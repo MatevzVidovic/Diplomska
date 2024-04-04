@@ -10,6 +10,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report
 
 
+chosen_num_of_features = 300
+
+
 
 def main():
 
@@ -204,7 +207,7 @@ def main():
 
     sort_index = np.array(list(sort_permutation))
 
-    best_index = sort_index[:300]
+    best_index = sort_index[:chosen_num_of_features]
 
     input("Stop D")
 

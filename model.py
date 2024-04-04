@@ -11,7 +11,12 @@ from sklearn.metrics import accuracy_score, classification_report
 
 printout = False
 
-test_purposes = True
+test_purposes = False
+test_num_of_train_rows = 1000
+test_num_of_test_rows = 10000
+
+chosen_num_of_features = 300
+middle_layer_size = 300
 
 
 
@@ -64,12 +69,10 @@ X_train_TF_IDF = vectorizer.fit_transform(X_train['HeadlineAndDesc'])
 X_test_TF_IDF = vectorizer.transform(X_test['HeadlineAndDesc'])
 
 if test_purposes:
-    train_rows = 1000
-    test_rows = 1000
-    X_train_TF_IDF = X_train_TF_IDF[:train_rows, :]
-    y_train = y_train[:train_rows]
-    X_test_TF_IDF = X_test_TF_IDF[:test_rows, :]
-    y_test = y_test[:test_rows]
+    X_train_TF_IDF = X_train_TF_IDF[:test_num_of_train_rows, :]
+    y_train = y_train[:test_num_of_train_rows]
+    X_test_TF_IDF = X_test_TF_IDF[:test_num_of_test_rows, :]
+    y_test = y_test[:test_num_of_test_rows]
 
 if printout:
     
@@ -102,7 +105,7 @@ sort_permutation = [x[1] for x in m_i_sorter]
 
 sort_index = np.array(list(sort_permutation))
 
-best_index = sort_index[:300]
+best_index = sort_index[:chosen_num_of_features]
 
 X_train_TF_IDF_trimmed = X_train_TF_IDF[:,best_index]
 X_test_TF_IDF_trimmed = X_test_TF_IDF[:,best_index]
@@ -404,11 +407,11 @@ Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         """
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(300, 300),
+            nn.Linear(chosen_num_of_features, middle_layer_size),
             nn.ReLU(),
-            nn.Linear(300, 300),
+            nn.Linear(middle_layer_size, middle_layer_size),
             nn.ReLU(),
-            nn.Linear(300, len(categories))
+            nn.Linear(middle_layer_size, len(categories))
         )
 
     def forward(self, x):
