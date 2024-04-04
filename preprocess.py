@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import scipy as sp
+from scipy import sparse
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -146,13 +147,12 @@ def main():
     input("Stop A")
 
     if False:
-        from scipy import sparse
-
+        
         sparse.save_npz("X_train_TF_IDF_discretised.npz", X_train_TF_IDF_discretised)
 
-        second_X_train_TF_IDF_discretised = sparse.load_npz("X_train_TF_IDF_discretised.npz")
-        print("second_X_train_TF_IDF_discretised")
-        print(second_X_train_TF_IDF_discretised)
+        # second_X_train_TF_IDF_discretised = sparse.load_npz("X_train_TF_IDF_discretised.npz")
+        # print("second_X_train_TF_IDF_discretised")
+        # print(second_X_train_TF_IDF_discretised)
 
         input("Stop B")
 
@@ -204,15 +204,30 @@ def main():
 
     sort_index = np.array(list(sort_permutation))
 
-    best_index = sort_index[:100]
+    best_index = sort_index[:300]
+
+    input("Stop D")
 
     print("X_train_TF_IDF.shape")
     print(X_train_TF_IDF.shape)
-    X_train_TF_IDF = X_train_TF_IDF[:,best_index]
-    print("X_train_TF_IDF")
-    print(X_train_TF_IDF)
-    print("X_train_TF_IDF.shape")
-    print(X_train_TF_IDF.shape)
+    X_train_TF_IDF_trimmed = X_train_TF_IDF[:,best_index]
+    print("X_train_TF_IDF_trimmed")
+    print(X_train_TF_IDF_trimmed)
+    print("X_train_TF_IDF_trimmed.shape")
+    print(X_train_TF_IDF_trimmed.shape)
+
+
+    input("Stop E")
+
+
+    sparse.save_npz("X_train_TF_IDF_trimmed.npz", X_train_TF_IDF_trimmed)
+
+    X_train_TF_IDF_trimmed_loaded = sparse.load_npz("X_train_TF_IDF_trimmed.npz")
+    print("X_train_TF_IDF_trimmed_loaded")
+    print(X_train_TF_IDF_trimmed_loaded)
+    print("X_train_TF_IDF_trimmed_loaded.shape")
+    print(X_train_TF_IDF_trimmed_loaded.shape)
+
 
 
 
