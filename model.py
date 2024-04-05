@@ -11,7 +11,14 @@ from sklearn.metrics import accuracy_score, classification_report
 
 printout = False
 
-test_purposes = False
+epochs = 2
+
+# if it is none, than (test_purposes = True) doesn't always take the same examples, which is nice
+train_test_split_seed = None # 42
+
+load_previous_model = True
+
+test_purposes = True
 test_num_of_train_rows = 1000
 test_num_of_test_rows = 10000
 
@@ -59,7 +66,7 @@ if printout:
 
 
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=train_test_split_seed)
 
 # Making X usable by making it numerical.
 # It becomes a scipy sparse matrix.
@@ -419,8 +426,21 @@ Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
         logits = self.linear_relu_stack(x)
         return logits
 
+
+
 model = NeuralNetwork().to(device)
 print(model)
+
+if load_previous_model:
+  prev_model_details = pd.read_csv("previous_model_" + str(chosen_num_of_features) + "_details.csv")
+  prev_serial_num = prev_model_details["previous_serial_num"][0]
+  prev_cumulative_epochs = prev_model_details["previous_cumulative_epochs"][0]
+  model.load_state_dict(torch.load("model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num) + ".pth"))
+else:
+  prev_model_serial_num = 0
+  prev_cumulative_epochs = 0
+      
+    
 
 
 
@@ -536,9 +556,6 @@ def test(dataloader, model, loss_fn):
 
 
 
-
-
-epochs = 5
 for t in range(epochs):
     print(f"Epoch {t+1}\n-------------------------------")
     train(train_dataloader, model, loss_fn, optimizer)
@@ -550,12 +567,9 @@ print("Done!")
 
 
 
-
-
-
-
-
-torch.save(model.state_dict(), "model.pth")
+torch.save(model.state_dict(), "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num+1) + ".pth")
+new_df = pd.DataFrame({"previous_serial_num": [prev_serial_num+1], "previous_cumulative_epochs": [prev_cumulative_epochs+epochs]})
+new_df.to_csv("previous_model_" + str(chosen_num_of_features) + "_details.csv")
 print("Saved PyTorch Model State to model.pth")
 
 
@@ -570,15 +584,8 @@ print("Saved PyTorch Model State to model.pth")
 
 
 
-model = NeuralNetwork().to(device)
+"""model = NeuralNetwork().to(device)
 model.load_state_dict(torch.load("model.pth"))
-
-
-
-
-
-
-
 
 classes = categories
 
@@ -588,4 +595,4 @@ with torch.no_grad():
     x = x.to(device)
     pred = model(x)
     predicted, actual = classes[pred[0].argmax(0)], classes[y]
-    print(f'Predicted: "{predicted}", Actual: "{actual}"')
+    print(f'Predicted: "{predicted}", Actual: "{actual}"')"""
