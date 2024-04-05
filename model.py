@@ -9,21 +9,234 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report
 
+import os
+
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+
+from torch.utils.data import Dataset
+import matplotlib.pyplot as plt
+
+from timeit import default_timer as timer
+
+
+
+
 printout = False
 
 epochs = 2
 
-# if it is none, than (test_purposes = True) doesn't always take the same examples, which is nice
-train_test_split_seed = None # 42
-
-load_previous_model = True
 
 test_purposes = True
-test_num_of_train_rows = 1000
+
+test_num_of_train_rows = 10000
 test_num_of_test_rows = 10000
 
-chosen_num_of_features = 300
-middle_layer_size = 300
+
+
+types_dict = {
+    0 : "basic",
+    1 : "deep_3pure_middle",
+    2 : "deep_4pure_middle_softmax_dropout_leaky_relu",
+}
+
+model_type = types_dict[2]
+chosen_num_of_features = 5000
+second_layer_size = 1000
+middle_layer_size = 700
+
+dropout = 0.1
+leaky_relu_alpha = 0.1
+
+"""
+!!!!!!!!!!!!!!!!!!!
+Res upam da je pri
+nn.Softmax(dim=1)
+dim pravilno izbran.
+
+Pomoje ne, ker terrible rezultati.
+
+Zdaj dajem na 0.
+No, tudi tako dobim zelo zelo slabe rezultate.
+
+TODO: ODSTRANI SOFTMAX
+!!!!!!!!!!!!!!!!!!!"""
+
+# nn.MSELoss()
+loss_fn = nn.CrossEntropyLoss()
+
+# optimizer pa moras urejati spodaj
+
+
+
+
+model_data_path = model_type + "_" + str(chosen_num_of_features) + "_" + str(second_layer_size) + "_" + str(middle_layer_size) + "_model/"
+
+# True if directory already exists
+load_previous_model = os.path.isdir(model_data_path)
+# Set to False if you want to rewrite data
+load_previous_model = load_previous_model
+
+
+
+
+
+
+
+
+
+
+# Define model
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        
+        """
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        PREJ SEM IMEL NA ZADNJEM
+        nn.Linear(300, 14)
+
+        DOBIL SEM PODOBNO NAPAKO KOT SPODAJ. PO NASVETU SEM POGNAL KOT
+        CUDA_LAUNCH_BLOCKING=1 python3 model.py
+        PA JE BILA ISTA NAPAKA.
+
+        KOT KAZE SEM MISMATCHAL STEVILO TARGET VARIABLEOV
+
+        https://discuss.pytorch.org/t/runtimeerror-cuda-error-device-side-assert-triggered/34213/9
+        
+        https://discuss.pytorch.org/t/how-to-fix-cuda-error-device-side-assert-triggered-error/137553
+
+
+        Epoch 1
+-------------------------------
+../aten/src/ATen/native/cuda/Loss.cu:250: nll_loss_forward_reduce_cuda_kernel_2d: block: [0,0,0], thread: [5,0,0] Assertion `t >= 0 && t < n_classes` failed.
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 492, in <module>
+    train(train_dataloader, model, loss_fn, optimizer)
+  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 440, in train
+    loss = loss_fn(pred, y)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/loss.py", line 1179, in forward
+    return F.cross_entropy(input, target, weight=self.weight,
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 3059, in cross_entropy
+    return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
+RuntimeError: CUDA error: device-side assert triggered
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
+
+
+
+
+        """
+        
+Sparse Layers
+
+nn.Embedding
+	
+
+A simple lookup table that stores embeddings of a fixed dictionary and size.
+
+nn.EmbeddingBag
+	
+
+Compute sums or means of 'bags' of embeddings, without instantiating the intermediate embeddings.
+Distance Functions
+
+nn.CosineSimilarity
+	
+
+print(f"Using {device} device")
+Returns cosine similarity between x1x1 and x2x2 computed along dim."""
+        
+        
+        if model_type == "basic":
+            self.sequential_NN_stack = nn.Sequential(
+                nn.Linear(chosen_num_of_features, second_layer_size),
+                nn.ReLU(),
+                nn.Linear(second_layer_size, middle_layer_size),
+                nn.ReLU(),
+                nn.Linear(middle_layer_size, len(categories))
+            )
+        elif model_type == "deep_3pure_middle":
+            self.sequential_NN_stack = nn.Sequential(
+              nn.Linear(chosen_num_of_features, second_layer_size),
+              nn.ReLU(),
+              nn.Linear(second_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Linear(middle_layer_size, len(categories))
+          )
+        elif model_type == "deep_4pure_middle_softmax_dropout_leaky_relu":
+            self.sequential_NN_stack = nn.Sequential(
+              nn.Linear(chosen_num_of_features, second_layer_size),
+              nn.ReLU(),
+              nn.Linear(second_layer_size, middle_layer_size),
+              nn.LeakyReLU(leaky_relu_alpha),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Dropout(p=dropout),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.LeakyReLU(leaky_relu_alpha),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.LeakyReLU(leaky_relu_alpha),
+              nn.Linear(middle_layer_size, middle_layer_size),
+              nn.ReLU(),
+              nn.Linear(middle_layer_size, len(categories)),
+              nn.Softmax(dim=0)
+          )
+            
+            
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.sequential_NN_stack(x)
+
+        # m = nn.Softmax(dim=1)
+        # print("Softmax(dim=1)")
+        # print(m(logits))
+
+        # m = nn.Softmax(dim=0)
+        # print("Softmax(dim=0)")
+        # print(m(logits))
+
+        return logits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -65,8 +278,26 @@ if printout:
 
 
 
+"""
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+random_state mora ostati 42 !!!!!!!!!!!!!
+Sicer:
+File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 141, in <module>
+    X_train_TF_IDF_trimmed = X_train_TF_IDF[:,best_index]
+IndexError: index (56545) out of range
+
+ker je drugačno število besed v tem naboru in se lahko to zgodi.
+
+To sedaj zal ne deluje vec:
+
+# if it is none, than (test_purposes = True) doesn't always take the same examples, which is nice
+train_test_split_seed = None # 42
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
+
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=train_test_split_seed)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Making X usable by making it numerical.
 # It becomes a scipy sparse matrix.
@@ -127,14 +358,11 @@ if printout:
 
 
 
-import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 
-from torch.utils.data import Dataset
-import matplotlib.pyplot as plt
+
+
+
+
 
 
 def tens_slice(tens, zeroth_indices=None, first_indices=None):
@@ -358,6 +586,7 @@ for X, y in test_dataloader:
 
 
 
+
 # Get cpu, gpu or mps device for training.
 device = (
     "cuda"
@@ -368,89 +597,28 @@ device = (
 )
 print(f"Using {device} device")
 
-# Define model
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.flatten = nn.Flatten()
-        
-        """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        PREJ SEM IMEL NA ZADNJEM
-        nn.Linear(300, 14)
-
-        DOBIL SEM PODOBNO NAPAKO KOT SPODAJ. PO NASVETU SEM POGNAL KOT
-        CUDA_LAUNCH_BLOCKING=1 python3 model.py
-        PA JE BILA ISTA NAPAKA.
-
-        KOT KAZE SEM MISMATCHAL STEVILO TARGET VARIABLEOV
-
-        https://discuss.pytorch.org/t/runtimeerror-cuda-error-device-side-assert-triggered/34213/9
-        
-        https://discuss.pytorch.org/t/how-to-fix-cuda-error-device-side-assert-triggered-error/137553
-
-
-        Epoch 1
--------------------------------
-../aten/src/ATen/native/cuda/Loss.cu:250: nll_loss_forward_reduce_cuda_kernel_2d: block: [0,0,0], thread: [5,0,0] Assertion `t >= 0 && t < n_classes` failed.
-Traceback (most recent call last):
-  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 492, in <module>
-    train(train_dataloader, model, loss_fn, optimizer)
-  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 440, in train
-    loss = loss_fn(pred, y)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/loss.py", line 1179, in forward
-    return F.cross_entropy(input, target, weight=self.weight,
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 3059, in cross_entropy
-    return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
-RuntimeError: CUDA error: device-side assert triggered
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-
-
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        """
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(chosen_num_of_features, middle_layer_size),
-            nn.ReLU(),
-            nn.Linear(middle_layer_size, middle_layer_size),
-            nn.ReLU(),
-            nn.Linear(middle_layer_size, len(categories))
-        )
-
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
 
 
 model = NeuralNetwork().to(device)
 print(model)
 
+
 if load_previous_model:
-  prev_model_details = pd.read_csv("previous_model_" + str(chosen_num_of_features) + "_details.csv")
+  prev_model_details = pd.read_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
   prev_serial_num = prev_model_details["previous_serial_num"][0]
   prev_cumulative_epochs = prev_model_details["previous_cumulative_epochs"][0]
-  model.load_state_dict(torch.load("model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num) + ".pth"))
+  model.load_state_dict(torch.load(model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num) + ".pth"))
 else:
-  prev_model_serial_num = 0
+  prev_serial_num = 0
   prev_cumulative_epochs = 0
       
     
 
 
 
-
-
-
-
-
-
-loss_fn = nn.CrossEntropyLoss()
+# https://pytorch.org/docs/stable/optim.html
+# SGD - stochastic gradient descent
+# imajo tudi Adam, pa sparse adam, pa take.
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 
@@ -459,13 +627,17 @@ optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 
 
+# ...
 
-
+train_times = []
 
 
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
     model.train()
+    
+    start = timer()
+
     for batch, (X, y) in enumerate(dataloader):
 
         """
@@ -517,6 +689,9 @@ RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for
         optimizer.zero_grad()
 
         if batch % 100 == 0:
+            end = timer()
+            train_times.append(end - start)
+            start = timer()
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
@@ -530,7 +705,8 @@ RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for
 
 
 
-
+accuracies = []
+avg_losses = []
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
@@ -545,6 +721,8 @@ def test(dataloader, model, loss_fn):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    accuracies.append("{(100*correct):>0.1f}%")
+    avg_losses.append("{test_loss:>8f}")
 
 
 
@@ -555,10 +733,15 @@ def test(dataloader, model, loss_fn):
 
 
 
+all_train_times = []
 
 for t in range(epochs):
     print(f"Epoch {t+1}\n-------------------------------")
     train(train_dataloader, model, loss_fn, optimizer)
+    del train_times[0]
+    print(train_times)
+    all_train_times.extend(train_times)
+    train_times = []
     test(test_dataloader, model, loss_fn)
 print("Done!")
 
@@ -566,11 +749,18 @@ print("Done!")
 
 
 
+try:
+  os.mkdir(model_data_path)
+except:
+  pass
 
-torch.save(model.state_dict(), "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num+1) + ".pth")
+torch.save(model.state_dict(), model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num+1) + ".pth")
 new_df = pd.DataFrame({"previous_serial_num": [prev_serial_num+1], "previous_cumulative_epochs": [prev_cumulative_epochs+epochs]})
-new_df.to_csv("previous_model_" + str(chosen_num_of_features) + "_details.csv")
-print("Saved PyTorch Model State to model.pth")
+new_df.to_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
+new_df = pd.DataFrame({"train_times": all_train_times, "accuracies": accuracies, "avg_losses": avg_losses})
+new_df.to_csv(model_data_path + "train_times_" + str(prev_serial_num+1) + ".csv")
+
+print("Saved PyTorch Model State")
 
 
 
