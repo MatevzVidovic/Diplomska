@@ -25,12 +25,13 @@ from timeit import default_timer as timer
 
 
 
+
 printout = False
 
-epochs = 2
+epochs = 1
 
 
-test_purposes = True
+test_purposes = False
 
 test_num_of_train_rows = 10000
 test_num_of_test_rows = 10000
@@ -40,7 +41,7 @@ test_num_of_test_rows = 10000
 types_dict = {
     0 : "basic",
     1 : "deep_3pure_middle",
-    2 : "deep_4pure_middle_softmax_dropout_leaky_relu",
+    2 : "deep_4pure_middle_dropout_leaky_relu",
 }
 
 model_type = types_dict[2]
@@ -62,7 +63,7 @@ Pomoje ne, ker terrible rezultati.
 Zdaj dajem na 0.
 No, tudi tako dobim zelo zelo slabe rezultate.
 
-TODO: ODSTRANI SOFTMAX
+Odstranil sem softmax.
 !!!!!!!!!!!!!!!!!!!"""
 
 # nn.MSELoss()
@@ -75,10 +76,9 @@ loss_fn = nn.CrossEntropyLoss()
 
 model_data_path = model_type + "_" + str(chosen_num_of_features) + "_" + str(second_layer_size) + "_" + str(middle_layer_size) + "_model/"
 
-# True if directory already exists
-load_previous_model = os.path.isdir(model_data_path)
-# Set to False if you want to rewrite data
-load_previous_model = load_previous_model
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# load_previous_model has been moved down, so that it works with while True
 
 
 
@@ -182,7 +182,7 @@ Returns cosine similarity between x1x1 and x2x2 computed along dim."""
               nn.ReLU(),
               nn.Linear(middle_layer_size, len(categories))
           )
-        elif model_type == "deep_4pure_middle_softmax_dropout_leaky_relu":
+        elif model_type == "deep_4pure_middle_dropout_leaky_relu":
             self.sequential_NN_stack = nn.Sequential(
               nn.Linear(chosen_num_of_features, second_layer_size),
               nn.ReLU(),
@@ -198,7 +198,7 @@ Returns cosine similarity between x1x1 and x2x2 computed along dim."""
               nn.Linear(middle_layer_size, middle_layer_size),
               nn.ReLU(),
               nn.Linear(middle_layer_size, len(categories)),
-              nn.Softmax(dim=0)
+              # nn.Softmax(dim=0)
           )
             
             
@@ -603,97 +603,43 @@ model = NeuralNetwork().to(device)
 print(model)
 
 
-if load_previous_model:
-  prev_model_details = pd.read_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
-  prev_serial_num = prev_model_details["previous_serial_num"][0]
-  prev_cumulative_epochs = prev_model_details["previous_cumulative_epochs"][0]
-  model.load_state_dict(torch.load(model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num) + ".pth"))
-else:
-  prev_serial_num = 0
-  prev_cumulative_epochs = 0
-      
-    
 
 
 
-# https://pytorch.org/docs/stable/optim.html
-# SGD - stochastic gradient descent
-# imajo tudi Adam, pa sparse adam, pa take.
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
+
+while True:
+
+
+
+
+  # True if directory already exists
+  load_previous_model = os.path.isdir(model_data_path)
+  # Set to False if you want to rewrite data
+  load_previous_model = load_previous_model
 
 
 
 
 
 
-# ...
-
-train_times = []
-
-
-def train(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset)
-    model.train()
-    
-    start = timer()
-
-    for batch, (X, y) in enumerate(dataloader):
-
-        """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        !!!!!! DODAJ:
-        y = y.type(torch.LongTensor)
-
-
-        TOLE JE STARA NAPAKA, AMPAK JO BOM PUSTIL, DA JE NE RABIM SE ZGORAJ PISAT, KER BI BILO BREZVEZE.
-
-        SEDAJ NAREDIM TO KONERZIJO ZE ZGORAJ, KER SEM PO TRENIRANJU DOBIL
-        RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for 'Char'
-        IN JE BILO KER JE Z Y_TRAIN ENAK PROBLEM
-
+  if load_previous_model:
+    prev_model_details = pd.read_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
+    prev_serial_num = prev_model_details["previous_serial_num"][0]
+    prev_cumulative_epochs = prev_model_details["previous_cumulative_epochs"][0]
+    model.load_state_dict(torch.load(model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num) + ".pth"))
+  else:
+    prev_serial_num = 0
+    prev_cumulative_epochs = 0
         
-        https://stackoverflow.com/questions/69742930/runtimeerror-nll-loss-forward-reduce-cuda-kernel-2d-index-not-implemented-for
-
-        ker
-        Epoch 1
--------------------------------
-Traceback (most recent call last):
-  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 461, in <module>
-    train(train_dataloader, model, loss_fn, optimizer)
-  File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 409, in train
-    loss = loss_fn(pred, y)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/loss.py", line 1179, in forward
-    return F.cross_entropy(input, target, weight=self.weight,
-  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 3059, in cross_entropy
-    return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
-RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for 'Char'
+      
 
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        """
-        X, y = X.to(device), y.to(device)
 
-        # Compute prediction error
-        pred = model(X)
-        loss = loss_fn(pred, y)
-
-        # Backpropagation
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        if batch % 100 == 0:
-            end = timer()
-            train_times.append(end - start)
-            start = timer()
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+  # https://pytorch.org/docs/stable/optim.html
+  # SGD - stochastic gradient descent
+  # imajo tudi Adam, pa sparse adam, pa take.
+  optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 
 
@@ -701,66 +647,73 @@ RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for
 
 
 
+  # ...
+
+  train_times = []
 
 
+  def train(dataloader, model, loss_fn, optimizer):
+      size = len(dataloader.dataset)
+      model.train()
+      
+      start = timer()
+
+      for batch, (X, y) in enumerate(dataloader):
+
+          """
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+          !!!!!! DODAJ:
+          y = y.type(torch.LongTensor)
 
 
-accuracies = []
-avg_losses = []
-def test(dataloader, model, loss_fn):
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    model.eval()
-    test_loss, correct = 0, 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-    test_loss /= num_batches
-    correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    accuracies.append("{(100*correct):>0.1f}%")
-    avg_losses.append("{test_loss:>8f}")
+          TOLE JE STARA NAPAKA, AMPAK JO BOM PUSTIL, DA JE NE RABIM SE ZGORAJ PISAT, KER BI BILO BREZVEZE.
+
+          SEDAJ NAREDIM TO KONERZIJO ZE ZGORAJ, KER SEM PO TRENIRANJU DOBIL
+          RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for 'Char'
+          IN JE BILO KER JE Z Y_TRAIN ENAK PROBLEM
+
+          
+          https://stackoverflow.com/questions/69742930/runtimeerror-nll-loss-forward-reduce-cuda-kernel-2d-index-not-implemented-for
+
+          ker
+          Epoch 1
+  -------------------------------
+  Traceback (most recent call last):
+    File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 461, in <module>
+      train(train_dataloader, model, loss_fn, optimizer)
+    File "/home/matevzvidovic/Desktop/SeminarskaDemo/model.py", line 409, in train
+      loss = loss_fn(pred, y)
+    File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+      return self._call_impl(*args, **kwargs)
+    File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+      return forward_call(*args, **kwargs)
+    File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/loss.py", line 1179, in forward
+      return F.cross_entropy(input, target, weight=self.weight,
+    File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 3059, in cross_entropy
+      return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
+  RuntimeError: "nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for 'Char'
 
 
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          """
+          X, y = X.to(device), y.to(device)
 
+          # Compute prediction error
+          pred = model(X)
+          loss = loss_fn(pred, y)
 
+          # Backpropagation
+          loss.backward()
+          optimizer.step()
+          optimizer.zero_grad()
 
-
-
-
-
-
-all_train_times = []
-
-for t in range(epochs):
-    print(f"Epoch {t+1}\n-------------------------------")
-    train(train_dataloader, model, loss_fn, optimizer)
-    del train_times[0]
-    print(train_times)
-    all_train_times.extend(train_times)
-    train_times = []
-    test(test_dataloader, model, loss_fn)
-print("Done!")
-
-
-
-
-
-try:
-  os.mkdir(model_data_path)
-except:
-  pass
-
-torch.save(model.state_dict(), model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num+1) + ".pth")
-new_df = pd.DataFrame({"previous_serial_num": [prev_serial_num+1], "previous_cumulative_epochs": [prev_cumulative_epochs+epochs]})
-new_df.to_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
-new_df = pd.DataFrame({"train_times": all_train_times, "accuracies": accuracies, "avg_losses": avg_losses})
-new_df.to_csv(model_data_path + "train_times_" + str(prev_serial_num+1) + ".csv")
-
-print("Saved PyTorch Model State")
+          if batch % 100 == 0:
+              end = timer()
+              train_times.append(end - start)
+              start = timer()
+              loss, current = loss.item(), (batch + 1) * len(X)
+              print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
 
@@ -772,17 +725,94 @@ print("Saved PyTorch Model State")
 
 
 
+  accuracies = []
+  avg_losses = []
+  def test(dataloader, model, loss_fn):
+      size = len(dataloader.dataset)
+      num_batches = len(dataloader)
+      model.eval()
+      test_loss, correct = 0, 0
+      with torch.no_grad():
+          for X, y in dataloader:
+              X, y = X.to(device), y.to(device)
+              pred = model(X)
+              test_loss += loss_fn(pred, y).item()
+              correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+      test_loss /= num_batches
+      correct /= size
+      print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+      accuracies.append("{(100*correct):>0.1f}%")
+      avg_losses.append("{test_loss:>8f}")
 
 
-"""model = NeuralNetwork().to(device)
-model.load_state_dict(torch.load("model.pth"))
 
-classes = categories
 
-model.eval()
-x, y = test_data[0][0], test_data[0][1]
-with torch.no_grad():
-    x = x.to(device)
-    pred = model(x)
-    predicted, actual = classes[pred[0].argmax(0)], classes[y]
-    print(f'Predicted: "{predicted}", Actual: "{actual}"')"""
+
+
+
+
+
+
+  all_train_times = []
+
+  for t in range(epochs):
+      print(f"Epoch {t+1}\n-------------------------------")
+      train(train_dataloader, model, loss_fn, optimizer)
+      del train_times[0]
+      print(train_times)
+      all_train_times.extend(train_times)
+      train_times = []
+      test(test_dataloader, model, loss_fn)
+  print("Done!")
+
+
+
+
+
+  try:
+    os.mkdir(model_data_path)
+  except:
+    pass
+
+  torch.save(model.state_dict(), model_data_path + "model_" + str(chosen_num_of_features) + "_" + str(prev_serial_num+1) + ".pth")
+
+  new_df = pd.DataFrame({"previous_serial_num": [prev_serial_num+1], "previous_cumulative_epochs": [prev_cumulative_epochs+epochs]})
+  new_df.to_csv(model_data_path + "previous_model_" + str(chosen_num_of_features) + "_details.csv")
+
+  """
+  Razlog za spodnji nacin kode:
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 677, in _extract_index
+    raise ValueError("All arrays must be of the same length")
+ValueError: All arrays must be of the same length
+"""
+  a = {"train_times": all_train_times, "accuracies": accuracies, "avg_losses": avg_losses}
+  new_df = pd.DataFrame.from_dict(a, orient='index')
+  new_df = df.transpose()
+  new_df.to_csv(model_data_path + "train_times_" + str(prev_serial_num+1) + ".csv")
+
+  print("Saved PyTorch Model State")
+
+
+
+
+
+
+
+
+
+
+
+
+
+  """model = NeuralNetwork().to(device)
+  model.load_state_dict(torch.load("model.pth"))
+
+  classes = categories
+
+  model.eval()
+  x, y = test_data[0][0], test_data[0][1]
+  with torch.no_grad():
+      x = x.to(device)
+      pred = model(x)
+      predicted, actual = classes[pred[0].argmax(0)], classes[y]
+      print(f'Predicted: "{predicted}", Actual: "{actual}"')"""
