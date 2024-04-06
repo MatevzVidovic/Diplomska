@@ -741,8 +741,11 @@ while True:
       test_loss /= num_batches
       correct /= size
       print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-      accuracies.append("{(100*correct):>0.1f}%")
-      avg_losses.append("{test_loss:>8f}")
+
+      accuracies.append(100*correct)
+      avg_losses.append(test_loss)
+      # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
+      # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
 
 
@@ -787,7 +790,7 @@ ValueError: All arrays must be of the same length
 """
   a = {"train_times": all_train_times, "accuracies": accuracies, "avg_losses": avg_losses}
   new_df = pd.DataFrame.from_dict(a, orient='index')
-  new_df = df.transpose()
+  new_df = new_df.transpose()
   new_df.to_csv(model_data_path + "train_times_" + str(prev_serial_num+1) + ".csv")
 
   print("Saved PyTorch Model State")
