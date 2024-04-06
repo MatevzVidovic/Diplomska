@@ -26,12 +26,11 @@ from timeit import default_timer as timer
 
 
 
-printout = False
+preprocess_printout = False
 
 epochs = 1
-
-
 test_purposes = False
+
 
 test_num_of_train_rows = 10000
 test_num_of_test_rows = 10000
@@ -51,6 +50,8 @@ middle_layer_size = 700
 
 dropout = 0.1
 leaky_relu_alpha = 0.1
+
+learning_rate = 1e-3
 
 """
 !!!!!!!!!!!!!!!!!!!
@@ -73,8 +74,11 @@ loss_fn = nn.CrossEntropyLoss()
 
 
 
+main_folder = "built_models/"
+if test_purposes:
+    main_folder = "test_models/"
 
-model_data_path = model_type + "_" + str(chosen_num_of_features) + "_" + str(second_layer_size) + "_" + str(middle_layer_size) + "_model/"
+model_data_path = main_folder + model_type + "_" + str(chosen_num_of_features) + "_" + str(second_layer_size) + "_" + str(middle_layer_size) + "_model/"
 
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -251,7 +255,8 @@ Returns cosine similarity between x1x1 and x2x2 computed along dim."""
 df = pd.read_csv("dataFrameOfImportants.csv")
 
 print(df.shape)
-df = df.dropna()
+df = df.dropna() # pozabili smo na inplace=True, a stvar je še vedno delovala.
+# Sedaj ne bomo spreminjali, ker ne bi več delovalo za prejšnje modele.
 print(df.shape)
 
 
@@ -259,7 +264,7 @@ X = df[['HeadlineAndDesc']]
 y = df['Category']
 
 
-if printout:
+if preprocess_printout:
     # get all distinct values of y
     print(y.unique())
 
@@ -272,7 +277,7 @@ for i, category in enumerate(y.unique()):
 
 y = y.apply(lambda x: category2hash[x])
 
-if printout:
+if preprocess_printout:
     print(y.unique())
     print(y)
 
@@ -312,7 +317,7 @@ if test_purposes:
     X_test_TF_IDF = X_test_TF_IDF[:test_num_of_test_rows, :]
     y_test = y_test[:test_num_of_test_rows]
 
-if printout:
+if preprocess_printout:
     
     # print(X_train_TF_IDF)
 
@@ -330,7 +335,7 @@ mutual_infos_df = pd.read_csv("mutual_infos_42.csv")
 # print(mutual_infos_df)
 mutual_infos = mutual_infos_df.values[:,1].reshape((-1))
 
-if printout:
+if preprocess_printout:
     print("mutual_infos")
     print(mutual_infos)
 
@@ -348,7 +353,7 @@ best_index = sort_index[:chosen_num_of_features]
 X_train_TF_IDF_trimmed = X_train_TF_IDF[:,best_index]
 X_test_TF_IDF_trimmed = X_test_TF_IDF[:,best_index]
 
-if printout:
+if preprocess_printout:
     print("X_train_TF_IDF_trimmed.shape")
     print(X_train_TF_IDF_trimmed.shape)
     print("X_test_TF_IDF_trimmed.shape")
@@ -639,7 +644,7 @@ while True:
   # https://pytorch.org/docs/stable/optim.html
   # SGD - stochastic gradient descent
   # imajo tudi Adam, pa sparse adam, pa take.
-  optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+  optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 
 
@@ -771,6 +776,11 @@ while True:
 
 
 
+
+  try:
+    os.mkdir(main_folder)
+  except:
+    pass
 
   try:
     os.mkdir(model_data_path)

@@ -1,1 +1,1 @@
-# SeminarskaDemo
+# DiplomskaDemo
