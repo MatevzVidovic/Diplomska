@@ -1,0 +1,40 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "LeGR DenseNet",
+			"type": "python",
+			"request": "launch",
+			"program": "legr.py",
+			"args": ["--dataset", "eyes_test", "--model", "../IPAD/logs/matej_sbvpi_densenet/teacher/models/teacher_best.pkl", "--batch_size", "3", "--name", "matej_test", "--omega", "0.5", "--tau_hat", "5"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "LeGR DenseNet (4 classes)",
+			"type": "python",
+			"request": "launch",
+			"program": "legr.py",
+			"args": ["--dataset", "eyes_test_sip", "--batch_size", "16", "--name", "matej_test", "--omega", "0.5", "--tau_hat", "5"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "LeGR U-Net",
+			"type": "python",
+			"request": "launch",
+			"program": "legr.py",
+			"args": ["--dataset", "eyes_test", "--model", "../IPAD/logs/matej_sbvpi_unet/original/models/unet_best.pkl", "--batch_size", "3", "--name", "matej_test", "--omega", "0.5", "--tau_hat", "5", "--pruner", "FilterPrunerUNet"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "LeGR U-Net (4 classes)",
+			"type": "python",
+			"request": "launch",
+			"program": "legr.py",
+			"args": ["--dataset", "eyes_test_sip", "--model", "../IPAD/logs/matej_mobius_sip_unet/original/models/unet_best.pkl", "--batch_size", "3", "--name", "matej_test", "--omega", "0.5", "--tau_hat", "5", "--pruner", "FilterPrunerUNet"],
+			"console": "integratedTerminal"
+		}
+	]
+}

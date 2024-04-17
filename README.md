@@ -1,1 +1,1 @@
-# DiplomskaDemo
+# Diplomska

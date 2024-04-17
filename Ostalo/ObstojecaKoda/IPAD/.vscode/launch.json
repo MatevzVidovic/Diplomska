@@ -1,0 +1,44 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "DenseNet",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"args": ["--dataset", "eyes_test/", "--expname", "matej_test", "--resume", "logs/matej_sbvpi_densenet/original/models/densenet_best.pkl", "--pruningGpus", "1", "--bs", "3", "--epochs", "5"],  // everything else
+			//"args": ["--dataset", "eyes_test/", "--expname", "matej_test", "--resume", "logs/matej_test/models/densenet_25.pt", "--pruningGpus", "1", "--bs", "3", "--epochs", "5"],  // train_pruned_model
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "DenseNet (4 classes)",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"args": ["--dataset", "eyes_test_sip/", "--expname", "matej_test", "--resume", "logs/matej_mobius_sip_densenet/original/models/densenet_best.pkl", "--pruningGpus", "0", "--bs", "16", "--epochs", "5"],  // everything else
+			//"args": ["--dataset", "eyes_test_sip/", "--expname", "matej_test", "--resume", "logs/matej_test/models/densenet_25.pt", "--pruningGpus", "0", "--bs", "2", "--epochs", "5"],  // train_pruned_model
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "U-Net",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"args": ["--dataset", "eyes_test/", "--expname", "matej_test", "--model", "unet", "--resume", "logs/matej_sbvpi_unet/original/models/unet_best.pkl", "--pruningGpus", "1", "--bs", "2", "--epochs", "5"],  // everything else
+			//"args": ["--dataset", "eyes_test/", "--expname", "matej_test", "--model", "unet", "--resume", "logs/matej_test/models/unet_25.pt", "--pruningGpus", "1", "--bs", "2", "--epochs", "5"],  // train_pruned_model
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "U-Net (4 classes)",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"args": ["--dataset", "eyes_test_sip/", "--expname", "matej_test", "--model", "unet", "--resume", "logs/matej_mobius_sip_unet/original/models/unet_best.pkl", "--pruningGpus", "1", "--bs", "2", "--epochs", "5"],  // everything else
+			//"args": ["--dataset", "eyes_test_sip/", "--expname", "matej_test", "--model", "unet", "--resume", "logs/matej_test/models/unet_25.pt", "--pruningGpus", "1", "--bs", "2", "--epochs", "5"],  // train_pruned_model
+			"console": "integratedTerminal"
+		}
+	]
+}

@@ -609,6 +609,12 @@ print(model)
 
 
 
+# TO SEM PRESTAVIL IZ WHILEA, KER NE SODI:
+# https://pytorch.org/docs/stable/optim.html
+# SGD - stochastic gradient descent
+# imajo tudi Adam, pa sparse adam, pa take.
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
 
 
 
@@ -639,12 +645,6 @@ while True:
         
       
 
-
-
-  # https://pytorch.org/docs/stable/optim.html
-  # SGD - stochastic gradient descent
-  # imajo tudi Adam, pa sparse adam, pa take.
-  optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 
 

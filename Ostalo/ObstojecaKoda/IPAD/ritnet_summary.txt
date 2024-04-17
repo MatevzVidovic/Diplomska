@@ -1,0 +1,257 @@
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+            Conv2d-1         [-1, 32, 640, 400]             320
+           Dropout-2         [-1, 32, 640, 400]               0
+         LeakyReLU-3         [-1, 32, 640, 400]               0
+            Conv2d-4         [-1, 32, 640, 400]           1,088
+            Conv2d-5         [-1, 32, 640, 400]           9,248
+           Dropout-6         [-1, 32, 640, 400]               0
+         LeakyReLU-7         [-1, 32, 640, 400]               0
+            Conv2d-8         [-1, 32, 640, 400]           2,112
+            Conv2d-9         [-1, 32, 640, 400]           9,248
+          Dropout-10         [-1, 32, 640, 400]               0
+        LeakyReLU-11         [-1, 32, 640, 400]               0
+      BatchNorm2d-12         [-1, 32, 640, 400]              64
+DenseNet2D_down_block-13         [-1, 32, 640, 400]               0
+        AvgPool2d-14         [-1, 32, 320, 200]               0
+           Conv2d-15         [-1, 32, 320, 200]           9,248
+          Dropout-16         [-1, 32, 320, 200]               0
+        LeakyReLU-17         [-1, 32, 320, 200]               0
+           Conv2d-18         [-1, 32, 320, 200]           2,080
+           Conv2d-19         [-1, 32, 320, 200]           9,248
+          Dropout-20         [-1, 32, 320, 200]               0
+        LeakyReLU-21         [-1, 32, 320, 200]               0
+           Conv2d-22         [-1, 32, 320, 200]           3,104
+           Conv2d-23         [-1, 32, 320, 200]           9,248
+          Dropout-24         [-1, 32, 320, 200]               0
+        LeakyReLU-25         [-1, 32, 320, 200]               0
+      BatchNorm2d-26         [-1, 32, 320, 200]              64
+DenseNet2D_down_block-27         [-1, 32, 320, 200]               0
+        AvgPool2d-28         [-1, 32, 160, 100]               0
+           Conv2d-29         [-1, 32, 160, 100]           9,248
+          Dropout-30         [-1, 32, 160, 100]               0
+        LeakyReLU-31         [-1, 32, 160, 100]               0
+           Conv2d-32         [-1, 32, 160, 100]           2,080
+           Conv2d-33         [-1, 32, 160, 100]           9,248
+          Dropout-34         [-1, 32, 160, 100]               0
+        LeakyReLU-35         [-1, 32, 160, 100]               0
+           Conv2d-36         [-1, 32, 160, 100]           3,104
+           Conv2d-37         [-1, 32, 160, 100]           9,248
+          Dropout-38         [-1, 32, 160, 100]               0
+        LeakyReLU-39         [-1, 32, 160, 100]               0
+      BatchNorm2d-40         [-1, 32, 160, 100]              64
+DenseNet2D_down_block-41         [-1, 32, 160, 100]               0
+        AvgPool2d-42           [-1, 32, 80, 50]               0
+           Conv2d-43           [-1, 32, 80, 50]           9,248
+          Dropout-44           [-1, 32, 80, 50]               0
+        LeakyReLU-45           [-1, 32, 80, 50]               0
+           Conv2d-46           [-1, 32, 80, 50]           2,080
+           Conv2d-47           [-1, 32, 80, 50]           9,248
+          Dropout-48           [-1, 32, 80, 50]               0
+        LeakyReLU-49           [-1, 32, 80, 50]               0
+           Conv2d-50           [-1, 32, 80, 50]           3,104
+           Conv2d-51           [-1, 32, 80, 50]           9,248
+          Dropout-52           [-1, 32, 80, 50]               0
+        LeakyReLU-53           [-1, 32, 80, 50]               0
+      BatchNorm2d-54           [-1, 32, 80, 50]              64
+DenseNet2D_down_block-55           [-1, 32, 80, 50]               0
+        AvgPool2d-56           [-1, 32, 40, 25]               0
+           Conv2d-57           [-1, 32, 40, 25]           9,248
+          Dropout-58           [-1, 32, 40, 25]               0
+        LeakyReLU-59           [-1, 32, 40, 25]               0
+           Conv2d-60           [-1, 32, 40, 25]           2,080
+           Conv2d-61           [-1, 32, 40, 25]           9,248
+          Dropout-62           [-1, 32, 40, 25]               0
+        LeakyReLU-63           [-1, 32, 40, 25]               0
+           Conv2d-64           [-1, 32, 40, 25]           3,104
+           Conv2d-65           [-1, 32, 40, 25]           9,248
+          Dropout-66           [-1, 32, 40, 25]               0
+        LeakyReLU-67           [-1, 32, 40, 25]               0
+      BatchNorm2d-68           [-1, 32, 40, 25]              64
+DenseNet2D_down_block-69           [-1, 32, 40, 25]               0
+           Conv2d-70           [-1, 32, 80, 50]           2,080
+           Conv2d-71           [-1, 32, 80, 50]           9,248
+          Dropout-72           [-1, 32, 80, 50]               0
+        LeakyReLU-73           [-1, 32, 80, 50]               0
+           Conv2d-74           [-1, 32, 80, 50]           3,104
+           Conv2d-75           [-1, 32, 80, 50]           9,248
+          Dropout-76           [-1, 32, 80, 50]               0
+        LeakyReLU-77           [-1, 32, 80, 50]               0
+DenseNet2D_up_block_concat-78           [-1, 32, 80, 50]               0
+           Conv2d-79         [-1, 32, 160, 100]           2,080
+           Conv2d-80         [-1, 32, 160, 100]           9,248
+          Dropout-81         [-1, 32, 160, 100]               0
+        LeakyReLU-82         [-1, 32, 160, 100]               0
+           Conv2d-83         [-1, 32, 160, 100]           3,104
+           Conv2d-84         [-1, 32, 160, 100]           9,248
+          Dropout-85         [-1, 32, 160, 100]               0
+        LeakyReLU-86         [-1, 32, 160, 100]               0
+DenseNet2D_up_block_concat-87         [-1, 32, 160, 100]               0
+           Conv2d-88         [-1, 32, 320, 200]           2,080
+           Conv2d-89         [-1, 32, 320, 200]           9,248
+          Dropout-90         [-1, 32, 320, 200]               0
+        LeakyReLU-91         [-1, 32, 320, 200]               0
+           Conv2d-92         [-1, 32, 320, 200]           3,104
+           Conv2d-93         [-1, 32, 320, 200]           9,248
+          Dropout-94         [-1, 32, 320, 200]               0
+        LeakyReLU-95         [-1, 32, 320, 200]               0
+DenseNet2D_up_block_concat-96         [-1, 32, 320, 200]               0
+           Conv2d-97         [-1, 32, 640, 400]           2,080
+           Conv2d-98         [-1, 32, 640, 400]           9,248
+          Dropout-99         [-1, 32, 640, 400]               0
+       LeakyReLU-100         [-1, 32, 640, 400]               0
+          Conv2d-101         [-1, 32, 640, 400]           3,104
+          Conv2d-102         [-1, 32, 640, 400]           9,248
+         Dropout-103         [-1, 32, 640, 400]               0
+       LeakyReLU-104         [-1, 32, 640, 400]               0
+DenseNet2D_up_block_concat-105         [-1, 32, 640, 400]               0
+         Dropout-106         [-1, 32, 640, 400]               0
+          Conv2d-107          [-1, 4, 640, 400]             132
+================================================================
+Total params: 248,900
+Trainable params: 248,900
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 0.98
+Forward/backward pass size (MB): 1920.41
+Params size (MB): 0.95
+Estimated Total Size (MB): 1922.34
+----------------------------------------------------------------
+
+
+EXTENDED:******************
+Total params: 475,588
+Trainable params: 475,588
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 0.98
+Forward/backward pass size (MB): 3746.58
+Params size (MB): 1.81
+Estimated Total Size (MB): 3749.37
+**************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DenseNet2D(
+  (down_block1): DenseNet2D_down_block(
+    (conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(33, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv31): Conv2d(65, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv32): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (max_pool): AvgPool2d(kernel_size=None, stride=None, padding=0)
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+    (dropout3): Dropout(p=0.2, inplace=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (down_block2): DenseNet2D_down_block(
+    (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv31): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv32): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (max_pool): AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0)
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+    (dropout3): Dropout(p=0.2, inplace=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (down_block3): DenseNet2D_down_block(
+    (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv31): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv32): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (max_pool): AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0)
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+    (dropout3): Dropout(p=0.2, inplace=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (down_block4): DenseNet2D_down_block(
+    (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv31): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv32): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (max_pool): AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0)
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+    (dropout3): Dropout(p=0.2, inplace=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (down_block5): DenseNet2D_down_block(
+    (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv31): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv32): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (max_pool): AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0)
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+    (dropout3): Dropout(p=0.2, inplace=False)
+    (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (up_block1): DenseNet2D_up_block_concat(
+    (conv11): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv12): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+  )
+  (up_block2): DenseNet2D_up_block_concat(
+    (conv11): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv12): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+  )
+  (up_block3): DenseNet2D_up_block_concat(
+    (conv11): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv12): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+  )
+  (up_block4): DenseNet2D_up_block_concat(
+    (conv11): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv12): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv21): Conv2d(96, 32, kernel_size=(1, 1), stride=(1, 1))
+    (conv22): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (relu): LeakyReLU(negative_slope=0.01)
+    (dropout1): Dropout(p=0.2, inplace=False)
+    (dropout2): Dropout(p=0.2, inplace=False)
+  )
+  (out_conv1): Conv2d(32, 4, kernel_size=(1, 1), stride=(1, 1))
+  (dropout1): Dropout(p=0.2, inplace=False)
+)
+
+
