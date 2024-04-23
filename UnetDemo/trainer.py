@@ -52,7 +52,7 @@ model_name_2_model_class = {
     "unet" : UNet,
 }
 
-epochs = 1
+epochs = 5
 batch_size = 16
 learning_rate = 1e-3
 
@@ -446,12 +446,6 @@ while True:
     except:
         pass
 
-
-    
-        prev_model_details = pd.read_csv(model_data_path + "previous_model" + "_details.csv")
-        prev_serial_num = prev_model_details["previous_serial_num"][0]
-        prev_cumulative_epochs = prev_model_details["previous_cumulative_epochs"][0]
-        model.load_state_dict(torch.load(model_data_path + model_num_2_model_name[model_num] + "_" + str(prev_serial_num) + ".pth"))
 
 
     torch.save(model.state_dict(), model_data_path + model_num_2_model_name[model_num] + "_" + str(prev_serial_num+1) + ".pth")
