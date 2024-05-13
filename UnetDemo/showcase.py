@@ -33,7 +33,7 @@ from dataset import IrisDataset, transform
 
 
 
-
+flag_for_mIoU_computed_with_two_classes = False
 
 # dataset.py   LineAugment doesn't work yet
 
@@ -206,11 +206,13 @@ from train_with_knowledge_distillation import get_mIoU_from_predictions, get_con
 with slight changes to make it work nicely for our scenario.
 """
 
-def get_mIoU_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    mIoU = conf_matrix_to_mIoU(confusion_matrix)
 
-    return mIoU
+
+
+
+
+
+
 
 
 def get_conf_matrix(predictions, targets):
@@ -250,6 +252,62 @@ def get_conf_matrix(predictions, targets):
     return confusion_matrix
 
 
+
+
+
+
+# On mIoU: It is particularly useful for multi-class segmentation tasks.
+# mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
+def get_IoU_from_predictions(predictions, targets):
+    confusion_matrix = get_conf_matrix(predictions, targets)
+    mIoU = conf_matrix_to_IoU(confusion_matrix)
+
+    return mIoU
+
+def conf_matrix_to_IoU(confusion_matrix):
+    """
+    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
+    print(c)
+    [[1 0 0 0]
+     [0 0 0 0]
+     [0 1 1 0]
+     [0 0 0 2]]
+    miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
+    print(miou) # 0.625
+    """
+
+    #print(confusion_matrix)
+    n_classes = 2
+    if confusion_matrix.shape != (n_classes, n_classes):
+        print(confusion_matrix.shape)
+        raise NotImplementedError()
+
+    IoU = np.diag(confusion_matrix) / (
+            np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
+            np.diag(confusion_matrix))
+    
+
+    print("mIoU computed with only two classes. Backgorund omitted.")
+    return IoU.item(1) # only IoU for sclera (not background)
+    
+
+
+
+
+
+
+
+
+
+
+# On mIoU: It is particularly useful for multi-class segmentation tasks.
+# mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
+def get_mIoU_from_predictions(predictions, targets):
+    confusion_matrix = get_conf_matrix(predictions, targets)
+    mIoU = conf_matrix_to_mIoU(confusion_matrix)
+
+    return mIoU
+
 def conf_matrix_to_mIoU(confusion_matrix):
     """
     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
@@ -273,6 +331,7 @@ def conf_matrix_to_mIoU(confusion_matrix):
             np.diag(confusion_matrix))
 
     if n_classes == 2:
+        print("mIoU computed with only two classes. Backgorund omitted.")
         return MIoU.item(1) # only IoU for sclera (not background)
     else:
         return np.mean(MIoU)
@@ -348,14 +407,15 @@ while True:
                     X, y = X.to(device), y.to(device)
                     pred = model(X)
 
+                    pred_binary = pred[0][1] > pred[0][0]
+                    pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+
                     plt.subplot(2, 2, 1)
                     plt.imshow(X[0][0].cpu().numpy())
                     plt.subplot(2, 2, 2)
                     plt.imshow(y[0].cpu().numpy())
                     plt.subplot(2, 2, 3)
-                    plt.imshow(pred[0][0].cpu().numpy())
-                    plt.subplot(2, 2, 4)
-                    plt.imshow(pred[0][1].cpu().numpy())
+                    plt.imshow(pred_binary_cpu_np, cmap='gray')
                     plt.show()
 
 
@@ -372,7 +432,7 @@ while True:
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
                     test_loss += loss_fn(pred, y).item()
                     # The problem is with mIoU
-                    # mIoU += get_mIoU_from_predictions(pred, y)
+                    mIoU += get_IoU_from_predictions(pred_binary, y)
 
         test_loss /= num_batches
         mIoU /= num_batches
