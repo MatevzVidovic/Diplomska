@@ -200,29 +200,37 @@ for X, y in test_dataloader:
 
 
 """
-The next threee functions are copies of:
+get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU are adapted from:
 from train_with_knowledge_distillation import get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU
-
-with slight changes to make it work nicely for our scenario.
 """
 
 
 
 
 
-
-
-
-
-
 def get_conf_matrix(predictions, targets):
+    """
+    predictions and targets can be matrixes or tensors.
+    
+    In both cases we only get a single confusion matrix
+    - in the tensor case it is simply agreggated over all examples in the batch.
+    """
+
+
     predictions_np = predictions.data.cpu().long().numpy()
     targets_np = targets.cpu().long().numpy()
     # for batch of predictions
     # if len(np.unique(targets)) != 2:
     #    print(len(np.unique(targets)))
 
-    assert (predictions.shape == targets.shape)
+    try:
+        assert (predictions.shape == targets.shape)
+    except:
+        print("predictions.shape: ", predictions.shape)
+        print("targets.shape: ", targets.shape)
+        raise AssertionError
+    
+
     num_classes = 2
 
     """
@@ -238,18 +246,51 @@ def get_conf_matrix(predictions, targets):
     """
     mask = (targets_np >= 0) & (targets_np < num_classes)
 
-    # print(mask) # 3d tensor true/false
+    # print(np.any(mask == False))
+    # False
+    """
+    I'm not sure why the mask is needed - wouldn't all the values be in this range?
+    And if they weren't, shouldn't we throw an error?
+    """
+
+
+    """
+    Example for 4 classes:
+    Possible target values are [0, 1, 2, 3].
+    
+    Possible label values are [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].
+    
+    Label values [0, 1, 2, 3] are those that are 0 in the target.
+    0 is for those who are also 0 in the prediction, 1 for those which are 1 in the prediction, etc.
+
+    Label values [4, 5, 6, 7] are those that are 1 in the target, etc.
+
+    Then this gets reshaped into a confusion matrix.
+    np.reshape fills the matrix row by row.
+    I don't like this, because in the 2 class case it is intuitive that background is the true negative,
+    and so this doesn't conform to the usual confusion matrix representation:
+    (predicted values as columns and target values as rows)
+    [[TP, FN],
+     [FP, TN]]
+
+    For this reason we transose the matrix along the other diagonal (not the usual diagonal of the transpose).
+    This is achieved by np.rot(mat, 2).T (rotate by 180 degrees and then transpose).
+    """
+
+    # print(mask) # 2d/3d tensor of true/false
     label = num_classes * targets_np[mask].astype('int') + predictions_np[
         mask]  # gt_image[mask] vzame samo tiste vrednosti, kjer je mask==True
-    # print(mask.shape)  # batch_size, 513, 513
-    # print(label.shape) # batch_size * 513 * 513 (= 1052676)
-    # print(label)  # vektor sestavljen iz 0, 1, 2, 3
-    count = np.bincount(label, minlength=num_classes ** 2)  # kolikokrat se ponovi vsaka unique vrednost
-    # print(count) # [816353  16014 204772  15537]
+    # print(mask.shape)  # batch_size, 128, 128
+    # print(label.shape) # batch_size * 128 * 128 (with batch_size==1:   = 16384)
+    # print(label)  # vector composed of 0, 1, 2, 3 (in the multilabel case)
+    count = np.bincount(label, minlength=num_classes ** 2)  # number of repetitions of each unique value
+    # print(count) # [14359   475    98  1452]
     confusion_matrix = count.reshape(num_classes, num_classes)
-    # [[738697 132480]
-    #  [106588  74911]]
-
+    confusion_matrix = np.rot90(confusion_matrix, 2).T
+    # print(confusion_matrix)
+    # [[ 1452   475]
+    #  [   98 14359]]
+    
     return confusion_matrix
 
 
@@ -257,8 +298,6 @@ def get_conf_matrix(predictions, targets):
 
 
 
-# On mIoU: It is particularly useful for multi-class segmentation tasks.
-# mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
 def get_IoU_from_predictions(predictions, targets):
     confusion_matrix = get_conf_matrix(predictions, targets)
     IoU = conf_matrix_to_IoU(confusion_matrix)
@@ -288,7 +327,36 @@ def conf_matrix_to_IoU(confusion_matrix):
             np.diag(confusion_matrix))
     
     return IoU.item(1) # only IoU for sclera (not background)
-    
+
+
+
+
+
+
+
+def get_F1_from_predictions(predictions, targets):
+    confusion_matrix = get_conf_matrix(predictions, targets)
+    IoU = conf_matrix_to_F1(confusion_matrix)
+
+    return IoU
+
+def conf_matrix_to_F1(confusion_matrix):
+
+    TP = confusion_matrix[0][0]
+    FN = confusion_matrix[0][1]
+    FP = confusion_matrix[1][0]
+    TN = confusion_matrix[1][1]
+
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+
+    F1 = 2 * (precision * recall) / (precision + recall)
+
+    return F1
+
+
+
+
 
 
 
@@ -394,13 +462,15 @@ while True:
     import matplotlib.pyplot as plt
 
 
-    IoUs = []
     avg_losses = []
+    IoUs = []
+    F1s = []
     def test(dataloader, model, loss_fn):
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
         model.eval()
-        test_loss, IoU = 0, 0
+        test_loss, IoU, F1 = 0, 0, 0
+        IoU_as_avg_on_matrixes = 0
         with torch.no_grad():
             for X, y in dataloader:
                     X, y = X.to(device), y.to(device)
@@ -416,34 +486,44 @@ while True:
                     test_loss += loss_fn(pred, y).item()
 
 
+                    pred_binary = pred[:, 1] > pred[:, 0]
+
+                    F1 += get_F1_from_predictions(pred_binary, y)
+                    IoU += get_IoU_from_predictions(pred_binary, y)
+
+
                     # X and y are tensors of a batch, so we have to go over them all
                     for i in range(batch_size):
 
                         pred_binary = pred[i][1] > pred[i][0]
                         pred_binary_cpu_np = (pred_binary.cpu()).numpy()
 
-                        plt.subplot(2, 2, 1)
-                        plt.imshow(X[i][0].cpu().numpy())
-                        plt.subplot(2, 2, 2)
-                        plt.imshow(y[i].cpu().numpy())
-                        plt.subplot(2, 2, 3)
-                        plt.imshow(pred_binary_cpu_np, cmap='gray')
-                        plt.show()
+                        # plt.subplot(2, 2, 1)
+                        # plt.imshow(X[i][0].cpu().numpy())
+                        # plt.subplot(2, 2, 2)
+                        # plt.imshow(y[i].cpu().numpy())
+                        # plt.subplot(2, 2, 3)
+                        # plt.imshow(pred_binary_cpu_np, cmap='gray')
+                        # plt.show()
 
                         curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
-                        print(f"Current IoU: {curr_IoU:>.6f}%")
-                        IoU += curr_IoU
+                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
+                        IoU_as_avg_on_matrixes += curr_IoU
 
 
 
 
-        test_loss /= num_batches # beacuse we are alreaddy adding batch means
-        IoU /= (num_batches * batch_size) 
+        test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
+        IoU /= num_batches
+        F1 /= num_batches
+        IoU_as_avg_on_matrixes /= (num_batches * batch_size)
 
-        print(f"Test Error: \n IoU: {(IoU):>.6f}%, Avg loss: {test_loss:>.8f} \n")
+        print(f"Test Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
+        # print(f"IoU_as_avg_on_matrixes: {IoU_as_avg_on_matrixes:>.6f}")
 
-        IoUs.append(IoU)
         avg_losses.append(test_loss)
+        IoUs.append(IoU)
+        F1s.append(F1)
         # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
         # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
