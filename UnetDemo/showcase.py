@@ -162,17 +162,17 @@ def get_data_loaders(**dataloading_args):
     print('path to file: ' + str(data_path))
 
     train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
-    valida_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
+    valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
-    validloader = DataLoader(valida_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
     testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
     print('train dataset len: ' + str(train_dataset.__len__()))
-    print('val dataset len: ' + str(valida_dataset.__len__()))
+    print('val dataset len: ' + str(valid_dataset.__len__()))
     print('test dataset len: ' + str(test_dataset.__len__()))
 
     return trainloader, validloader, testloader
@@ -221,6 +221,7 @@ def get_conf_matrix(predictions, targets):
     # for batch of predictions
     # if len(np.unique(targets)) != 2:
     #    print(len(np.unique(targets)))
+
     assert (predictions.shape == targets.shape)
     num_classes = 2
 
@@ -260,9 +261,9 @@ def get_conf_matrix(predictions, targets):
 # mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
 def get_IoU_from_predictions(predictions, targets):
     confusion_matrix = get_conf_matrix(predictions, targets)
-    mIoU = conf_matrix_to_IoU(confusion_matrix)
+    IoU = conf_matrix_to_IoU(confusion_matrix)
 
-    return mIoU
+    return IoU
 
 def conf_matrix_to_IoU(confusion_matrix):
     """
@@ -286,8 +287,6 @@ def conf_matrix_to_IoU(confusion_matrix):
             np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
             np.diag(confusion_matrix))
     
-
-    print("mIoU computed with only two classes. Backgorund omitted.")
     return IoU.item(1) # only IoU for sclera (not background)
     
 
@@ -331,7 +330,7 @@ def conf_matrix_to_mIoU(confusion_matrix):
             np.diag(confusion_matrix))
 
     if n_classes == 2:
-        print("mIoU computed with only two classes. Backgorund omitted.")
+        print("mIoU computed with only two classes. Background omitted.")
         return MIoU.item(1) # only IoU for sclera (not background)
     else:
         return np.mean(MIoU)
@@ -395,51 +394,60 @@ while True:
     import matplotlib.pyplot as plt
 
 
-    mIoUs = []
+    IoUs = []
     avg_losses = []
     def test(dataloader, model, loss_fn):
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
         model.eval()
-        test_loss, mIoU = 0, 0
+        test_loss, IoU = 0, 0
         with torch.no_grad():
             for X, y in dataloader:
                     X, y = X.to(device), y.to(device)
                     pred = model(X)
 
-                    pred_binary = pred[0][1] > pred[0][0]
-                    pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+                    # X and y are tensors of a batch, so we have to go over them all
+                    # NOPE. These 16 are all of the same picture.
+                    for i in range(batch_size):
 
-                    plt.subplot(2, 2, 1)
-                    plt.imshow(X[0][0].cpu().numpy())
-                    plt.subplot(2, 2, 2)
-                    plt.imshow(y[0].cpu().numpy())
-                    plt.subplot(2, 2, 3)
-                    plt.imshow(pred_binary_cpu_np, cmap='gray')
-                    plt.show()
+                        pred_binary = pred[0][1] > pred[0][0]
+                        pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+
+                        plt.subplot(2, 2, 1)
+                        plt.imshow(X[0][0].cpu().numpy())
+                        plt.subplot(2, 2, 2)
+                        plt.imshow(y[0].cpu().numpy())
+                        plt.subplot(2, 2, 3)
+                        plt.imshow(pred_binary_cpu_np, cmap='gray')
+                        plt.show()
+
+                        # print("X")
+                        # print(X)
+                        # print("y")
+                        # print(y)
 
 
-                    # print("pred")
-                    # print(pred)
-                    # print("y")
-                    # print(y)
-                    # print("pred.shape")
-                    # print(pred.shape)
-                    # print("y.shape")
-                    # print(y.shape)
+                        # print("pred")
+                        # print(pred)
+                        # print("y")
+                        # print(y)
+                        # print("pred.shape")
+                        # print(pred.shape)
+                        # print("y.shape")
+                        # print(y.shape)
 
-                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += loss_fn(pred, y).item()
-                    # The problem is with mIoU
-                    mIoU += get_IoU_from_predictions(pred_binary, y)
+                        # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+                        # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
+                        test_loss += loss_fn(pred, y).item()
+                        # The problem is with mIoU
+                        IoU += get_IoU_from_predictions(pred_binary, y[0])
 
-        test_loss /= num_batches
-        mIoU /= num_batches
+        test_loss /= num_batches # (num_batches * batch_size)
+        IoU /= num_batches # (num_batches * batch_size)
 
-        print(f"Test Error: \n mIoU: {(mIoU):>.6f}%, Avg loss: {test_loss:>.8f} \n")
+        print(f"Test Error: \n IoU: {(IoU):>.6f}%, Avg loss: {test_loss:>.8f} \n")
 
-        mIoUs.append(mIoU)
+        IoUs.append(IoU)
         avg_losses.append(test_loss)
         # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
         # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
