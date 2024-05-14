@@ -493,7 +493,7 @@ while True:
 
 
                     # X and y are tensors of a batch, so we have to go over them all
-                    for i in range(batch_size):
+                    for i in range(X.shape[0]):
 
                         pred_binary = pred[i][1] > pred[i][0]
                         pred_binary_cpu_np = (pred_binary.cpu()).numpy()
