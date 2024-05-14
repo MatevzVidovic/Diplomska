@@ -406,44 +406,39 @@ while True:
                     X, y = X.to(device), y.to(device)
                     pred = model(X)
 
+
+                    # loss_fn computes the mean loss for the entire batch.
+                    # We cold also get the loss for each image, but we don't need to.
+                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
+
+                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
+                    test_loss += loss_fn(pred, y).item()
+
+
                     # X and y are tensors of a batch, so we have to go over them all
-                    # NOPE. These 16 are all of the same picture.
                     for i in range(batch_size):
 
-                        pred_binary = pred[0][1] > pred[0][0]
+                        pred_binary = pred[i][1] > pred[i][0]
                         pred_binary_cpu_np = (pred_binary.cpu()).numpy()
 
                         plt.subplot(2, 2, 1)
-                        plt.imshow(X[0][0].cpu().numpy())
+                        plt.imshow(X[i][0].cpu().numpy())
                         plt.subplot(2, 2, 2)
-                        plt.imshow(y[0].cpu().numpy())
+                        plt.imshow(y[i].cpu().numpy())
                         plt.subplot(2, 2, 3)
                         plt.imshow(pred_binary_cpu_np, cmap='gray')
                         plt.show()
 
-                        # print("X")
-                        # print(X)
-                        # print("y")
-                        # print(y)
+                        curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
+                        print(f"Current IoU: {curr_IoU:>.6f}%")
+                        IoU += curr_IoU
 
 
-                        # print("pred")
-                        # print(pred)
-                        # print("y")
-                        # print(y)
-                        # print("pred.shape")
-                        # print(pred.shape)
-                        # print("y.shape")
-                        # print(y.shape)
 
-                        # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                        # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                        test_loss += loss_fn(pred, y).item()
-                        # The problem is with mIoU
-                        IoU += get_IoU_from_predictions(pred_binary, y[0])
 
-        test_loss /= num_batches # (num_batches * batch_size)
-        IoU /= num_batches # (num_batches * batch_size)
+        test_loss /= num_batches # beacuse we are alreaddy adding batch means
+        IoU /= (num_batches * batch_size) 
 
         print(f"Test Error: \n IoU: {(IoU):>.6f}%, Avg loss: {test_loss:>.8f} \n")
 

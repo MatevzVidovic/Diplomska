@@ -242,9 +242,6 @@ class IrisDataset(Dataset):
 
         image_path = osp.join(self.filepath,'Images',self.list_files[idx]+'.jpg')
 
-        print('image_path: ' + str(image_path))
-
-
         pil_img = Image.open(image_path).convert("L").resize((self.width, self.height), Image.BILINEAR) #ali Image.BICUBIC ali Image.LANCZOS
 
         #PREPROCESSING STEP FOR ALL TRAIN, VALIDATION AND TEST INPUTS
