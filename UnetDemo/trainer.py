@@ -40,7 +40,7 @@ flag_for_mIoU_computed_with_two_classes = False
 
 # Only means it goes into a separate test subfolder,
 # so it doesn't mess up the already built models.
-test_purposes = True
+test_purposes = False
 
 model_num = 0
 
@@ -52,7 +52,7 @@ model_name_2_model_class = {
     "unet" : UNet,
 }
 
-epochs = 5
+epochs = 1
 batch_size = 16
 learning_rate = 1e-3
 
@@ -641,7 +641,7 @@ while True:
     a = {"train_times": all_train_times, "avg_losses": avg_losses, "IoUs": IoUs, "F1s": F1s}
     new_df = pd.DataFrame.from_dict(a, orient='index')
     new_df = new_df.transpose()
-    new_df.to_csv(model_data_path + "train_times_" + str(prev_serial_num+1) + ".csv")
+    new_df.to_csv(model_data_path + "train_times_and_stats_" + str(prev_serial_num+1) + ".csv")
 
     print("Saved PyTorch Model State")
 

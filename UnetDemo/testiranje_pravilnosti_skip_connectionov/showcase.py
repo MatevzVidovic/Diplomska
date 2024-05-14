@@ -150,7 +150,7 @@ dataloading_args = {
     # DataLoader params
     "batch_size" : batch_size,
     "shuffle" : False, # TODO shuffle??
-    "num_workers" : 4,
+    "num_workers" : 1,
 }
 
 
@@ -348,15 +348,16 @@ while True:
                     X, y = X.to(device), y.to(device)
                     pred = model(X)
 
-                    plt.subplot(2, 2, 1)
-                    plt.imshow(X[0][0].cpu().numpy())
-                    plt.subplot(2, 2, 2)
-                    plt.imshow(y[0].cpu().numpy())
-                    plt.subplot(2, 2, 3)
-                    plt.imshow(pred[0][0].cpu().numpy())
-                    plt.subplot(2, 2, 4)
-                    plt.imshow(pred[0][1].cpu().numpy())
-                    plt.show()
+                    if False:
+                        plt.subplot(2, 2, 1)
+                        plt.imshow(X[0][0].cpu().numpy())
+                        plt.subplot(2, 2, 2)
+                        plt.imshow(y[0].cpu().numpy())
+                        plt.subplot(2, 2, 3)
+                        plt.imshow(pred[0][0].cpu().numpy())
+                        plt.subplot(2, 2, 4)
+                        plt.imshow(pred[0][1].cpu().numpy())
+                        plt.show()
 
 
                     # print("pred")

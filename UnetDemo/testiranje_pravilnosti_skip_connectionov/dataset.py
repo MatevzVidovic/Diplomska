@@ -172,6 +172,7 @@ class MaskToTensor(object):
 
 
 
+paths_so_far = []
 class IrisDataset(Dataset):
     def __init__(self, filepath, split='train', transform=None, n_classes=4, testrun=False, **kwargs):
         
@@ -180,6 +181,7 @@ class IrisDataset(Dataset):
         
         self.width = kwargs['width']
         self.height = kwargs['height']
+
         
         self.split = split
         self.classes = n_classes
@@ -241,6 +243,16 @@ class IrisDataset(Dataset):
     def __getitem__(self, idx):
 
         image_path = osp.join(self.filepath,'Images',self.list_files[idx]+'.jpg')
+
+        if image_path in paths_so_far:
+            print('image path already in paths_so_far')
+            print('image_path: ' + str(image_path))
+            input("Waiting for input...")
+        else:
+            paths_so_far.append(image_path)
+            print("Size of paths_so_far: " + str(len(paths_so_far)) + 1*"\n")
+
+
 
 
         pil_img = Image.open(image_path).convert("L").resize((self.width, self.height), Image.BILINEAR) #ali Image.BICUBIC ali Image.LANCZOS

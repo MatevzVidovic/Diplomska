@@ -62,7 +62,7 @@ class UNet(nn.Module):
 		logits = self.outc(x)
 		print("logits.shape:")
 		print(logits.shape)
-		input("Press Enter to continue...")
+		# input("Press Enter to continue...")
 		return logits
 
 class DoubleConv(nn.Module):
