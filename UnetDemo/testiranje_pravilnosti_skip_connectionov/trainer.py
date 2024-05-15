@@ -143,7 +143,7 @@ dataloading_args = {
     "height" : 128,
     
     # iris dataset params
-    "path_to_sclera_data" : "./sclera_data",
+    "path_to_sclera_data" : "../sclera_data",
     "transform" : transform,
     "n_classes" : 2,
 
