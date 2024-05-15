@@ -272,8 +272,18 @@ def get_conf_matrix(predictions, targets):
     (predicted values as columns and target values as rows)
     [[TP, FN],
      [FP, TN]]
-    For this reason we transose the matrix along the other diagonal (not the usual diagonal of the transpose).
-    This is achieved by np.rot(mat, 2).T (rotate by 180 degrees and then transpose).
+
+    First, we tried transposing along the anti-diagonal (np.rot90(confusion_matrix, 2).T), but this is wrong.
+    Just perform an antidiagonal transpose on a 3x3 matrix on paper by hand and keep track of the column and row labels.
+    They switch places. It's all wrong.
+
+    Instead, we shold flip the columns along their centre, and then flip the rows along their centre.
+    Essentially reshuffling them along the centre. This way the labels stay correctly corresponding after each of the operations.
+    
+    This means performing flipud and fliplr.
+    But this is actually the same as just doing
+    np.rot90(confusion_matrix, 2)
+    and not doing the transpose.
     """
 
     # print(mask) # 2d/3d tensor of true/false
@@ -285,7 +295,7 @@ def get_conf_matrix(predictions, targets):
     count = np.bincount(label, minlength=num_classes ** 2)  # number of repetitions of each unique value
     # print(count) # [14359   475    98  1452]
     confusion_matrix = count.reshape(num_classes, num_classes)
-    confusion_matrix = np.rot90(confusion_matrix, 2).T
+    confusion_matrix = np.rot90(confusion_matrix, 2)
     # print(confusion_matrix)
     # [[ 1452   475]
     #  [   98 14359]]
