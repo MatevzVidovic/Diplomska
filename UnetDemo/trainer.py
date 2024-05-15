@@ -18,7 +18,6 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 
 from torch.utils.data import Dataset
-import matplotlib.pyplot as plt
 
 from timeit import default_timer as timer
 
