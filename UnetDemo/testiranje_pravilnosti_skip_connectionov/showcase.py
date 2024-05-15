@@ -150,7 +150,7 @@ dataloading_args = {
     # DataLoader params
     "batch_size" : batch_size,
     "shuffle" : False, # TODO shuffle??
-    "num_workers" : 1,
+    "num_workers" : 0,
 }
 
 
@@ -186,11 +186,11 @@ train_dataloader, valida_dataloader, test_dataloader = get_data_loaders(**datalo
 
 
 
-for X, y in test_dataloader:
-    # print(X)
-    print(f"Shape of X [N, C, H, W]: {X.shape}")
-    print(f"Shape of y: {y.shape} {y.dtype}")
-    break
+# for X, y in test_dataloader:
+#     # print(X)
+#     print(f"Shape of X [N, C, H, W]: {X.shape}")
+#     print(f"Shape of y: {y.shape} {y.dtype}")
+#     break
 
 
 
