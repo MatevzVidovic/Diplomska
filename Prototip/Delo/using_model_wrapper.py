@@ -11,7 +11,7 @@ from dataset import IrisDataset, transform
 
 from ModelWrapper import ModelWrapper
 
-
+from ConvResourceCalc import ConvResourceCalc
 
 
 
@@ -132,4 +132,15 @@ if __name__ == "__main__":
 
     wrap_model.save()
 
-    wrap_model.test_showcase()
+    # wrap_model.test_showcase()
+
+
+    resource_calc = ConvResourceCalc(wrap_model)
+    resource_calc.calculate_resources(torch.randn(1, 1, 128, 128))
+    FLOPs = resource_calc.cur_flops
+    resource_dict = resource_calc.module_resources_dict
+
+    print(f"FLOPs: {FLOPs}")
+    print(f"Resource dict: {resource_dict}")
+
+
