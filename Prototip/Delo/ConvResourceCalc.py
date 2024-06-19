@@ -28,11 +28,11 @@ class ConvResourceCalc():
 
 
 
-    def calculate_layer(self, layer, x, module):
+    def calculate_layer(self, layer, x, tree_ix):
 
 
         y = layer.old_forward(x)
-        
+
         if isinstance(layer, nn.Conv2d):
             n_removed_filters = 0
             
@@ -47,8 +47,10 @@ class ConvResourceCalc():
             w = y.shape[3]
             cur_flops = h * w * layer.weight.size(0) * (layer.weight.size(1) - n_removed_filters) * layer.weight.size(2) * layer.weight.size(3)
 
-            self.module_resources_dict[module] = cur_flops
-            self.cur_flops += h * w * layer.weight.size(0) * (layer.weight.size(1) - n_removed_filters) * layer.weight.size(2) * layer.weight.size(3)
+            # self.module_resources_dict[module] = cur_flops
+            self.module_tree_ixs_2_flops_dict[tree_ix] = cur_flops
+            self.cur_flops += cur_flops
+            # self.cur_flops += h * w * layer.weight.size(0) * (layer.weight.size(1) - n_removed_filters) * layer.weight.size(2) * layer.weight.size(3)
             #self.original_flops += h * w * layer.weight.size(0) * layer.weight.size(1) * layer.weight.size(2) * layer.weight.size(3)
             #self.n_removed_filters += n_removed_filters
 
@@ -57,13 +59,16 @@ class ConvResourceCalc():
             # rezanje tega je samo posledica rezanja konvolucije, nikoli ne mores samo tega rezat, zato ga ne sestevam..
             pass
 
+
+        else:
+            self.module_tree_ixs_2_flops_dict[tree_ix] = 0
+
         
 
 
 
         return y
-
-
+    
 
     def calculate_resources(self, input_example):
         # tale ubistvu spremeni forward tako, da poklice trace_layer na vsakem. V trace nardis dejansko forward, poleg tega pa se
@@ -73,20 +78,62 @@ class ConvResourceCalc():
         #self.n_removed_filters = 0
         self.module_resources_dict = {}
 
-        def modify_forward(model):
+        self.module_tree_ixs_2_flops_dict = {}
+        self.module_tree_ixs_2_children_tree_ix_lists = {}
+        self.module_tree_ixs_2_name = {}
+
+        def modify_forward(model, curr_tree_ix=None):
+
             model_name = type(model).__name__.lower()
+
+            self.module_tree_ixs_2_flops_dict[curr_tree_ix] = 0
+            self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix] = []
+            self.module_tree_ixs_2_name[curr_tree_ix] = model_name
+
+
+
+
+            # We have to only change it for leaves, because some modules take skip connections and 
+            # the lambda function takes more parameters than we made it for.
+            """
+            x = self.up1(x5, x4)
+            TypeError: ConvResourceCalc.calculate_resources.<locals>.modify_forward.<locals>.new_forward.<locals>.lambda_forward() takes 1 positional argument but 2 were given
+            """
+            if self._is_leaf(model):
+                def new_forward(m):
+                    def lambda_forward(x):
+                        return self.calculate_layer(m, x, curr_tree_ix)
+                    return lambda_forward
+
+                model.old_forward = model.forward
+                model.forward = new_forward(model)
+
+
+
+
+
+            for ix, child in enumerate(model.children()):
+
+                new_tree_ix = (curr_tree_ix, ix)
+
+                self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix].append(new_tree_ix)
+
+                modify_forward(child, new_tree_ix)
+
+
+            # # Direct approach:
                         
-            for module in model.modules():
-                if isinstance(module, self.target_modules):
+            # for module in model.modules():
+            #     if isinstance(module, self.target_modules):
 
-                    def new_forward(layer):
-                        def lambda_forward(x):
-                            return self.calculate_layer(layer, x, module)
+            #         def new_forward(layer):
+            #             def lambda_forward(x):
+            #                 return self.calculate_layer(layer, x, module)
 
-                        return lambda_forward
+            #             return lambda_forward
 
-                    module.old_forward = module.forward
-                    module.forward = new_forward(module)
+            #         module.old_forward = module.forward
+            #         module.forward = new_forward(module)
 
 
 
@@ -94,17 +141,56 @@ class ConvResourceCalc():
             
             model_name = type(model).__name__.lower()
             
-            for module in model.modules():
-                print(module)
-                if isinstance(module, self.target_modules) and hasattr(module, 'old_forward'):
-                    module.forward = module.old_forward
-                    module.old_forward = None
+            for child in model.children():
+                # leaf node
+                if self._is_leaf(child) and hasattr(child, 'old_forward'):
+                    child.forward = child.old_forward
+                    child.old_forward = None
+                else:
+                    restore_forward(child)
+
+
+            # # Direct approach:
+
+            # for module in model.modules():
+            #     print(module)
+            #     if isinstance(module, self.target_modules) and hasattr(module, 'old_forward'):
+            #         module.forward = module.old_forward
+            #         module.old_forward = None
+
 
             print(10*"\n" + "Children:")
             for child in model.children():
                 print(child)
+        
+
+
+        # We have the FLOPs for the leaves. Elsewhere it is 0.
+        # Now we recursively calculate the FLOPs of middle modules.
+        def recursively_populate_resources(curr_tree_ix=None):
+
+            # print(self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix])
+            children_tree_ix_lists = self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix]
+
+            # If leaf, return what we have calculated.
+            if len(children_tree_ix_lists) == 0:
+                return self.module_tree_ixs_2_flops_dict[curr_tree_ix]
+
+
+            cur_flops = 0
+            for child_tree_ix in children_tree_ix_lists:
+                cur_flops += recursively_populate_resources(child_tree_ix)
+
+            self.module_tree_ixs_2_flops_dict[curr_tree_ix] = cur_flops
+            
+            return cur_flops
+            
+
 
         modify_forward(self.wrapper_model.model)
         input_example = input_example.to(self.wrapper_model.device)
         y = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
+        print(self.module_tree_ixs_2_name)
+        print(self.module_tree_ixs_2_flops_dict)
+        recursively_populate_resources()

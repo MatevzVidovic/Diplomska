@@ -138,7 +138,7 @@ if __name__ == "__main__":
     resource_calc = ConvResourceCalc(wrap_model)
     resource_calc.calculate_resources(torch.randn(1, 1, 128, 128))
     FLOPs = resource_calc.cur_flops
-    resource_dict = resource_calc.module_resources_dict
+    resource_dict = resource_calc.module_tree_ixs_2_flops_dict
 
     print(f"FLOPs: {FLOPs}")
     print(f"Resource dict: {resource_dict}")
