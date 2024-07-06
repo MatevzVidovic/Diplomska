@@ -17,6 +17,8 @@ import pickle
 
 from pruner import pruner
 
+from min_resource_percentage import min_resource_percentage
+
 
 
 test_purposes = True
@@ -158,6 +160,9 @@ if __name__ == "__main__":
 
 
 
+
+
+
     """
     This is proof of concept of how to get activations through hooks.
     It kind of already works, which is awesome.
@@ -204,5 +209,139 @@ if __name__ == "__main__":
 
     
 
+
+
+
+    min_res_percents = min_resource_percentage(resource_calc.module_tree_ixs_2_name)
+    min_res_percents.set_by_name("Conv2d", 0.5)
+
+    tree_ix_2_percentage_dict = {
+        (0,) : 0.2,
+        ((0,), 0) : 0.2,
+    }
+    min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+
+    print(min_res_percents.min_resource_percentage_dict)
+
+
+
+
+
+    """
+    Kind of an attempt at getting module names - could help with specifying connections.
+    """
+
+    def generator_to_list(generator):
+        return [name for name, module in generator]
+
+    def first_element(generator):
+        name, module = next(generator)
+        # return name
+        return module
+    
+    def second_element(generator):
+        name, module = next(generator)
+        name, module = next(generator)
+        return name
+        # return module
+
+    print(generator_to_list(resource_calc.module_tree_ixs_2_modules_themselves[(0,)].named_modules(remove_duplicate=False)))
+    # print(first_element(resource_calc.module_tree_ixs_2_modules_themselves[((None, 0), 0)].named_modules(remove_duplicate=False)))
+    # print(second_element(resource_calc.module_tree_ixs_2_modules_themselves[((None, 0), 0)].named_modules(remove_duplicate=False)))
+
+    print(generator_to_list(resource_calc.module_tree_ixs_2_modules_themselves[((0,), 0)].named_modules(remove_duplicate=False)))
+
+
+
+    """
+    NEW IDEA:
+    I will make an ordered list where there are only tree_ixs of the lowest level modules.
+    These are the onew we are actually concerned with when writing the conections lambda.
+    The user can then check the list and check the corresponding names.
+    This should make working with the tree_ixs easier.
+
+    If it doesn't work, the user can always still type the tree_ixs manually.
+    It isn't hard - they would mostly be copying and pasting them and only changing a numebr or two.
+    """
+
+    lowest_level_modules_tree_ixs = []
+    for tree_ix, children_list in resource_calc.module_tree_ixs_2_children_tree_ix_lists.items():
+        if len(children_list) == 0:
+            lowest_level_modules_tree_ixs.append(tree_ix)
+    
+    print(lowest_level_modules_tree_ixs)
+
+    def denest_tuple(tup):
+        returning_list = []
+        for item in tup:
+            if isinstance(item, tuple):
+                returning_list.extend(denest_tuple(item))
+            elif isinstance(item, int):
+                returning_list.append(item)
+        return returning_list
+    
+    def renest_tuple(lst):
+        curr_tuple = (lst[0],)
+        for item in lst[1:]:
+            curr_tuple = (curr_tuple, item)
+        return curr_tuple
+        
+    lowest_level_modules_denested_tree_ixs = [denest_tuple(tree_ix) for tree_ix in lowest_level_modules_tree_ixs]
+    print(lowest_level_modules_denested_tree_ixs)
+    
+    lowest_level_modules_denested_tree_ixs = sorted(lowest_level_modules_denested_tree_ixs)
+    print(lowest_level_modules_denested_tree_ixs)
+
+
+
+    sorted_lowest_level_modules_tree_ixs = [renest_tuple(lst) for lst in lowest_level_modules_denested_tree_ixs]
+    print(sorted_lowest_level_modules_tree_ixs)
+
+    lowest_level_modules_names = [resource_calc.module_tree_ixs_2_name[tree_ix] for tree_ix in sorted_lowest_level_modules_tree_ixs]
+    print(lowest_level_modules_names)
+
+    lowest_level_modules = sorted_lowest_level_modules_tree_ixs
+
+
+    """
+    I HAVE TO THINK MORE ABOUT HOW TO MAKE THIS EASIER.
+    LOWEST LEVEL IDEA IS NOT THE BEST.
+    MAYBE GO BY ORTING ALL MODULES OF A CERTAIN NAME AND CREATE THAT LIST.
+    THIS WAY YOU CAN ACCESS THE TREE_IXS BY SIMPLY CONNECTING THE TYPE INDEX.
+
+    WITH PARALLEL CONNECTIONS ONE WILL SIMPLY HAVE TO LOOK UP WHICH ONE CAME FIRST IN THIS LIST.
+    IT REQUIRES SOME MORE WORK FOR THE USER BUT THERE IS NO WAY TO DO IT PROGRAMATICALLY.
+    """
+
+
+
+    def unet_resource_lambda(tree_ix, filter_ix):
+
+        low_level_module_ix = lowest_level_modules.index(tree_ix)
+        idx = low_level_module_ix
+
+        next_idxs_list = [idx+1]
+
+        # if idx == 6:
+        #     next_idxs_list.append
+
+
+
+        # output is: [(goal_tree_ix_1, goal_filter_ix_1), (goal_tree_ix_2, goal_filter_ix_2),...] 
+                # Output of conv2 in each down block also goes to conv1 in corresponding up block
+        if layer_index == 1:
+            next_conv_idx = [2, 16]
+        elif layer_index == 3:
+            next_conv_idx = [4, 14]
+        elif layer_index == 5:
+            next_conv_idx = [6, 12]
+        elif layer_index == 7:
+            next_conv_idx = [8, 10]
+        # outc has no next convolution
+        elif layer_index >= 18:
+            next_conv_idx = []
+        # Every other convolution output just goes to the next one
+        else:
+            next_conv_idx = [layer_index + 1]
 
 

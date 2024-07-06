@@ -83,7 +83,7 @@ class ConvResourceCalc():
         self.module_tree_ixs_2_name = {}
         self.module_tree_ixs_2_modules_themselves = {}
 
-        def modify_forward(module, curr_tree_ix=None):
+        def modify_forward(module, curr_tree_ix=(0,)):
 
             module_name = type(module).__name__    #.lower()
 
@@ -169,7 +169,7 @@ class ConvResourceCalc():
 
         # We have the FLOPs for the leaves. Elsewhere it is 0.
         # Now we recursively calculate the FLOPs of middle modules.
-        def recursively_populate_resources(curr_tree_ix=None):
+        def recursively_populate_resources(curr_tree_ix=(0,)):
 
             # print(self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix])
             children_tree_ix_lists = self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix]

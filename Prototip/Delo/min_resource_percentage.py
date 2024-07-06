@@ -1,0 +1,36 @@
+
+
+class min_resource_percentage:
+
+    def __init__(self, tree_ix_2_name_dict):
+        self.tree_ix_2_name_dict = tree_ix_2_name_dict
+
+        self.min_resource_percentage_dict = {}
+        for tree_ix, _ in self.tree_ix_2_name_dict.items():
+            self.min_resource_percentage_dict[tree_ix] = 0.0
+    
+    def set_by_name(self, name, percentage):
+        
+        applicable_tree_ixs = []
+        for tree_ix, module_name in self.tree_ix_2_name_dict.items():
+            if module_name == name:
+                applicable_tree_ixs.append(tree_ix)
+        
+        assert len(applicable_tree_ixs) > 0, f"No module with name {name} found."
+
+        for tree_ix in applicable_tree_ixs:
+            self.min_resource_percentage_dict[tree_ix] = percentage
+        
+    
+    def set_by_tree_ix_list(self, tree_ix_list, percentage):
+        for tree_ix in tree_ix_list:
+            assert tree_ix in self.tree_ix_2_name_dict, f"Tree ix {tree_ix} not found in tree_ix_2_name_dict."
+            self.min_resource_percentage_dict[tree_ix] = percentage
+    
+    def set_by_tree_ix_dict(self, tree_ix_2_percentage_dict):
+        for tree_ix, percentage in tree_ix_2_percentage_dict.items():
+            assert tree_ix in self.tree_ix_2_name_dict, f"Tree ix {tree_ix} not found in tree_ix_2_name_dict."
+            self.min_resource_percentage_dict[tree_ix] = percentage
+            
+
+
