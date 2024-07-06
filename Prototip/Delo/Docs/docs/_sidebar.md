@@ -4,8 +4,7 @@
 - [Henlo](help.md)
 - [Main thingy](initial_readme_for_docs.md)
 - ConvResourceCalc.py
-  - ConvResourceCalc
-    - [\__init__]
+  - [ConvResourceCalc](ConvResourceCalc/ConvResourceCalc.md)
 - ModelWrapper.py
   - [get_conf_matrix()]
   - ModelWrapper
@@ -16,4 +15,6 @@
   - [3 plan](plan_logs/star_plan_3.md)
   - [2 plan](plan_logs/star_plan_2.md)
   - [1 plan](plan_logs/star_plan_1.md)
+- General logs
+  - [How to use pytorch hooks for activations](GeneralLogs/HowToUseHooksForActivations.md)
   

@@ -81,14 +81,16 @@ class ConvResourceCalc():
         self.module_tree_ixs_2_flops_dict = {}
         self.module_tree_ixs_2_children_tree_ix_lists = {}
         self.module_tree_ixs_2_name = {}
+        self.module_tree_ixs_2_modules_themselves = {}
 
-        def modify_forward(model, curr_tree_ix=None):
+        def modify_forward(module, curr_tree_ix=None):
 
-            model_name = type(model).__name__.lower()
+            module_name = type(module).__name__    #.lower()
 
             self.module_tree_ixs_2_flops_dict[curr_tree_ix] = 0
             self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix] = []
-            self.module_tree_ixs_2_name[curr_tree_ix] = model_name
+            self.module_tree_ixs_2_name[curr_tree_ix] = module_name
+            self.module_tree_ixs_2_modules_themselves[curr_tree_ix] = module
 
 
 
@@ -99,20 +101,20 @@ class ConvResourceCalc():
             x = self.up1(x5, x4)
             TypeError: ConvResourceCalc.calculate_resources.<locals>.modify_forward.<locals>.new_forward.<locals>.lambda_forward() takes 1 positional argument but 2 were given
             """
-            if self._is_leaf(model):
+            if self._is_leaf(module):
                 def new_forward(m):
                     def lambda_forward(x):
                         return self.calculate_layer(m, x, curr_tree_ix)
                     return lambda_forward
 
-                model.old_forward = model.forward
-                model.forward = new_forward(model)
+                module.old_forward = module.forward
+                module.forward = new_forward(module)
 
 
 
 
 
-            for ix, child in enumerate(model.children()):
+            for ix, child in enumerate(module.children()):
 
                 new_tree_ix = (curr_tree_ix, ix)
 
@@ -123,17 +125,17 @@ class ConvResourceCalc():
 
             # # Direct approach:
                         
-            # for module in model.modules():
-            #     if isinstance(module, self.target_modules):
+            # for submodule in module.modules():
+            #     if isinstance(submodule, self.target_modules):
 
             #         def new_forward(layer):
             #             def lambda_forward(x):
-            #                 return self.calculate_layer(layer, x, module)
+            #                 return self.calculate_layer(layer, x, submodule)
 
             #             return lambda_forward
 
-            #         module.old_forward = module.forward
-            #         module.forward = new_forward(module)
+            #         submodule.old_forward = submodule.forward
+            #         submodule.forward = new_forward(submodule)
 
 
 
@@ -152,16 +154,16 @@ class ConvResourceCalc():
 
             # # Direct approach:
 
-            # for module in model.modules():
-            #     print(module)
-            #     if isinstance(module, self.target_modules) and hasattr(module, 'old_forward'):
-            #         module.forward = module.old_forward
-            #         module.old_forward = None
+            # for submodule in module.modules():
+            #     print(submodule)
+            #     if isinstance(submodule, self.target_modules) and hasattr(submodule, 'old_forward'):
+            #         submodule.forward = submodule.old_forward
+            #         submodule.old_forward = None
 
 
-            print(10*"\n" + "Children:")
-            for child in model.children():
-                print(child)
+            # print(10*"\n" + "Children:")
+            # for child in module.children():
+            #     print(child)
         
 
 
@@ -191,6 +193,8 @@ class ConvResourceCalc():
         input_example = input_example.to(self.wrapper_model.device)
         y = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
-        print(self.module_tree_ixs_2_name)
-        print(self.module_tree_ixs_2_flops_dict)
+        # print(self.module_tree_ixs_2_name)
+        # print(self.module_tree_ixs_2_flops_dict)
         recursively_populate_resources()
+        # print(self.module_tree_ixs_2_flops_dict)
+        # print(self.cur_flops)

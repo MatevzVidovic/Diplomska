@@ -13,10 +13,9 @@ from ModelWrapper import ModelWrapper
 
 from ConvResourceCalc import ConvResourceCalc
 
+import pickle
 
-
-
-
+from pruner import pruner
 
 
 
@@ -142,5 +141,68 @@ if __name__ == "__main__":
 
     print(f"FLOPs: {FLOPs}")
     print(f"Resource dict: {resource_dict}")
+
+
+    # pickle resource_dict
+    with open("initial_resource_dict.pkl", "wb") as f:
+        pickle.dump(resource_dict, f)
+    
+
+
+
+
+
+
+
+
+
+
+
+    """
+    This is proof of concept of how to get activations through hooks.
+    It kind of already works, which is awesome.
+    """
+
+    print(wrap_model.model)
+
+    # print(resource_calc.module_tree_ixs_2_modules_themselves)
+
+    print(resource_calc.module_tree_ixs_2_name)
+
+
+    conv_modules_tree_ixs = []
+    for key, value in resource_calc.module_tree_ixs_2_name.items():
+        if value == "Conv2d":
+            conv_modules_tree_ixs.append(key)
+    
+    print(conv_modules_tree_ixs)
+
+
+    activations = {}
+    def get_activation(tree_ix):
+        def hook(model, input, output):
+            activations[tree_ix] = output.detach()
+        return hook
+
+    tree_ix_2_hook_handle = {}
+    for tree_ix in conv_modules_tree_ixs:
+        module = resource_calc.module_tree_ixs_2_modules_themselves[tree_ix]
+        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+    
+    input_tensor = torch.randn(1, 1, 128, 128)
+    wrap_model.model.eval()
+    with torch.no_grad():
+        model(input_tensor)
+    
+    print(activations)
+
+
+    # This shows how to remove hooks when they are no longer needed.
+    # Tiis can save memory.
+    for tree_ix, hook_handle in tree_ix_2_hook_handle.items():
+        hook_handle.remove()
+
+    
+
 
 

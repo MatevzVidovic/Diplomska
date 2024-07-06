@@ -261,6 +261,8 @@ class ModelWrapper:
             else "cpu"
         )
 
+        print(f"Device: {self.device}")
+
 
 
         self.model = model.to(self.device)
