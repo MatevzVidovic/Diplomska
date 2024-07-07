@@ -270,7 +270,7 @@ if __name__ == "__main__":
     print(accessing_first_module)
     # So it makes sense to just always use op.attrgetter() instead of getattr().
 
-    input("Press enter to continue.")
+    # input("Press enter to continue.")
 
 
 
@@ -284,21 +284,19 @@ if __name__ == "__main__":
 
     """
     NEW IDEA:
-    I will make an ordered list where there are only tree_ixs of the lowest level modules.
-    These are the onew we are actually concerned with when writing the conections lambda.
+    I will make an ordered list where there are only tree_ixs of the lowest level modules - these are the onew who actually get pruned.
+    These are the ones we are actually concerned with when writing the conections lambda.
     The user can then check the list and check the corresponding names.
     This should make working with the tree_ixs easier.
 
     If it doesn't work, the user can always still type the tree_ixs manually.
     It isn't hard - they would mostly be copying and pasting them and only changing a numebr or two.
+
+    However, it is kind of hard to know what is the ordinal number of the lowest level module.
+    This is why lower we make a better method.
     """
 
-    lowest_level_modules_tree_ixs = []
-    for tree_ix, children_list in resource_calc.module_tree_ixs_2_children_tree_ix_lists.items():
-        if len(children_list) == 0:
-            lowest_level_modules_tree_ixs.append(tree_ix)
-    
-    print(lowest_level_modules_tree_ixs)
+
 
     def denest_tuple(tup):
         returning_list = []
@@ -314,16 +312,30 @@ if __name__ == "__main__":
         for item in lst[1:]:
             curr_tuple = (curr_tuple, item)
         return curr_tuple
-        
-    lowest_level_modules_denested_tree_ixs = [denest_tuple(tree_ix) for tree_ix in lowest_level_modules_tree_ixs]
-    print(lowest_level_modules_denested_tree_ixs)
     
-    lowest_level_modules_denested_tree_ixs = sorted(lowest_level_modules_denested_tree_ixs)
-    print(lowest_level_modules_denested_tree_ixs)
+
+    def sort_tree_ixs(list_of_tree_ixs):
+        
+        denested_list = [denest_tuple(tree_ix) for tree_ix in list_of_tree_ixs]
+        
+        sorted_denested_list = sorted(denested_list)
+
+        sorted_list = [renest_tuple(lst) for lst in sorted_denested_list]
+
+        # print(denested_list)
+        # print(sorted_denested_list)
+        return sorted_list
 
 
+    lowest_level_modules_tree_ixs = []
+    for tree_ix, children_list in resource_calc.module_tree_ixs_2_children_tree_ix_lists.items():
+        if len(children_list) == 0:
+            lowest_level_modules_tree_ixs.append(tree_ix)
+    
+    print(lowest_level_modules_tree_ixs)
 
-    sorted_lowest_level_modules_tree_ixs = [renest_tuple(lst) for lst in lowest_level_modules_denested_tree_ixs]
+
+    sorted_lowest_level_modules_tree_ixs = sort_tree_ixs(lowest_level_modules_tree_ixs)
     print(sorted_lowest_level_modules_tree_ixs)
 
     lowest_level_modules_names = [resource_calc.module_tree_ixs_2_name[tree_ix] for tree_ix in sorted_lowest_level_modules_tree_ixs]
@@ -347,11 +359,124 @@ if __name__ == "__main__":
     I guess:
     - find all tree_ixs of a certain name
     - sort them with denesting and renesting as above
-    - voila.
+    - voila. This is the list you want - you can access the tree_ix as the ordinal number of this type of layer.
     Just make a method where you pass a name and you get the sorted list.
     This should make things a lot easier.
     """
 
+    tree_ix_2_layer_name = resource_calc.module_tree_ixs_2_name
+
+    def get_ordered_list_of_tree_ixs_for_layer_name(module_tree_ixs_2_name, layer_name):
+        
+        applicable_tree_ixs = []
+        for tree_ix, module_name in module_tree_ixs_2_name.items():
+            if module_name == layer_name:
+                applicable_tree_ixs.append(tree_ix)
+        
+        assert len(applicable_tree_ixs) > 0, f"No module with name {layer_name} found."
+
+        sorted_applicable_tree_ixs = sort_tree_ixs(applicable_tree_ixs)
+
+        return sorted_applicable_tree_ixs
+    
+    conv_tree_ixs = get_ordered_list_of_tree_ixs_for_layer_name(tree_ix_2_layer_name, "Conv2d")
+    print(5*"\n" + "Example of all Conv2d layers list:")
+    print(conv_modules_tree_ixs)
+    names_ov_conv_tree_ixs = [tree_ix_2_layer_name[tree_ix] for tree_ix in conv_tree_ixs]
+    print(names_ov_conv_tree_ixs)
+
+    
+    
+
+
+    """
+    Great idea to visualize these tree_ixs and their names:
+    
+
+    how to do this in python?
+    I have a dictionary: tree_ix_2_layer_name
+    Tree ixs are tuples like so: ((0,), 1), 0), 2) - which is the path down a virtual tree (zeroth node (root), then first child, then zeroth child, then second child. I have such tree_ixs for both leaves and inside nodes.
+
+    How to accomplish this in python:
+
+    - naredit tree ix visualiser. Naj se izriše pravokotnik čez cel ekran. Zgornja 2 centimetra piše Unet in zraven njegov tree_ix. Kar je ostalo spodaj se razseka po širini na toliko delov, iz kolikor je sestavljen Unet. Potem  Za vsak ta del storimo isto naprej. Na najnižji vrstici lahko sledimo bottom level layerjem ki so actual building vlocks po katerih input potuje dalje.
+    Tako se bo actually very simply dalo pogledat, kater tree_ix ima nek blok, in kater zapovrsti tip bloka je to.
+    """
+
+
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+
+    # def denest_tuple_to_tuple(tup):
+    #     new_tup = tuple(denest_tuple(tup))
+    #     return new_tup
+
+    def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth):
+        # Draw the rectangle and label it
+
+        # which of it's name is it?
+        this_name_tree_ixs = get_ordered_list_of_tree_ixs_for_layer_name(tree_ix_2_layer_name, layer_name)
+        # print(this_name_tree_ixs)
+        # print(ix)
+        ordered_ix = this_name_tree_ixs.index(ix)
+
+        # ordered_ix = -1        
+        # for curr_ix, tree_ix in enumerate(this_name_tree_ixs):
+        #     if curr_ix == ix:
+        #         ordered_ix = curr_ix
+        #         break
+        # if ordered_ix == -1:
+        #     raise ValueError(f"tree_ix not found: {ix}")
+
+        
+
+        ax.add_patch(patches.Rectangle((x, y), width, height, edgecolor='black', facecolor='none'))
+        ax.text(x + width/2, y + height/2, f'{ordered_ix}. {layer_name}\n{ix}', ha='center', va='center')
+
+        # Find children of the current index
+        children = [key for key in tree_ix_2_layer_name if key[0] == ix]
+        if children:
+            child_width = width / len(children)
+            for i, child in enumerate(sort_tree_ixs(children)):
+                child_name = tree_ix_2_layer_name[child]
+                draw_tree(child, child_name, ax, x + i * child_width, y - height, child_width, height, max_depth - 1)
+
+    def visualize_tree(tree, ax, width=1, height=0.1):
+        max_depth = max(len(denest_tuple(k)) for k in tree.keys())
+        total_height = max_depth * height
+        root_ix = (0,)
+        root_name = tree[root_ix]
+        draw_tree(root_ix, root_name, ax, 0, total_height, width, height, max_depth)
+
+    fig, ax = plt.subplots()
+    visualize_tree(tree_ix_2_layer_name, ax)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """
+    THIS HERE IS THE START OF BUILDING A CONNECTION LAMBDA
+    based on the _get_next_conv_id_list_recursive()
+    It is very early stage.
+    """
 
 
     def unet_resource_lambda(tree_ix, filter_ix):
@@ -382,6 +507,12 @@ if __name__ == "__main__":
         # Every other convolution output just goes to the next one
         else:
             next_conv_idx = [layer_index + 1]
+
+
+
+
+
+
 
 
 
