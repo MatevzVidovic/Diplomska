@@ -155,8 +155,9 @@ if __name__ == "__main__":
 
 
     # pickle resource_dict
-    with open("initial_resource_dict.pkl", "wb") as f:
-        pickle.dump(resource_dict, f)
+    with open("initial_conv_resource_calc.pkl", "wb") as f:
+        to_pickle = resource_calc.get_copy_for_pickle()
+        pickle.dump(to_pickle, f)
     
 
 
@@ -519,7 +520,7 @@ if __name__ == "__main__":
 
 
         # Oh, I see. This is easily programmable.
-        # Just use "initial_resource_dict.pkl" and use 
+        # Just use "initial_conv_resource_calc.pkl" and use 
         # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
         # And that's it haha.
 
@@ -664,8 +665,12 @@ if __name__ == "__main__":
         #     next_conv_idx = [layer_index + 1]
 
 
+    with open("initial_conv_resource_calc.pkl", "rb") as f:
+        initial_resource_calc = pickle.load(f)
 
+    pruner_instance = pruner(wrap_model, min_res_percents, initial_resource_calc, unet_resource_lambda, None)
 
+    print(pruner_instance.initial_conv_resource_calc.module_tree_ix_2_weights_dimensions)
 
 
 

@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import copy
+
 
 
 
@@ -18,7 +20,27 @@ class ConvResourceCalc():
             self.target_modules = (nn.Conv2d, nn.BatchNorm2d, nn.ReLU, nn.Dropout, nn.Upsample, nn.ConvTranspose2d)
         else:
             self.target_modules = target_modules
+    
 
+    def get_copy_for_pickle(self):
+
+        # deepcopy uses pickle in the background, so we have to do this:
+        temp_wrapper_model = self.wrapper_model
+        self.wrapper_model = None
+
+        # It pickles without doing the following, but that is useless anyways,
+        #  because it's pointing to an old model.
+        # So better to cause an error than to just be a bug.
+        temp_dict = self.module_tree_ixs_2_modules_themselves
+        self.module_tree_ixs_2_modules_themselves = None
+
+        picleable_object = copy.deepcopy(self)
+        
+        
+        self.wrapper_model = temp_wrapper_model
+        self.module_tree_ixs_2_modules_themselves = temp_dict
+
+        return picleable_object
 
 
     def _get_len_of_generator(self, gen):
