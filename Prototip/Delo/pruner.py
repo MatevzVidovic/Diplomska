@@ -3,7 +3,7 @@
 
 class pruner:
 
-    def __init__(self, wrapper_model, min_resource_percentage_dict, initial_resource_dict ,connection_lambda, filter_importance_lambda):
+    def __init__(self, wrapper_model, min_resource_percentage_dict, initial_resource_dict, connection_lambda, filter_importance_lambda):
         self.wrapper_model = wrapper_model
         self.initial_resource_dict = initial_resource_dict
         self.min_resource_percentage_dict = min_resource_percentage_dict

@@ -144,21 +144,20 @@ if __name__ == "__main__":
 
     resource_calc = ConvResourceCalc(wrap_model)
     resource_calc.calculate_resources(torch.randn(1, 1, 128, 128))
-    FLOPs = resource_calc.cur_flops
+    FLOPs = resource_calc.all_flops_num
     resource_dict = resource_calc.module_tree_ixs_2_flops_dict
 
     print(f"FLOPs: {FLOPs}")
     print(f"Resource dict: {resource_dict}")
+    print(f"Weight dimensions: {resource_calc.module_tree_ix_2_weights_dimensions}")
+    print(f"Weight numbers: {resource_calc.module_tree_ix_2_weights_num}")
+
 
 
     # pickle resource_dict
     with open("initial_resource_dict.pkl", "wb") as f:
         pickle.dump(resource_dict, f)
     
-
-
-
-
 
 
 
@@ -186,13 +185,16 @@ if __name__ == "__main__":
         if value == "Conv2d":
             conv_modules_tree_ixs.append(key)
     
+
     print(conv_modules_tree_ixs)
 
 
     activations = {}
     def get_activation(tree_ix):
         def hook(model, input, output):
-            activations[tree_ix] = output.detach()
+            if tree_ix not in activations:
+                activations[tree_ix] = []
+            activations[tree_ix].append(output.detach())
         return hook
 
     tree_ix_2_hook_handle = {}
@@ -200,16 +202,32 @@ if __name__ == "__main__":
         module = resource_calc.module_tree_ixs_2_modules_themselves[tree_ix]
         tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
     
+    print(activations)
+
     input_tensor = torch.randn(1, 1, 128, 128)
     wrap_model.model.eval()
     with torch.no_grad():
         model(input_tensor)
     
-    print(activations)
+    # print(activations)
+
+    print(f"Number of activations for [((((0,), 0), 0), 0)]: {len([((((0,), 0), 0), 0)])}")
+    print(activations[((((0,), 0), 0), 0)][0].shape)
+
+
+    # input_tensor = torch.randn(1, 1, 128, 128)
+    # wrap_model.model.eval()
+    # with torch.no_grad():
+    #     model(input_tensor)
+    
+
+    # print(activations[((((0,), 0), 0), 0)].shape)
+
+
 
 
     # This shows how to remove hooks when they are no longer needed.
-    # Tiis can save memory.
+    # This can save memory.
     for tree_ix, hook_handle in tree_ix_2_hook_handle.items():
         hook_handle.remove()
 
@@ -347,7 +365,7 @@ if __name__ == "__main__":
     """
     I HAVE TO THINK MORE ABOUT HOW TO MAKE THIS EASIER.
     LOWEST LEVEL IDEA IS NOT THE BEST.
-    MAYBE GO BY ORTING ALL MODULES OF A CERTAIN NAME AND CREATE THAT LIST.
+    MAYBE GO BY SORTING ALL MODULES OF A CERTAIN NAME AND CREATE THAT LIST.
     THIS WAY YOU CAN ACCESS THE TREE_IXS BY SIMPLY CONNECTING THE TYPE INDEX.
 
     WITH PARALLEL CONNECTIONS ONE WILL SIMPLY HAVE TO LOOK UP WHICH ONE CAME FIRST IN THIS LIST.
@@ -382,8 +400,8 @@ if __name__ == "__main__":
     conv_tree_ixs = get_ordered_list_of_tree_ixs_for_layer_name(tree_ix_2_layer_name, "Conv2d")
     print(5*"\n" + "Example of all Conv2d layers list:")
     print(conv_modules_tree_ixs)
-    names_ov_conv_tree_ixs = [tree_ix_2_layer_name[tree_ix] for tree_ix in conv_tree_ixs]
-    print(names_ov_conv_tree_ixs)
+    names_of_conv_tree_ixs = [tree_ix_2_layer_name[tree_ix] for tree_ix in conv_tree_ixs]
+    print(names_of_conv_tree_ixs)
 
     
     
@@ -414,11 +432,12 @@ if __name__ == "__main__":
     def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth):
         # Draw the rectangle and label it
 
-        # which of it's name is it?
+        # which of its' name is it?
         this_name_tree_ixs = get_ordered_list_of_tree_ixs_for_layer_name(tree_ix_2_layer_name, layer_name)
         # print(this_name_tree_ixs)
         # print(ix)
         ordered_ix = this_name_tree_ixs.index(ix)
+
 
         # ordered_ix = -1        
         # for curr_ix, tree_ix in enumerate(this_name_tree_ixs):
@@ -428,10 +447,29 @@ if __name__ == "__main__":
         # if ordered_ix == -1:
         #     raise ValueError(f"tree_ix not found: {ix}")
 
+        display_string = f'{ordered_ix}. {layer_name}\n{ix}'
+
+
+        # The reason for this is, that when writing the connection lambda,
+        # which is used for pruning, we generally only care about the connections
+        # to lowest level modules.
+        # These are modules that appear the lowest in the tree, and are the ones that actually 
+        # do the work. Data passes through them. They arent just composites of less complex modules.
+        # They are the actual building blocks.
+        if ix in lowest_level_modules:
+            lowest_level_modules_index = lowest_level_modules.index(ix)
+            display_string += f"\n{lowest_level_modules_index}. LLM"
+        
+
+        if ix in resource_calc.module_tree_ix_2_weights_dimensions:
+            display_string += f"\n{resource_calc.module_tree_ix_2_weights_dimensions[ix]}"
+
+        
+
         
 
         ax.add_patch(patches.Rectangle((x, y), width, height, edgecolor='black', facecolor='none'))
-        ax.text(x + width/2, y + height/2, f'{ordered_ix}. {layer_name}\n{ix}', ha='center', va='center')
+        ax.text(x + width/2, y + height/2, display_string, ha='center', va='center')
 
         # Find children of the current index
         children = [key for key in tree_ix_2_layer_name if key[0] == ix]
@@ -467,6 +505,41 @@ if __name__ == "__main__":
 
 
 
+    def unet_tree_ix_2_skip_connection_start(tree_ix):
+
+        # It could be done programatically, however:
+        # Assuming the layers that have skip connections have only one source of them,
+        # we could calculate how many inputs come from the previous layer.
+        # That is then the starting ix of skip connections.
+
+        # To make this function, go look in the drawn matplotlib graph.
+        # On the upstream, just look at thhe convolution's weight dimensions.
+        # (output_dimensions - input_dimensions) is the ix of the first skip connection
+
+
+
+        # Oh, I see. This is easily programmable.
+        # Just use "initial_resource_dict.pkl" and use 
+        # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
+        # And that's it haha.
+
+        conv_ix = None
+        if tree_ix in conv_tree_ixs:
+            conv_ix = conv_tree_ixs.index(tree_ix)
+
+            if conv_ix == 16:
+                return 64
+            elif conv_ix == 14:
+                return 128
+            elif conv_ix == 12:
+                return 256
+            elif conv_ix == 10:
+                return 512
+
+
+        else:
+            return None
+        
 
 
 
@@ -480,33 +553,115 @@ if __name__ == "__main__":
 
 
     def unet_resource_lambda(tree_ix, filter_ix):
+        # f(tree_ix, filter_ix) -> [(goal_tree_ix_1, goal_filter_ix_1), (goal_tree_ix_2, goal_filter_ix_2),...]
 
-        low_level_module_ix = lowest_level_modules.index(tree_ix)
-        idx = low_level_module_ix
+        conn_destinations = []
 
-        next_idxs_list = [idx+1]
+        # we kind of only care about convolutional modules.
+        # We just need to prune there (and possibly something with the batch norm layer)
+        # So it would make sense to transform the tree_ix to the ordinal number of 
+        # the convolutional module, and work with that ix instead.
+
+        conv_ix = None
+        if tree_ix in conv_tree_ixs:
+            conv_ix = conv_tree_ixs.index(tree_ix)
+            conn_destinations.append((conv_ix+1, filter_ix))
+
+        # We made it so that for conv layers who receive as input the previous layer and a skip connection
+        # the first filters are of the previous layer. This makes the line above as elegant as it is.
+        # We will, however, have to deal with more trouble with skip connections. 
+
+        
+        # For the more general option (e.g. to include a possible batchnorm pruning) 
+        # we can instead work with "lowest_level_modules" indexes.
+        # These are modules that appear the lowest in the tree, and are the ones that actually 
+        # do the work. Data passes through them. They arent just composites of less complex modules.
+        # They are the actual building blocks.
+
+        LLM_ix = None
+        if tree_ix in lowest_level_modules:
+            LLM_ix = lowest_level_modules.index(tree_ix)
+
+
+        # We already handled the regular connections for convolutional networks.
+        # Now, here come skip connections.
+        # For explanation, look at the graphic in the original U-net paper.
+        
+        # We have to know where the skip connections start.
+        # What real index is the zeroth index of the skip connections for the goal layer?
+        # In this way we can then use the tree_ix to get the base ix.
+
+        # For this, we will for now create a second function where we hardcode this.
+        # It could be done programatically, however:
+        # Assuming the layers that have skip connections have only one source of them,
+        # we could calculate how many inputs come from the previous layer.
+        # That is then the starting ix of skip connections.
+
+        # To do this, we look at the code where the skip connections of the model are defined:
+        # def forward(self, x):
+            # x1 = self.inc(x)
+            # x2 = self.down1(x1)
+            # x3 = self.down2(x2)
+            # x4 = self.down3(x3)
+            # x5 = self.down4(x4)
+            # x = self.up1(x5, x4)
+            # x = self.up2(x, x3)
+            # x = self.up3(x, x2)
+            # x = self.up4(x, x1)
+            # logits = self.outc(x)
+            # return logits
+        
+        # We then look at the graphic of our network. We see that the inc block and first three down blocks create skip connections.
+        # Therefore the last (second) convolution in those blocks will be senging the skip connection forward.
+        # This is how we identify the particular convolutional modules (LLMs) that are involved in skip connections.
+        
+
+        # if conv_ix in [1, 3, 5, 7]:
+        
+        goal_tree_ix = None
+        if conv_ix == 1:
+            goal_tree_ix = 16
+        elif conv_ix == 3:
+            goal_tree_ix = 14
+        elif conv_ix == 5:
+            goal_tree_ix = 12
+        elif conv_ix == 7:
+            goal_tree_ix = 10
+        
+        if goal_tree_ix is not None:
+            goal_filter_ix = filter_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_tree_ix])
+            conn_destinations.append((goal_tree_ix, goal_filter_ix))
+
+        # outc has no next convolution
+        if conv_ix == 18:
+            conn_destinations = []
+        
+        return conn_destinations
+
+
+        
 
         # if idx == 6:
         #     next_idxs_list.append
 
 
 
-        # output is: [(goal_tree_ix_1, goal_filter_ix_1), (goal_tree_ix_2, goal_filter_ix_2),...] 
-                # Output of conv2 in each down block also goes to conv1 in corresponding up block
-        if layer_index == 1:
-            next_conv_idx = [2, 16]
-        elif layer_index == 3:
-            next_conv_idx = [4, 14]
-        elif layer_index == 5:
-            next_conv_idx = [6, 12]
-        elif layer_index == 7:
-            next_conv_idx = [8, 10]
-        # outc has no next convolution
-        elif layer_index >= 18:
-            next_conv_idx = []
-        # Every other convolution output just goes to the next one
-        else:
-            next_conv_idx = [layer_index + 1]
+        # # output is: [(goal_tree_ix_1, goal_filter_ix_1), (goal_tree_ix_2, goal_filter_ix_2),...] 
+        #         # Output of conv2 in each down block also goes to conv1 in corresponding up block
+        # if layer_index == 1:
+        #     next_conv_idx = [2, 16]
+        # elif layer_index == 3:
+        #     next_conv_idx = [4, 14]
+        # elif layer_index == 5:
+        #     next_conv_idx = [6, 12]
+        # elif layer_index == 7:
+        #     next_conv_idx = [8, 10]
+        # # outc has no next convolution
+        # elif layer_index >= 18:
+        #     next_conv_idx = []
+        # # Every other convolution output just goes to the next one
+        # else:
+        #     next_conv_idx = [layer_index + 1]
 
 
 
@@ -674,7 +829,20 @@ disable_filter(device, model, name_index):
 - from the name, get what layer_index it is (_get_layer_index())
 - from the layer_index, get a list of layer indexes of the next convolutions (_get_next_conv_id_list_recursive())
 - go through the list and prune based on these layer:indexes (_prune_next_layer())
-(but in this last step the batch norm isn't pruned, which I don't understand)
+     - this calls _layer_index_to_conv, which returns the pointer to layer to prune.
+     It literally gets the layer by the name like this: (calculates names of blocks based on the index)
+     layer_index -= 2
+            du = 'up' if layer_index // 8 else 'down'
+            block = layer_index % 8 // 2 + 1
+            layer = layer_index % 2 + 1
+            block = op.attrgetter(f'{du}{block}.conv')(model)
+
+!!!! i get it now - (but in this last step the batch norm isn't pruned, which I don't understand)
+The next layers only have their input size changed, not the output.
+The layer is:   filter_num x width x height x input_channels
+The initial pruned layer gets_ filter_num -= 1
+The subsequent layers get their input_channels -= 1, so their output is actually the same.
+It's a different kind of pruning.
 """
 
 
