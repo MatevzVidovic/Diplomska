@@ -205,10 +205,11 @@ if __name__ == "__main__":
     
     print(activations)
 
-    input_tensor = torch.randn(1, 1, 128, 128)
     wrap_model.model.eval()
     with torch.no_grad():
-        model(input_tensor)
+        for i in range(10):
+            input_tensor = torch.randn(1, 1, 128, 128)
+            model(input_tensor)
     
     # print(activations)
 
@@ -665,12 +666,93 @@ if __name__ == "__main__":
         #     next_conv_idx = [layer_index + 1]
 
 
+    def IPAD_filter_importance_lambda_generator(L1_ADC_weight):
+        assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
+        
+        def IPAD_filter_importance_lambda(activations, conv_tree_ixs):
+            # Returns dict tree_ix_2_list_of_filter_importances
+            # The ix-th importance is for the filter currently on the ix-th place.
+            # To convert this ix to the initial unpruned models filter ix, use the pruner's
+            # state of active filters.
+
+            tree_ix_2_filter_importances = {}
+            for tree_ix in conv_tree_ixs:
+
+                curr_batch_outputs = activations[tree_ix]
+                print("len(curr_batch_outputs):")
+                print(len(curr_batch_outputs))
+                print("curr_batch_outputs[0].shape:")
+                print(curr_batch_outputs[0].shape)
+                curr_batch_outputs = torch.stack(tuple(curr_batch_outputs), dim=(0))
+                # print(curr_batch_outputs.shape)
+                # print(type(curr_batch_outputs))
+                # print(curr_batch_outputs)
+                filters_average_activation = curr_batch_outputs.mean(dim=(0))
+                # print(filters_average_activation.shape)
+                # print(filters_average_activation)
+                overall_average_activation = filters_average_activation.mean(dim=(0))
+                print(overall_average_activation)
+                # print(overall_average_activation.shape)
+                # print(overall_average_activation)
+                h = filters_average_activation.shape[1]
+                w = filters_average_activation.shape[2]
+                L1_ADC = torch.abs(filters_average_activation - overall_average_activation).sum(dim=(1,2)) / (h*w)
+                L2_ADC = (filters_average_activation - overall_average_activation).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
+                filter_importance = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
+                print(f"L1_ADC: {L1_ADC}")
+                print(f"L2_ADC: {L2_ADC}")
+                print(filter_importance.shape)
+                print(filter_importance)
+
+                tree_ix_2_filter_importances[tree_ix] = filter_importance
+            
+            return tree_ix_2_filter_importances
+            
+        return IPAD_filter_importance_lambda
+            
+        
+
+    def test_matrix_creator(number):
+        return torch.Tensor([[number, number, number], [number, number, number], [number, number, number]])
+    
+    def test_tensor_creator():
+        return torch.stack([test_matrix_creator(i) for i in range(4)], dim=(0))
+
+    test_conv_tree_ixs = [0]
+
+    test_activations = {0 : [test_tensor_creator() for _ in range(16)]}
+
+    # for 16 batches, 4 filters, 3x3 activation map, this needs to be a list of 16 tensors of shape (4, 3, 3)
+    # average filter for it should have 1.5 everywhere
+    # L1_ADC should be [1.5, 0.5, 0.5, 1.5], since it is just the mean of the abses of the differences
+    # L2_ADC should be, for the first index: sqrt(3*3* 1.5**2) / 3*3
+    # equals [sqrt(3*3) * sqrt(1.5**2) / 3*3,... ]
+    # equals 3 * sqrt(1.5**2) / 9 = 1.5 / 3 = 0.5
+    # So for the 0th element, the IPAD should be 0.5 * 1.5 + 0.5 * 0.5 = 0.75 + 0.25 = 1
+
+    # and for the second index: sqrt(3*3* 0.5**2) / 3*3 = 0.5 / 3 = 0.16666666666666666
+    # so IPAD should be 0.5 * 0.5 + 0.5 * 0.16666666666666666 = 0.25 + 0.08333333333333333 = 0.3333333333333333
+
+    # the test passes
+
+    test_IPAD_func = IPAD_filter_importance_lambda_generator(0.5)
+
+    test_final_importances = test_IPAD_func(test_activations, test_conv_tree_ixs)
+    print(test_final_importances) 
+
+    input("Press enter to continue.")
+
+
+
+
     with open("initial_conv_resource_calc.pkl", "rb") as f:
         initial_resource_calc = pickle.load(f)
 
-    pruner_instance = pruner(wrap_model, min_res_percents, initial_resource_calc, unet_resource_lambda, None)
+    pruner_instance = pruner(min_res_percents, initial_resource_calc, unet_resource_lambda, IPAD_filter_importance_lambda_generator(0.5), conv_tree_ixs)
 
     print(pruner_instance.initial_conv_resource_calc.module_tree_ix_2_weights_dimensions)
+
+    pruner_instance.prune(activations)
 
 
 
