@@ -34,13 +34,13 @@ class ConvResourceCalc():
         temp_dict = self.module_tree_ixs_2_modules_themselves
         self.module_tree_ixs_2_modules_themselves = None
 
-        picleable_object = copy.deepcopy(self)
+        pickleable_object = copy.deepcopy(self)
         
         
         self.wrapper_model = temp_wrapper_model
         self.module_tree_ixs_2_modules_themselves = temp_dict
 
-        return picleable_object
+        return pickleable_object
 
 
     def _get_len_of_generator(self, gen):
@@ -118,18 +118,22 @@ class ConvResourceCalc():
         self.module_tree_ix_2_weights_num = {}
 
         self.module_tree_ixs_2_children_tree_ix_lists = {}
+        self.module_tree_ixs_2_all_parents_to_root_tree_ix_list = {}
         self.module_tree_ixs_2_name = {}
         self.module_tree_ixs_2_modules_themselves = {}
         self.module_tree_ix_2_weights_dimensions = {}
 
 
-        def modify_forward(module, curr_tree_ix=(0,)):
+        def modify_forward(module, curr_tree_ix=(0,), current_path_list=[]):
 
             module_name = type(module).__name__    #.lower()
 
             self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix] = []
             self.module_tree_ixs_2_name[curr_tree_ix] = module_name
             self.module_tree_ixs_2_modules_themselves[curr_tree_ix] = module
+
+            self.module_tree_ixs_2_all_parents_to_root_tree_ix_list[curr_tree_ix] = current_path_list
+            children_path_list = current_path_list + [curr_tree_ix]
 
 
 
@@ -159,7 +163,7 @@ class ConvResourceCalc():
 
                 self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix].append(new_tree_ix)
 
-                modify_forward(child, new_tree_ix)
+                modify_forward(child, new_tree_ix, children_path_list)
 
 
             # # Direct approach:
