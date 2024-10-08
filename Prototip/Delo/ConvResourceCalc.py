@@ -20,6 +20,15 @@ class ConvResourceCalc():
             self.target_modules = (nn.Conv2d, nn.BatchNorm2d, nn.ReLU, nn.Dropout, nn.Upsample, nn.ConvTranspose2d)
         else:
             self.target_modules = target_modules
+        
+        self.module_tree_ix_2_flops_num = {}
+        self.module_tree_ix_2_weights_num = {}
+
+        self.module_tree_ix_2_children_tree_ix_list = {}
+        self.module_tree_ix_2_all_parents_to_root_tree_ix_list = {}
+        self.module_tree_ix_2_name = {}
+        self.module_tree_ix_2_module_itself = {}
+        self.module_tree_ix_2_weights_dimensions = {}
     
 
     def get_copy_for_pickle(self):
@@ -31,14 +40,14 @@ class ConvResourceCalc():
         # It pickles without doing the following, but that is useless anyways,
         #  because it's pointing to an old model.
         # So better to cause an error than to just be a bug.
-        temp_dict = self.module_tree_ixs_2_modules_themselves
-        self.module_tree_ixs_2_modules_themselves = None
+        temp_dict = self.module_tree_ix_2_module_itself
+        self.module_tree_ix_2_module_itself = None
 
         pickleable_object = copy.deepcopy(self)
         
         
         self.wrapper_model = temp_wrapper_model
-        self.module_tree_ixs_2_modules_themselves = temp_dict
+        self.module_tree_ix_2_module_itself = temp_dict
 
         return pickleable_object
 
@@ -63,39 +72,41 @@ class ConvResourceCalc():
             # print(f"assert: {y.shape[1] == layer.weight.size(0)}") # is true
 
             # dimensions of the output:
-            # batch_size, number of filters (output chanels), height, width
+            # batch_size, number of kernels (output chanels), height, width
             h = y.shape[2]
             w = y.shape[3]
 
             # dimensions of layer weights:
-            # number of filters (output chanels), number of filters (input chanels), kernel height, kernel width
+            # number of kernels (output chanels), number of kernels (input chanels), kernel height, kernel width
             cur_weights = layer.weight.size(0) * layer.weight.size(1) * layer.weight.size(2) * layer.weight.size(3)
             cur_flops = h * w * cur_weights
 
 
-            # self.module_resources_dict[module] = cur_flops
-            self.module_tree_ixs_2_flops_dict[tree_ix] = cur_flops
+            self.module_tree_ix_2_flops_num[tree_ix] = cur_flops
             self.all_flops_num += cur_flops
             self.module_tree_ix_2_weights_dimensions[tree_ix] = list(layer.weight.shape)
             self.module_tree_ix_2_weights_num[tree_ix] = cur_weights
             self.all_weights_num += cur_weights
 
-            # This is false, because the filters are now not zeroed out, but actually removed:
+            # This is false, because the kernels are now not zeroed out, but actually removed:
+            # (the word filter is used, because this is from the previous code, where it was used) 
             # (Also, I think that would have been wrong also, because (layer.weight.size(0) - n_removed_filters) would be correct)
             # self.cur_flops += h * w * layer.weight.size(0) * (layer.weight.size(1) - n_removed_filters) * layer.weight.size(2) * layer.weight.size(3)
             #self.original_flops += h * w * layer.weight.size(0) * layer.weight.size(1) * layer.weight.size(2) * layer.weight.size(3)
             #self.n_removed_filters += n_removed_filters
 
-        # elif isinstance(layer, nn.BatchNorm2d):
-        #     # ne upostevas, ker ne uporabis pri inferenci ene slike, na podlagi katere delas flop count.
-        #     # rezanje tega je samo posledica rezanja konvolucije, nikoli ne mores samo tega rezat, zato ga ne sestevam..
-        #     self.module_tree_ixs_2_flops_dict[tree_ix] = 0
-        #     self.module_tree_ix_2_weights_num[tree_ix] = 0
-        #     # pass
+
+        elif isinstance(layer, nn.BatchNorm2d):
+
+            self.module_tree_ix_2_weights_dimensions[tree_ix] = list(layer.weight.shape)
+
+            # Dovolj malo, da ne upostevam.
+            self.module_tree_ix_2_flops_num[tree_ix] = 0
+            self.module_tree_ix_2_weights_num[tree_ix] = 0
 
 
         else:
-            self.module_tree_ixs_2_flops_dict[tree_ix] = 0
+            self.module_tree_ix_2_flops_num[tree_ix] = 0
             self.module_tree_ix_2_weights_num[tree_ix] = 0
 
         
@@ -111,28 +122,19 @@ class ConvResourceCalc():
         #self.original_flops = 0
         self.all_flops_num = 0
         self.all_weights_num = 0
-        #self.n_removed_filters = 0
-        self.module_resources_dict = {}
 
-        self.module_tree_ixs_2_flops_dict = {}
-        self.module_tree_ix_2_weights_num = {}
-
-        self.module_tree_ixs_2_children_tree_ix_lists = {}
-        self.module_tree_ixs_2_all_parents_to_root_tree_ix_list = {}
-        self.module_tree_ixs_2_name = {}
-        self.module_tree_ixs_2_modules_themselves = {}
-        self.module_tree_ix_2_weights_dimensions = {}
+        
 
 
         def modify_forward(module, curr_tree_ix=(0,), current_path_list=[]):
 
             module_name = type(module).__name__    #.lower()
 
-            self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix] = []
-            self.module_tree_ixs_2_name[curr_tree_ix] = module_name
-            self.module_tree_ixs_2_modules_themselves[curr_tree_ix] = module
+            self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix] = []
+            self.module_tree_ix_2_name[curr_tree_ix] = module_name
+            self.module_tree_ix_2_module_itself[curr_tree_ix] = module
 
-            self.module_tree_ixs_2_all_parents_to_root_tree_ix_list[curr_tree_ix] = current_path_list
+            self.module_tree_ix_2_all_parents_to_root_tree_ix_list[curr_tree_ix] = current_path_list
             children_path_list = current_path_list + [curr_tree_ix]
 
 
@@ -161,7 +163,7 @@ class ConvResourceCalc():
 
                 new_tree_ix = (curr_tree_ix, ix)
 
-                self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix].append(new_tree_ix)
+                self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix].append(new_tree_ix)
 
                 modify_forward(child, new_tree_ix, children_path_list)
 
@@ -214,19 +216,19 @@ class ConvResourceCalc():
         # Now we recursively calculate the FLOPs of middle modules.
         def recursively_populate_flops(curr_tree_ix=(0,)):
 
-            # print(self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix])
-            children_tree_ix_lists = self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix]
+            # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
+            children_tree_ix_lists = self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix]
 
             # If leaf, return what we have calculated.
             if len(children_tree_ix_lists) == 0:
-                return self.module_tree_ixs_2_flops_dict[curr_tree_ix]
+                return self.module_tree_ix_2_flops_num[curr_tree_ix]
 
 
             cur_flops = 0
             for child_tree_ix in children_tree_ix_lists:
                 cur_flops += recursively_populate_flops(child_tree_ix)
 
-            self.module_tree_ixs_2_flops_dict[curr_tree_ix] = cur_flops
+            self.module_tree_ix_2_flops_num[curr_tree_ix] = cur_flops
             
             return cur_flops
 
@@ -235,8 +237,8 @@ class ConvResourceCalc():
 
         def recursively_populate_weights_nums(curr_tree_ix=(0,)):
 
-            # print(self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix])
-            children_tree_ix_lists = self.module_tree_ixs_2_children_tree_ix_lists[curr_tree_ix]
+            # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
+            children_tree_ix_lists = self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix]
 
             # If leaf, return what we have calculated.
             if len(children_tree_ix_lists) == 0:
@@ -257,9 +259,9 @@ class ConvResourceCalc():
         input_example = input_example.to(self.wrapper_model.device)
         y = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
-        # print(self.module_tree_ixs_2_name)
-        # print(self.module_tree_ixs_2_flops_dict)
+        # print(self.module_tree_ix_2_name)
+        # print(self.module_tree_ix_2_flops_num)
         recursively_populate_flops()
-        # print(self.module_tree_ixs_2_flops_dict)
+        # print(self.module_tree_ix_2_flops_num)
         # print(self.all_flops_num)
         recursively_populate_weights_nums()

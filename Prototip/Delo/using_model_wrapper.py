@@ -146,7 +146,7 @@ if __name__ == "__main__":
     input_example = torch.randn(1, 1, 128, 128)
     resource_calc.calculate_resources(input_example)
     FLOPs = resource_calc.all_flops_num
-    resource_dict = resource_calc.module_tree_ixs_2_flops_dict
+    resource_dict = resource_calc.module_tree_ix_2_flops_num
 
     print(f"FLOPs: {FLOPs}")
     print(f"Resource dict: {resource_dict}")
@@ -177,13 +177,13 @@ if __name__ == "__main__":
 
     print(wrap_model.model)
 
-    # print(resource_calc.module_tree_ixs_2_modules_themselves)
+    # print(resource_calc.module_tree_ix_2_module_itself)
 
-    print(resource_calc.module_tree_ixs_2_name)
+    print(resource_calc.module_tree_ix_2_name)
 
 
     conv_modules_tree_ixs = []
-    for key, value in resource_calc.module_tree_ixs_2_name.items():
+    for key, value in resource_calc.module_tree_ix_2_name.items():
         if value == "Conv2d":
             conv_modules_tree_ixs.append(key)
     
@@ -192,19 +192,25 @@ if __name__ == "__main__":
 
 
     activations = {}
-    def get_activation(tree_ix):
-        def hook(model, input, output):
-            if tree_ix not in activations:
-                activations[tree_ix] = []
-            activations[tree_ix].append(output.detach())
-        return hook
 
-    tree_ix_2_hook_handle = {}
-    for tree_ix in conv_modules_tree_ixs:
-        module = resource_calc.module_tree_ixs_2_modules_themselves[tree_ix]
-        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+    def set_activations_hooks(activations: dict, tree_ixs, resource_calc: ConvResourceCalc):
     
-    print(activations)
+        def get_activation(tree_ix):
+            def hook(model, input, output):
+                if tree_ix not in activations:
+                    activations[tree_ix] = []
+                activations[tree_ix].append(output.detach())
+            return hook
+
+        tree_ix_2_hook_handle = {}
+        for tree_ix in tree_ixs:
+            module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
+            tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+    
+    set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
+
+    
+    # print(activations)
 
     wrap_model.model.eval()
     with torch.no_grad():
@@ -214,8 +220,17 @@ if __name__ == "__main__":
     
     # print(activations)
 
-    print(f"Number of activations for [((((0,), 0), 0), 0)]: {len([((((0,), 0), 0), 0)])}")
-    print(activations[((((0,), 0), 0), 0)][0].shape)
+    activations.clear()
+
+    wrap_model.model.eval()
+    with torch.no_grad():
+        for i in range(10):
+            input_tensor = torch.randn(1, 1, 128, 128)
+            model(input_tensor)
+
+    # print(f"Number of activations for [((((0,), 0), 0), 0)]: {len([((((0,), 0), 0), 0)])}")
+    # print(activations[((((0,), 0), 0), 0)][0].shape)
+    # input()
 
 
     # input_tensor = torch.randn(1, 1, 128, 128)
@@ -229,17 +244,17 @@ if __name__ == "__main__":
 
 
 
-    # This shows how to remove hooks when they are no longer needed.
-    # This can save memory.
-    for tree_ix, hook_handle in tree_ix_2_hook_handle.items():
-        hook_handle.remove()
+    # # This shows how to remove hooks when they are no longer needed.
+    # # This can save memory.
+    # for tree_ix, hook_handle in tree_ix_2_hook_handle.items():
+    #     hook_handle.remove()
 
     
 
 
 
 
-    FLOPS_min_res_percents = min_resource_percentage(resource_calc.module_tree_ixs_2_name)
+    FLOPS_min_res_percents = min_resource_percentage(resource_calc.module_tree_ix_2_name)
     FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
 
     tree_ix_2_percentage_dict = {
@@ -251,7 +266,7 @@ if __name__ == "__main__":
     # print(FLOPS_min_res_percents.min_resource_percentage_dict)
     # input()
 
-    weights_min_res_percents = min_resource_percentage(resource_calc.module_tree_ixs_2_name)
+    weights_min_res_percents = min_resource_percentage(resource_calc.module_tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
 
@@ -280,12 +295,12 @@ if __name__ == "__main__":
         return name
         # return module
 
-    module_full_names = generator_to_list(resource_calc.module_tree_ixs_2_modules_themselves[(0,)].named_modules(remove_duplicate=False))
+    module_full_names = generator_to_list(resource_calc.module_tree_ix_2_module_itself[(0,)].named_modules(remove_duplicate=False))
     print(module_full_names)
-    # print(first_element(resource_calc.module_tree_ixs_2_modules_themselves[((None, 0), 0)].named_modules(remove_duplicate=False)))
-    # print(second_element(resource_calc.module_tree_ixs_2_modules_themselves[((None, 0), 0)].named_modules(remove_duplicate=False)))
+    # print(first_element(resource_calc.module_tree_ix_2_module_itself[((None, 0), 0)].named_modules(remove_duplicate=False)))
+    # print(second_element(resource_calc.module_tree_ix_2_module_itself[((None, 0), 0)].named_modules(remove_duplicate=False)))
 
-    print(generator_to_list(resource_calc.module_tree_ixs_2_modules_themselves[((0,), 0)].named_modules(remove_duplicate=False)))
+    print(generator_to_list(resource_calc.module_tree_ix_2_module_itself[((0,), 0)].named_modules(remove_duplicate=False)))
 
     accessing_first_module = getattr(wrap_model.model, module_full_names[1]) # this works
     print(accessing_first_module)
@@ -353,7 +368,7 @@ if __name__ == "__main__":
 
 
     lowest_level_modules_tree_ixs = []
-    for tree_ix, children_list in resource_calc.module_tree_ixs_2_children_tree_ix_lists.items():
+    for tree_ix, children_list in resource_calc.module_tree_ix_2_children_tree_ix_list.items():
         if len(children_list) == 0:
             lowest_level_modules_tree_ixs.append(tree_ix)
     
@@ -363,7 +378,7 @@ if __name__ == "__main__":
     sorted_lowest_level_modules_tree_ixs = sort_tree_ixs(lowest_level_modules_tree_ixs)
     print(sorted_lowest_level_modules_tree_ixs)
 
-    lowest_level_modules_names = [resource_calc.module_tree_ixs_2_name[tree_ix] for tree_ix in sorted_lowest_level_modules_tree_ixs]
+    lowest_level_modules_names = [resource_calc.module_tree_ix_2_name[tree_ix] for tree_ix in sorted_lowest_level_modules_tree_ixs]
     print(lowest_level_modules_names)
 
     lowest_level_modules = sorted_lowest_level_modules_tree_ixs
@@ -389,12 +404,12 @@ if __name__ == "__main__":
     This should make things a lot easier.
     """
 
-    tree_ix_2_layer_name = resource_calc.module_tree_ixs_2_name
+    tree_ix_2_layer_name = resource_calc.module_tree_ix_2_name
 
-    def get_ordered_list_of_tree_ixs_for_layer_name(module_tree_ixs_2_name, layer_name):
+    def get_ordered_list_of_tree_ixs_for_layer_name(module_tree_ix_2_name, layer_name):
         
         applicable_tree_ixs = []
-        for tree_ix, module_name in module_tree_ixs_2_name.items():
+        for tree_ix, module_name in module_tree_ix_2_name.items():
             if module_name == layer_name:
                 applicable_tree_ixs.append(tree_ix)
         
@@ -436,7 +451,45 @@ if __name__ == "__main__":
     #     new_tup = tuple(denest_tuple(tup))
     #     return new_tup
 
-    def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth):
+    def string_of_pruned(list_of_initial_ixs, initial_dim_size):
+        ix_is_in_initial_ixs_list = []
+        for i in range(initial_dim_size):
+            ix_is_in_initial_ixs_list.append(False)
+        
+        for ix in list_of_initial_ixs:
+            try:
+                ix_is_in_initial_ixs_list[ix] = True
+            except:
+                print(f"ix: {ix}")
+                print(f"initial_dim_size: {initial_dim_size}")
+                print(f"list_of_initial_ixs: {list_of_initial_ixs}")
+                raise ValueError("Index out of range.")
+        
+        # When you come into a territory of False, you start a new section.
+        # When you leave it, you end the section.
+        # If we are in false territory at the end, we end the section.
+        string = ""
+        ix_in_False_territory = -1
+        for i, is_in_initial_ixs in enumerate(ix_is_in_initial_ixs_list):
+            if not is_in_initial_ixs:
+                if ix_in_False_territory == -1:
+                    string += f"{i}"
+                ix_in_False_territory += 1
+            else:
+                if ix_in_False_territory >= 1:
+                    string += f"-{i-1}, "
+                elif ix_in_False_territory == 0:
+                    string += f", "
+                ix_in_False_territory = -1
+        if ix_in_False_territory > 0:
+            string += f"-{initial_dim_size}"
+
+        return string
+                
+
+
+
+    def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc: ConvResourceCalc, initial_resource_calc: ConvResourceCalc, pruner: pruner):
         # Draw the rectangle and label it
 
         # which of its' name is it?
@@ -467,9 +520,46 @@ if __name__ == "__main__":
             lowest_level_modules_index = lowest_level_modules.index(ix)
             display_string += f"\n{lowest_level_modules_index}. LLM"
         
+        # To mi ni všeč, ker gre prek resource calc in ne direktno. In torej če se zgodi, da ga ne posodobiš,
+        # ker ti tu recimo reference-a star resource_calc objekt, bo to nasty bug.
+        # Pa tudi sedaj itak rabim initial resource calc v nadaljevanju, in je bolje preprosto skozi njega vse delat.
+        # if ix in resource_calc.module_tree_ix_2_weights_dimensions:
+        #     display_string += f"\n{resource_calc.module_tree_ix_2_weights_dimensions[ix]}"
 
-        if ix in resource_calc.module_tree_ix_2_weights_dimensions:
-            display_string += f"\n{resource_calc.module_tree_ix_2_weights_dimensions[ix]}"
+        # To je bolje, ker ta tu bo vsaka verzija resource calc-a bila pravilna. 
+        layer = resource_calc.module_tree_ix_2_module_itself[ix]
+        if type(layer) == nn.Conv2d:
+            display_string += f"\n{list(layer.weight.shape)}"
+        
+        elif type(layer) == nn.BatchNorm2d:
+            
+            shapes = [list(layer.weight.shape), list(layer.bias.shape), 
+                      list(layer.running_mean.shape), list(layer.running_var.shape)]
+            
+            # are all shapes the same?
+            if all(shape == shapes[0] for shape in shapes):
+                display_string += f"\n{shapes[0]}"
+            else:
+                for shape in shapes:
+                    display_string += f"\n{shape}"
+        
+
+        # The display of what we have pruned:
+        if pruner is not None and initial_resource_calc is not None:
+
+            # print(display_string)
+
+            if ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
+                list_of_active_initial_kernel_ixs = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix]
+                # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+                initial_dim_size = initial_resource_calc.module_tree_ix_2_weights_dimensions[ix][0]
+                display_string += f"\nKernels pruned: [{string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)}]"
+            
+            if ix in pruner.tree_ix_2_list_of_initial_input_slice_ixs.keys():
+                list_of_active_initial_input_slice_ixs = pruner.tree_ix_2_list_of_initial_input_slice_ixs[ix]
+                initial_dim_size = initial_resource_calc.module_tree_ix_2_weights_dimensions[ix][1]
+                display_string += f"\nInput slices pruned: [{string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)}]"
+
 
         
 
@@ -484,26 +574,27 @@ if __name__ == "__main__":
             child_width = width / len(children)
             for i, child in enumerate(sort_tree_ixs(children)):
                 child_name = tree_ix_2_layer_name[child]
-                draw_tree(child, child_name, ax, x + i * child_width, y - height, child_width, height, max_depth - 1)
+                draw_tree(child, child_name, ax, x + i * child_width, y - height, child_width, height, max_depth - 1, resource_calc, initial_resource_calc, pruner)
 
-    def visualize_tree(tree, ax, width=1, height=0.1):
+    def visualize_tree(ax, resource_calc: ConvResourceCalc, initial_resource_calc, pruner, width=1, height=0.1):
+        tree = resource_calc.module_tree_ix_2_name
         max_depth = max(len(denest_tuple(k)) for k in tree.keys())
         total_height = max_depth * height
         root_ix = (0,)
         root_name = tree[root_ix]
-        draw_tree(root_ix, root_name, ax, 0, total_height, width, height, max_depth)
+        draw_tree(root_ix, root_name, ax, 0, total_height, width, height, max_depth, resource_calc, initial_resource_calc, pruner)
 
 
 
-    def model_graph(tree_ix_2_layer_name):
+    def model_graph(resource_calc, initial_resource_calc=None, pruner=None):
         fig, ax = plt.subplots()
-        visualize_tree(tree_ix_2_layer_name, ax)
+        visualize_tree(ax, resource_calc, initial_resource_calc, pruner)
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.axis('off')
         plt.show(block=False)
 
-    model_graph(tree_ix_2_layer_name)
+    model_graph(resource_calc)
 
     # fig, ax = plt.subplots()
     # visualize_tree(tree_ix_2_layer_name, ax)
@@ -594,7 +685,7 @@ if __name__ == "__main__":
             conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
 
         # We made it so that for conv layers who receive as input the previous layer and a skip connection
-        # the first filters are of the previous layer. This makes the line above as elegant as it is.
+        # the first inpute slices are of the previous layer. This makes the line above as elegant as it is.
         # We will, however, have to deal with more trouble with skip connections. 
 
         
@@ -739,16 +830,16 @@ if __name__ == "__main__":
 
 
 
-    def IPAD_filter_importance_lambda_generator(L1_ADC_weight):
+    def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
         assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
         
-        def IPAD_filter_importance_lambda(activations, conv_tree_ixs):
-            # Returns dict tree_ix_2_list_of_filter_importances
-            # The ix-th importance is for the filter currently on the ix-th place.
-            # To convert this ix to the initial unpruned models filter ix, use the pruner's
-            # state of active filters.
+        def IPAD_kernel_importance_lambda(activations, conv_tree_ixs):
+            # Returns dict tree_ix_2_list_of_kernel_importances
+            # The ix-th importance is for the kernel currently on the ix-th place.
+            # To convert this ix to the initial unpruned models kernel ix, use the pruner's
+            # state of active kernels.
 
-            tree_ix_2_filter_importances = {}
+            tree_ix_2_kernel_importances = {}
             for tree_ix in conv_tree_ixs:
 
                 curr_batch_outputs = activations[tree_ix]
@@ -760,28 +851,28 @@ if __name__ == "__main__":
                 # print(curr_batch_outputs.shape)
                 # print(type(curr_batch_outputs))
                 # print(curr_batch_outputs)
-                filters_average_activation = curr_batch_outputs.mean(dim=(0))
-                # print(filters_average_activation.shape)
-                # print(filters_average_activation)
-                overall_average_activation = filters_average_activation.mean(dim=(0))
+                kernels_average_activation = curr_batch_outputs.mean(dim=(0))
+                # print(kernels_average_activation.shape)
+                # print(kernels_average_activation)
+                overall_average_activation = kernels_average_activation.mean(dim=(0))
                 # print(overall_average_activation)
                 # print(overall_average_activation.shape)
                 # print(overall_average_activation)
-                h = filters_average_activation.shape[1]
-                w = filters_average_activation.shape[2]
-                L1_ADC = torch.abs(filters_average_activation - overall_average_activation).sum(dim=(1,2)) / (h*w)
-                L2_ADC = (filters_average_activation - overall_average_activation).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
-                filter_importance = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
+                h = kernels_average_activation.shape[1]
+                w = kernels_average_activation.shape[2]
+                L1_ADC = torch.abs(kernels_average_activation - overall_average_activation).sum(dim=(1,2)) / (h*w)
+                L2_ADC = (kernels_average_activation - overall_average_activation).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
+                kernel_importance = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
                 # print(f"L1_ADC: {L1_ADC}")
                 # print(f"L2_ADC: {L2_ADC}")
-                # print(filter_importance.shape)
-                # print(filter_importance)
+                # print(kernel_importance.shape)
+                # print(kernel_importance)
 
-                tree_ix_2_filter_importances[tree_ix] = filter_importance
+                tree_ix_2_kernel_importances[tree_ix] = kernel_importance
             
-            return tree_ix_2_filter_importances
+            return tree_ix_2_kernel_importances
             
-        return IPAD_filter_importance_lambda
+        return IPAD_kernel_importance_lambda
             
     
 
@@ -791,7 +882,7 @@ if __name__ == "__main__":
 
 
 
-    # Testing the IPAD_filter_importance_lambda_generator
+    # Testing the IPAD_kernel_importance_lambda_generator
 
     def test_one_kernel_creator(number):
         # make the batch_size 2, so the test is more real-life
@@ -806,8 +897,8 @@ if __name__ == "__main__":
 
     test_activations = {0 : [test_kernel_combinator() for _ in range(8)]}
 
-    # for 16 batches, 4 filters, 3x3 activation map, this needs to be a list of 16 tensors of shape (4, 3, 3)
-    # overall average filter for it should have 1.5 everywhere
+    # for 16 batches, 4 kernels, 3x3 activation map, this needs to be a list of 16 tensors of shape (4, 3, 3)
+    # overall average kernel for it should have 1.5 everywhere
     # L1_ADC should be [1.5, 0.5, 0.5, 1.5], since it is just the mean of the abses of the differences
     # L2_ADC should be, for the first index: sqrt(3*3* 1.5**2) / 3*3
     # equals [sqrt(3*3) * sqrt(1.5**2) / 3*3,... ]
@@ -819,7 +910,7 @@ if __name__ == "__main__":
 
     # the test passes
 
-    test_IPAD_func = IPAD_filter_importance_lambda_generator(0.5)
+    test_IPAD_func = IPAD_kernel_importance_lambda_generator(0.5)
 
     test_final_importances = test_IPAD_func(test_activations, test_conv_tree_ixs)
 
@@ -840,24 +931,58 @@ if __name__ == "__main__":
 
 
 
+    def load_initial_conv_resource_calc() -> ConvResourceCalc:
+        with open("initial_conv_resource_calc.pkl", "rb") as f:
+            initial_resource_calc = pickle.load(f)
+        return initial_resource_calc
+    
+    initial_resource_calc = load_initial_conv_resource_calc()
 
-    with open("initial_conv_resource_calc.pkl", "rb") as f:
-        initial_resource_calc = pickle.load(f)
-
-    pruner_instance = pruner(FLOPS_min_res_percents, weights_min_res_percents, initial_resource_calc, unet_connection_lambda, unet_inextricable_connection_lambda, IPAD_filter_importance_lambda_generator(0.5), conv_tree_ixs, lowest_level_modules)
+    batch_norm_ixs = get_ordered_list_of_tree_ixs_for_layer_name(initial_resource_calc.module_tree_ix_2_name, "BatchNorm2d")
+    pruner_instance = pruner(FLOPS_min_res_percents, weights_min_res_percents, initial_resource_calc, unet_connection_lambda, unet_inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules)
 
     # print(pruner_instance.initial_conv_resource_calc.module_tree_ix_2_weights_dimensions)
 
-    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
-    resource_calc.calculate_resources(input_example)
-    pruner_instance.prune(activations, resource_calc, wrap_model)
+    importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
 
 
 
-    resource_calc.calculate_resources(input_example)
-    tree_ix_2_layer_name = resource_calc.module_tree_ixs_2_name
-    model_graph(tree_ix_2_layer_name)
-    input("Press enter to continue.")
+
+
+
+
+    inp = ""
+    while inp == "" or inp == "g":
+    
+        # print(activations)
+
+        activations.clear()
+
+        # set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
+
+        wrap_model.model.eval()
+        with torch.no_grad():
+            for i in range(10):
+                input_tensor = torch.randn(1, 1, 128, 128)
+                model(input_tensor)
+        
+        # print(activations)
+        # print(f"Number of activations for [((((0,), 0), 0), 0)]: {len([((((0,), 0), 0), 0)])}")
+        # print(activations[((((0,), 0), 0), 0)][0].shape)
+        # input()
+    
+    
+        # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+        resource_calc.calculate_resources(input_example)
+        importance_dict = importance_lambda(activations, conv_tree_ixs)
+        pruner_instance.prune(importance_dict, resource_calc, wrap_model)
+
+        resource_calc.calculate_resources(input_example)
+    
+        if inp == "g":
+            model_graph(resource_calc, initial_resource_calc, pruner_instance)
+    
+        inp = input("Press enter to continue, any text to stop, g to continue and show graph.\n")
 
 
 
@@ -881,128 +1006,6 @@ It all happens in remove_filters_and_retrain_model()
     - they calculate the importance of each filter (_get_sorted_filter_importance_dict_for_model())
     - they get the least important filter, where they take into account the unprunable filters from step #1 (get_filter_with_minimal_importance()) 
 """
-
-
-_original_sizes = {}
-def _get_sorted_filter_importance_dict_for_model(model, omega, args):
-    filter_weights_norms = {}  # for each filter: ||W_lk||_p
-    #filter_activations_l2sq = {}  # for each filter: ||F_lk||^2
-    filter_activation_diffs = {}  # for each filter: avg(|F_lk - F_lavg|)
-    sizes = {}  # for each layer: kernel_width, kernel_height
-    layer_n = {}  # for each layer: input_channels * kernel_width * kernel_height (= filter size)
-    layer_m = {}  # for each layer: output_channels (= number of filters in layer)
-    #layer_a = {}  # for each layer: activation_width * activation_height
-    #layer_weights_l2sq_sum_normed = {}  # for each layer: 1 / (n_filters_l * filter_size_l) * sum_k(||W_lk||^2)
-
-    for name, _ in model.named_parameters():  # always weight and bias
-        if name.endswith('_activations_sum'):
-            block_name, _, activation_sum_name = name.rpartition('.')
-            block = op.attrgetter(block_name)(model)  # Need to use attrgetter since block_name can include dots in UNet
-            layer = getattr(block, activation_sum_name.replace('_activations_sum', ''))
-            activations = getattr(block, activation_sum_name.replace('_sum', '')).detach().cpu().numpy()
-
-            weights = layer.weight.detach()
-            if args.interpolate:
-                weights = F.interpolate(weights, size=(3, 3), mode='bilinear', align_corners=False)
-            if args.norm % 2:  # In odd norms we need to use absolute values
-                weights = weights.abs()
-            if args.norm == 1:
-                layer_weights_norm_tensor = weights.sum(dim=[1, 2, 3])
-            elif args.norm == 2:
-                layer_weights_norm_tensor = weights.pow(2).sum(dim=[1, 2, 3]).sqrt()
-            else:
-                layer_weights_norm_tensor = weights.pow(args.norm).sum(dim=[1, 2, 3]).pow(1 / args.norm)
-
-            #layer_activations_l2sq_tensor = getattr(block, activations_name)
-            #assert layer_weights_l2sq_tensor.shape == layer_activations_l2sq_tensor.shape
-
-            name_without_activations_sum_suffix = name.replace('_activations_sum', '')  # down_block1.conv1
-            sizes[name_without_activations_sum_suffix] = layer.kernel_size
-            layer_n[name_without_activations_sum_suffix] = layer.in_channels if args.interpolate else np.prod((layer.in_channels, *layer.kernel_size))
-            layer_m[name_without_activations_sum_suffix] = layer.out_channels
-            #layer_a[name_without_activations_sum_suffix] = block.activation_height * block.activation_width
-            #mn = layer_n[name_without_activations_sum_suffix] * layer_m[name_without_activations_sum_suffix]
-            #layer_weights_l2sq_sum_normed[name_without_activations_sum_suffix] = layer_weights_l2sq_tensor.sum() / mn
-            #layer_activations_l2sq_sum_normed[name_without_activations_sum_suffix] = layer_activations_l2sq_tensor.sum() / mn
-
-            # My activation criterion
-            avg_activation = activations.mean(axis=(0,1))  # Mean activation over the batch: 2D matrix of activation pixels
-            filter_activations = activations.mean(axis=0)  # Mean per-filter activations over the batch: 3D matrix - 1st dimension is filters, 2nd and 3rd are activation pixels
-            diff_matrices = filter_activations - avg_activation  # Differential matrix D_k for each filter: 3D matrix - 1st dimension is filters, 2nd and 3rd are difference pixels
-            if args.norm % 2:  # In odd norms we need to use absolute values
-                diff_matrices = np.abs(diff_matrices)
-            if args.norm == 1:
-                diff_means = diff_matrices.mean(axis=(1,2))
-            elif args.norm == 2:
-                diff_means = np.sqrt(np.square(diff_matrices).sum(axis=(1,2))) / (diff_matrices.shape[1] * diff_matrices.shape[2])
-            else:
-                diff_means = np.power(np.power(diff_matrices, args.norm).sum(axis=(1,2)), 1 / args.norm) / (diff_matrices.shape[1] * diff_matrices.shape[2])
-
-            #for k, (weights_norm, activations_l2sq) in enumerate(zip(layer_weights_norm_tensor, layer_activations_l2sq_tensor)):
-            for k, (weights_norm, diff_mean) in enumerate(zip(layer_weights_norm_tensor, diff_means)):
-                dict_key = '{0}-{1}'.format(name_without_activations_sum_suffix, k)  # down_block1.conv1-15
-                filter_weights_norms[dict_key] = weights_norm
-                #filter_activations_l2sq[dict_key] = activations_l2sq
-                filter_activation_diffs[dict_key] = diff_mean
-
-    #total_weights_sum_normed = torch.cat(layer_weights_l2sq_sum_normed.values()).sum()
-    #total_activations_sum_normed = torch.cat(layer_activations_l2sq_sum_normed.values()).sum()
-
-    # Print ranges to help determine the equalizer (I care mainly about the min values, since that's closer to what determines the pruned filters)
-    #weight_importance_array = np.array([filter_weights_l2sq[k].item() / layer_n[k.rsplit('-', 1)[0]] for k in filter_weights_l2sq])
-    #activation_importance_array = np.array([filter_activations_l2sq[k].item() / layer_a[k.rsplit('-', 1)[0]] for k in filter_activations_l2sq])  # Old
-    #activation_importance_array = np.array([filter_activation_diffs[k].item() for k in filter_activation_diffs])  # New
-    #print(f"Weights: {sorted(np.partition(weight_importance_array, 5)[:5])}–{np.median(weight_importance_array)}–{weight_importance_array.max()}")
-    #print(f"Activations: {sorted(np.partition(activation_importance_array, 5)[:5])}–{np.median(activation_importance_array)}–{activation_importance_array.max()}")
-
-    # Compute correlation between the rankings of the two importance criteria (requires weight_importance_array and activation_importance_array from above)
-    #weight_ranking = weight_importance_array.argsort()
-    #activation_ranking = activation_importance_array.argsort()
-    #print(f"Weight ranking:\n{np.array(list(filter_weights_l2sq.keys()))[weight_ranking][:200]}")
-    #print(f"Activation ranking:\n{np.array(list(filter_weights_l2sq.keys()))[activation_ranking][:200]}")
-    #print(f"Spearman's rank-order correlation: {scipy.stats.spearmanr(weight_ranking, activation_ranking)}")
-
-    activation_equalizer = 10  # experimentally determined ratio to bring the activation criterion roughly to the same order of magnitude as the weight criterion
-    all_importances_dict = {}
-    for k in filter_weights_norms:
-        l = k.rsplit('-', 1)[0]  # k = down_block1.conv1-15, l = down_block1.conv1
-        if args.random:
-            all_importances_dict[k] = torch.rand(1, device=filter_weights_norms[k].device)  # For random pruning use random filter importance
-        elif args.uniform:
-            if l not in _original_sizes:  # This is a hacky way of saving the original sizes on the first run of this function (before any pruning is done)
-                _original_sizes[l] = layer_m[l]
-            # For uniform pruning use the proportion of pruned filterss (so less pruned layers get pruned first) with a small random perturbation (to prune a random filter inside the chosen layer)
-            all_importances_dict[k] = 1 - (layer_m[l] / _original_sizes[l]) + torch.distributions.Uniform(-1e3, 1e3).sample().to(filter_weights_norms[k].device)
-        else:
-            all_importances_dict[k] = (
-                omega / layer_n[l] * filter_weights_norms[k] +  # Weight criterion
-                #(1 - omega) * activation_equalizer / layer_a[l] * filter_activations_l2sq[k] #+  # Old activation criterion
-                (1 - omega) * activation_equalizer * filter_activation_diffs[k] #+  # New activation criterion
-            ) if not args.channelsUseWeightsOnly or sizes[l] != (1, 1) else filter_weights_norms[k] / layer_n[l]
-
-    return dict(sorted(all_importances_dict.items(), key=op.itemgetter(1)))
-
-def get_filter_with_minimal_importance(device, all_importances_dict_sorted, layers_with_exceeded_limit, blocks_with_exceeded_limit):
-    # we must return filter with nonzero activation, because zeroed filters are not used in network
-    # ALSO set selected filter's activation to zero!
-    # and skip layers in layers_with_exceeded_limit or blocks in blocks_with_exceeded_limit
-    for key, value in all_importances_dict_sorted.items():
-        zero_tensor = torch.tensor(0, dtype=torch.float32).to(device)
-        if torch.equal(value, zero_tensor):
-            continue
-
-        layer_name, _ = get_parameter_name_and_index_from_activations_dict_key(key)
-
-        if layer_name in layers_with_exceeded_limit:
-            #logger.write('layer {0} skipped because it has exceeded percent limit'.format(layer_name))
-            continue
-        block_name, _, _ = layer_name.rpartition('.')
-        if block_name in blocks_with_exceeded_limit:
-            #logger.write('layer {0} skipped because block {1} has exceeded percent limit'.format(layer_name, block_name))
-            continue
-
-        all_importances_dict_sorted[key] = zero_tensor
-        return key, value#, all_importances_dict_sorted
 
 
 
@@ -1034,563 +1037,3 @@ The subsequent layers get their input_channels -= 1, so their output is actually
 It's a different kind of pruning.
 """
 
-
-
-def _get_layer_index(name, model):
-    model = type(model).__name__.lower()
-    if 'densenet' in model:
-        if name == 'down_block1.conv1':
-            return 0
-        elif name == 'down_block1.conv21':
-            return 1
-        elif name == 'down_block1.conv22':
-            return 2
-        elif name == 'down_block1.conv31':
-            return 3
-        elif name == 'down_block1.conv32':
-            return 4
-        elif name == 'down_block2.conv1':
-            return 5
-        elif name == 'down_block2.conv21':
-            return 6
-        elif name == 'down_block2.conv22':
-            return 7
-        elif name == 'down_block2.conv31':
-            return 8
-        elif name == 'down_block2.conv32':
-            return 9
-        elif name == 'down_block3.conv1':
-            return 10
-        elif name == 'down_block3.conv21':
-            return 11
-        elif name == 'down_block3.conv22':
-            return 12
-        elif name == 'down_block3.conv31':
-            return 13
-        elif name == 'down_block3.conv32':
-            return 14
-        elif name == 'down_block4.conv1':
-            return 15
-        elif name == 'down_block4.conv21':
-            return 16
-        elif name == 'down_block4.conv22':
-            return 17
-        elif name == 'down_block4.conv31':
-            return 18
-        elif name == 'down_block4.conv32':
-            return 19
-        elif name == 'down_block5.conv1':
-            return 20
-        elif name == 'down_block5.conv21':
-            return 21
-        elif name == 'down_block5.conv22':
-            return 22
-        elif name == 'down_block5.conv31':
-            return 23
-        elif name == 'down_block5.conv32':
-            return 24
-
-        elif name == 'up_block1.conv11':
-            return 25
-        elif name == 'up_block1.conv12':
-            return 26
-        elif name == 'up_block1.conv21':
-            return 27
-        elif name == 'up_block1.conv22':
-            return 28
-        elif name == 'up_block2.conv11':
-            return 29
-        elif name == 'up_block2.conv12':
-            return 30
-        elif name == 'up_block2.conv21':
-            return 31
-        elif name == 'up_block2.conv22':
-            return 32
-        elif name == 'up_block3.conv11':
-            return 33
-        elif name == 'up_block3.conv12':
-            return 34
-        elif name == 'up_block3.conv21':
-            return 35
-        elif name == 'up_block3.conv22':
-            return 36
-        elif name == 'up_block4.conv11':
-            return 37
-        elif name == 'up_block4.conv12':
-            return 38
-        elif name == 'up_block4.conv21':
-            return 39
-        elif name == 'up_block4.conv22':
-            return 40
-        elif name.startswith('out_conv1'):
-            return 41
-        else:
-            raise Exception('Neki je narobe pri layer index')
-
-    elif 'unet' in model:
-        return [
-            'inc.conv1', 'inc.conv2',                # 0 1
-            'down1.conv.conv1', 'down1.conv.conv2',  # 2 3
-            'down2.conv.conv1', 'down2.conv.conv2',  # 4 5
-            'down3.conv.conv1', 'down3.conv.conv2',  # 6 7
-            'down4.conv.conv1', 'down4.conv.conv2',  # 8 9
-            'up1.conv.conv1', 'up1.conv.conv2',     # 10 11
-            'up2.conv.conv1', 'up2.conv.conv2',     # 12 13
-            'up3.conv.conv1', 'up3.conv.conv2',     # 14 15
-            'up4.conv.conv1', 'up4.conv.conv2',     # 16 17
-            'outc.conv'                             # 18
-        ].index(name)
-
-    else:
-        raise ValueError(f"Unknown model {model}")
-
-
-def _get_next_conv_id_list_recursive(layer_index, model):
-    model = type(model).__name__.lower()
-    if 'densenet' in model:
-        if layer_index == 0:
-            next_conv_idx = [1, 3]
-        elif layer_index == 1:
-            next_conv_idx = [2]
-        elif layer_index == 2:
-            next_conv_idx = [3]
-        elif layer_index == 3:
-            next_conv_idx = [4]
-        elif layer_index == 4:
-            next_conv_idx = [5, 6, 8, 37, 39]
-        elif layer_index == 5:
-            next_conv_idx = [6, 8]
-        elif layer_index == 6:
-            next_conv_idx = [7]
-        elif layer_index == 7:
-            next_conv_idx = [8]
-        elif layer_index == 8:
-            next_conv_idx = [9]
-        elif layer_index == 9:
-            next_conv_idx = [10, 11, 13, 33, 35]
-        elif layer_index == 10:
-            next_conv_idx = [11, 13]
-        elif layer_index == 11:
-            next_conv_idx = [12]
-        elif layer_index == 12:
-            next_conv_idx = [13]
-        elif layer_index == 13:
-            next_conv_idx = [14]
-        elif layer_index == 14:
-            next_conv_idx = [15, 16, 18, 29, 31]
-        elif layer_index == 15:
-            next_conv_idx = [16, 18]
-        elif layer_index == 16:
-            next_conv_idx = [17]
-        elif layer_index == 17:
-            next_conv_idx = [18]
-        elif layer_index == 18:
-            next_conv_idx = [19]
-        elif layer_index == 19:
-            next_conv_idx = [20, 21, 23, 25, 27]
-        elif layer_index == 20:
-            next_conv_idx = [21, 23]
-        elif layer_index == 21:
-            next_conv_idx = [22]
-        elif layer_index == 22:
-            next_conv_idx = [23]
-        elif layer_index == 23:
-            next_conv_idx = [24]
-        elif layer_index == 24:
-            next_conv_idx = [25, 27]
-        # UP BLOCKS:
-        elif layer_index == 25:
-            next_conv_idx = [26]
-        elif layer_index == 26:
-            next_conv_idx = [27]
-        elif layer_index == 27:
-            next_conv_idx = [28]
-        elif layer_index == 28:
-            next_conv_idx = [29, 31]
-        elif layer_index == 29:
-            next_conv_idx = [30]
-        elif layer_index == 30:
-            next_conv_idx = [31]
-        elif layer_index == 31:
-            next_conv_idx = [32]
-        elif layer_index == 32:
-            next_conv_idx = [33, 35]
-        elif layer_index == 33:
-            next_conv_idx = [34]
-        elif layer_index == 34:
-            next_conv_idx = [35]
-        elif layer_index == 35:
-            next_conv_idx = [36]
-        elif layer_index == 36:
-            next_conv_idx = [37, 39]
-        elif layer_index == 37:
-            next_conv_idx = [38]
-        elif layer_index == 38:
-            next_conv_idx = [39]
-        elif layer_index == 39:
-            next_conv_idx = [40]
-        elif layer_index == 40:
-            next_conv_idx = [41]
-        elif layer_index == 41:
-            next_conv_idx = []
-        else:
-            raise Exception("Error occured")
-
-    elif 'unet' in model:
-        # Output of conv2 in each down block also goes to conv1 in corresponding up block
-        if layer_index == 1:
-            next_conv_idx = [2, 16]
-        elif layer_index == 3:
-            next_conv_idx = [4, 14]
-        elif layer_index == 5:
-            next_conv_idx = [6, 12]
-        elif layer_index == 7:
-            next_conv_idx = [8, 10]
-        # outc has no next convolution
-        elif layer_index >= 18:
-            next_conv_idx = []
-        # Every other convolution output just goes to the next one
-        else:
-            next_conv_idx = [layer_index + 1]
-
-    else:
-        raise ValueError(f"Unknown model {model}")
-
-    # recursion call
-    result_list = next_conv_idx.copy()
-    # for id in next_conv_idx:
-    #    result_list = result_list + self._get_next_conv_id_list_recursive(id)
-
-    return result_list
-
-
-
-
-
-def _layer_index_to_conv(layer_index, model):
-    model_name = type(model).__name__.lower()
-    if 'densenet' in model_name:
-        if layer_index == 0:
-            block_name = 'down_block1'
-            conv_name = 'conv1'
-        elif layer_index == 1:
-            block_name = 'down_block1'
-            conv_name = 'conv21'
-        elif layer_index == 2:
-            block_name = 'down_block1'
-            conv_name = 'conv22'
-        elif layer_index == 3:
-            block_name = 'down_block1'
-            conv_name = 'conv31'
-        elif layer_index == 4:
-            block_name = 'down_block1'
-            conv_name = 'conv32'
-        elif layer_index == 5:
-            block_name = 'down_block2'
-            conv_name = 'conv1'
-        elif layer_index == 6:
-            block_name = 'down_block2'
-            conv_name = 'conv21'
-        elif layer_index == 7:
-            block_name = 'down_block2'
-            conv_name = 'conv22'
-        elif layer_index == 8:
-            block_name = 'down_block2'
-            conv_name = 'conv31'
-        elif layer_index == 9:
-            block_name = 'down_block2'
-            conv_name = 'conv32'
-        elif layer_index == 10:
-            block_name = 'down_block3'
-            conv_name = 'conv1'
-        elif layer_index == 11:
-            block_name = 'down_block3'
-            conv_name = 'conv21'
-        elif layer_index == 12:
-            block_name = 'down_block3'
-            conv_name = 'conv22'
-        elif layer_index == 13:
-            block_name = 'down_block3'
-            conv_name = 'conv31'
-        elif layer_index == 14:
-            block_name = 'down_block3'
-            conv_name = 'conv32'
-        elif layer_index == 15:
-            block_name = 'down_block4'
-            conv_name = 'conv1'
-        elif layer_index == 16:
-            block_name = 'down_block4'
-            conv_name = 'conv21'
-        elif layer_index == 17:
-            block_name = 'down_block4'
-            conv_name = 'conv22'
-        elif layer_index == 18:
-            block_name = 'down_block4'
-            conv_name = 'conv31'
-        elif layer_index == 19:
-            block_name = 'down_block4'
-            conv_name = 'conv32'
-        elif layer_index == 20:
-            block_name = 'down_block5'
-            conv_name = 'conv1'
-        elif layer_index == 21:
-            block_name = 'down_block5'
-            conv_name = 'conv21'
-        elif layer_index == 22:
-            block_name = 'down_block5'
-            conv_name = 'conv22'
-        elif layer_index == 23:
-            block_name = 'down_block5'
-            conv_name = 'conv31'
-        elif layer_index == 24:
-            block_name = 'down_block5'
-            conv_name = 'conv32'
-
-        elif layer_index == 25:
-            block_name = 'up_block1'
-            conv_name = 'conv11'
-        elif layer_index == 26:
-            block_name = 'up_block1'
-            conv_name = 'conv12'
-        elif layer_index == 27:
-            block_name = 'up_block1'
-            conv_name = 'conv21'
-        elif layer_index == 28:
-            block_name = 'up_block1'
-            conv_name = 'conv22'
-        elif layer_index == 29:
-            block_name = 'up_block2'
-            conv_name = 'conv11'
-        elif layer_index == 30:
-            block_name = 'up_block2'
-            conv_name = 'conv12'
-        elif layer_index == 31:
-            block_name = 'up_block2'
-            conv_name = 'conv21'
-        elif layer_index == 32:
-            block_name = 'up_block2'
-            conv_name = 'conv22'
-        elif layer_index == 33:
-            block_name = 'up_block3'
-            conv_name = 'conv11'
-        elif layer_index == 34:
-            block_name = 'up_block3'
-            conv_name = 'conv12'
-        elif layer_index == 35:
-            block_name = 'up_block3'
-            conv_name = 'conv21'
-        elif layer_index == 36:
-            block_name = 'up_block3'
-            conv_name = 'conv22'
-        elif layer_index == 37:
-            block_name = 'up_block4'
-            conv_name = 'conv11'
-        elif layer_index == 38:
-            block_name = 'up_block4'
-            conv_name = 'conv12'
-        elif layer_index == 39:
-            block_name = 'up_block4'
-            conv_name = 'conv21'
-        elif layer_index == 40:
-            block_name = 'up_block4'
-            conv_name = 'conv22'
-        elif layer_index == 41:
-            return getattr(model, 'out_conv1'), None, 'out_conv1'
-        else:
-            raise Exception('neki je narobe pri pridobivanju conv iz layer indexa')
-
-        block = getattr(model, block_name)
-
-    elif 'unet' in model_name:
-        if layer_index == 18:
-            return model.outc.conv, None, 'conv'
-        if layer_index < 2:
-            layer = layer_index + 1
-            block = model.inc
-        else:
-            layer_index -= 2
-            du = 'up' if layer_index // 8 else 'down'
-            block = layer_index % 8 // 2 + 1
-            layer = layer_index % 2 + 1
-            block = op.attrgetter(f'{du}{block}.conv')(model)
-        conv_name = f'conv{layer}'
-
-    else:
-        raise ValueError(f"Unknown model {model_name}")
-
-    return getattr(block, conv_name), block, conv_name
-
-
-def disable_filter(device, model, name_index):
-    #logger.write('disabling filter in layer {0}'.format(name_index))
-    n_parameters_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    name, index = get_parameter_name_and_index_from_activations_dict_key(name_index)
-    block_name, _, layer_name = name.rpartition('.')
-    block = op.attrgetter(block_name)(model)
-    layer = getattr(block, layer_name)
-
-    new_conv = \
-        torch.nn.Conv2d(in_channels=layer.in_channels, \
-                        out_channels=layer.out_channels - 1,
-                        kernel_size=layer.kernel_size, \
-                        stride=layer.stride,
-                        padding=layer.padding,
-                        dilation=layer.dilation,
-                        groups=1,  # conv.groups,
-                        bias=True
-                        )
-
-    if (layer.groups != 1):
-        print('MAYBE THIS IS WRONG GROUPS != 1')
-    layer.out_channels -= 1
-
-    old_weights = layer.weight.data.cpu().numpy()
-    new_weights = new_conv.weight.data.cpu().numpy()
-    new_weights[: index, :, :, :] = old_weights[: index, :, :, :]
-    new_weights[index:, :, :, :] = old_weights[index + 1:, :, :, :]
-
-    # conv.weight.data = torch.from_numpy(new_weights).to(self.device)
-    layer.weight = torch.nn.Parameter(torch.from_numpy(new_weights).to(device))
-    layer.weight.grad = None
-
-    if layer.bias is not None:
-        bias_numpy = layer.bias.data.cpu().numpy()
-        bias = np.zeros(shape=(bias_numpy.shape[0] - 1), dtype=np.float32)
-        bias[:index] = bias_numpy[:index]
-        bias[index:] = bias_numpy[index + 1:]
-        # conv.bias.data = torch.from_numpy(bias).to(self.device)
-        layer.bias = torch.nn.Parameter(torch.from_numpy(bias).to(device))
-        layer.bias.grad = None
-
-
-    # ALSO: change activations sum for this conv layer # todo: i dont update activations (only sum)
-    layer_activations_sum = getattr(block, layer_name + '_activations_sum') # vektor dolzine toliko kolikor je filtrov, za vsak filter je ena stevilka
-    layer_activations_sum = torch.cat([layer_activations_sum[0:index], layer_activations_sum[index+1:]])
-    setattr(block, layer_name + '_activations_sum', torch.nn.Parameter(layer_activations_sum.to(device), requires_grad=False))
-
-    layer_index = _get_layer_index(name, model)
-    # prune next bn if nedded
-    _prune_next_bn_if_needed(layer_index, index, index, 1, device, model)
-
-    # surgery on chained convolution layers
-    next_conv_idx_list = _get_next_conv_id_list_recursive(layer_index, model)
-    for next_conv_id in next_conv_idx_list:
-        #print(next_conv_id)
-        _prune_next_layer(next_conv_id, index, index, 1, device, model)
-
-    n_parameters_after_pruning = sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    return n_parameters_before - n_parameters_after_pruning
-
-
-def _prune_next_layer(next_conv_i, filters_begin, filters_end, pruned_filters, device, model):
-    logger.write('Additionally pruning (next layer) conv with layer_id ' + str(next_conv_i))
-    assert filters_begin == filters_end
-    next_conv, block, layer_name = _layer_index_to_conv(next_conv_i, model)
-
-    next_new_conv = \
-        torch.nn.Conv2d(in_channels=next_conv.in_channels - pruned_filters, \
-                        out_channels=next_conv.out_channels, \
-                        kernel_size=next_conv.kernel_size, \
-                        stride=next_conv.stride,
-                        padding=next_conv.padding,
-                        dilation=next_conv.dilation,
-                        groups=1,  # next_conv.groups,
-                        bias=True
-                        )  # next_conv.bias)
-    next_conv.in_channels -= pruned_filters
-
-    old_weights = next_conv.weight.data.cpu().numpy()
-    new_weights = next_new_conv.weight.data.cpu().numpy()
-
-    new_weights[:, : filters_begin, :, :] = old_weights[:, : filters_begin, :, :]
-    new_weights[:, filters_begin:, :, :] = old_weights[:, filters_end + 1:, :, :]
-
-    next_conv.weight = torch.nn.Parameter(torch.from_numpy(new_weights).to(device))
-    #        next_conv.weight.data = torch.from_numpy(new_weights).to(self.device)
-    next_conv.weight.grad = None
-
-    # out conv: ne popravljam aktivacij, ker jih nimam za to konvolucijo
-    model_name = type(model).__name__.lower()
-    if 'densenet' in model_name and next_conv_i == 41 or 'unet' in model_name and next_conv_i == 18:
-        return
-
-    index = filters_begin
-    # ALSO: change activations sum for this conv layer # todo: i dont update activations
-    layer_activations_sum = getattr(block,
-                                    layer_name + '_activations_sum')  # vektor dolzine toliko kolikor je filtrov, za vsak filter je ena stevilka
-    layer_activations_sum = torch.cat([layer_activations_sum[0:index], layer_activations_sum[index + 1:]])
-    setattr(block, layer_name + '_activations_sum',
-            torch.nn.Parameter(layer_activations_sum.to(device), requires_grad=False))
-
-
-
-def _prune_next_bn_if_needed(layer_index, filters_begin, filters_end, pruned_filters, device, model):
-    model_name = type(model).__name__.lower()
-    if 'densenet' in model_name:
-        next_bn_index = None
-        if layer_index == 4:  # layer_index == 0 or layer_index == 1 or layer_index == 2 or layer_index == 3 or layer_index == 4:
-            next_bn_index = 4  # 4, 9, 14, 19, 24
-        elif layer_index == 9:  # layer_index == 5 or layer_index == 6 or layer_index == 7 or layer_index == 8 or layer_index == 9:
-            next_bn_index = 9  # 4, 9, 14, 19, 24
-        elif layer_index == 14:  # layer_index == 10 or layer_index == 11 or layer_index == 12 or layer_index == 13 or layer_index == 14:
-            next_bn_index = 14  # 4, 9, 14, 19, 24
-        elif layer_index == 19:  # layer_index == 15 or layer_index == 16 or layer_index == 17 or layer_index == 18 or layer_index == 19:
-            next_bn_index = 19  # 4, 9, 14, 19, 24
-        elif layer_index == 24:  # layer_index == 20 or layer_index == 21 or layer_index == 22 or layer_index == 23 or layer_index == 24:
-            next_bn_index = 24  # 4, 9, 14, 19, 24
-        else:
-            next_bn = None
-    elif 'unet' in model_name:
-        next_bn_index = layer_index if layer_index < 18 else None  # outc doesn't have a BN layer
-    else:
-        raise ValueError(f"Unknown model {model_name}")
-
-
-    if next_bn_index is not None:
-        next_bn = _get_bn_by_prev_conv_index(next_bn_index, model)
-
-    # Surgery on next batchnorm layer
-    if next_bn is not None:
-        logger.write('additionally pruning batch norm with index {0}'.format(next_bn_index))
-        logger.write('n features compressed from {0} to {1} '.format(next_bn.num_features, next_bn.num_features - pruned_filters))
-        next_new_bn = \
-            torch.nn.BatchNorm2d(num_features=next_bn.num_features - pruned_filters, \
-                                 eps=next_bn.eps, \
-                                 momentum=next_bn.momentum, \
-                                 affine=next_bn.affine,
-                                 track_running_stats=next_bn.track_running_stats)
-        next_bn.num_features -= pruned_filters
-
-        old_weights = next_bn.weight.data.cpu().numpy()
-        new_weights = next_new_bn.weight.data.cpu().numpy()
-        old_bias = next_bn.bias.data.cpu().numpy()
-        new_bias = next_new_bn.bias.data.cpu().numpy()
-        old_running_mean = next_bn.running_mean.data.cpu().numpy()
-        new_running_mean = next_new_bn.running_mean.data.cpu().numpy()
-        old_running_var = next_bn.running_var.data.cpu().numpy()
-        new_running_var = next_new_bn.running_var.data.cpu().numpy()
-
-        new_weights[: filters_begin] = old_weights[: filters_begin]
-        new_weights[filters_begin:] = old_weights[filters_end + 1:]
-        #next_bn.weight.data = torch.from_numpy(new_weights).to(device)
-        next_bn.weight = torch.nn.Parameter(torch.from_numpy(new_weights).to(device))
-        next_bn.weight.grad = None
-
-        new_bias[: filters_begin] = old_bias[: filters_begin]
-        new_bias[filters_begin:] = old_bias[filters_end + 1:]
-        #next_bn.bias.data = torch.from_numpy(new_bias).to(device)
-        next_bn.bias = torch.nn.Parameter(torch.from_numpy(new_bias).to(device))
-        next_bn.bias.grad = None
-
-        new_running_mean[: filters_begin] = old_running_mean[: filters_begin]
-        new_running_mean[filters_begin:] = old_running_mean[filters_end + 1:]
-        next_bn.running_mean.data = torch.from_numpy(new_running_mean).to(device)
-        #next_bn.running_mean = torch.nn.Parameter(torch.from_numpy(new_running_mean).to(device))
-        next_bn.running_mean.grad = None
-
-        new_running_var[: filters_begin] = old_running_var[: filters_begin]
-        new_running_var[filters_begin:] = old_running_var[filters_end + 1:]
-        next_bn.running_var.data = torch.from_numpy(new_running_var).to(device)
-        #next_bn.running_var = torch.nn.Parameter(torch.from_numpy(new_running_var).to(device))
-        next_bn.running_var.grad = None
