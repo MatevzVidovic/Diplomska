@@ -8,11 +8,28 @@ import ConvResourceCalc
 import torch.nn.utils.prune as prune
 
 
+from typing import Union
+
+import logging
+import sys
+import os
+
+# Assuming the submodule is located at 'python_logger'
+submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
+sys.path.insert(0, submodule_path)
+
+import python_logger.log_helper as py_log
+
+
+MY_LOGGER = logging.getLogger("prototip")
+
+
 class pruner:
 
 
 
-    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc: ConvResourceCalc, connection_lambda, inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules):
+    @py_log.log(passed_logger=MY_LOGGER)
+    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, connection_lambda, inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, logger):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.FLOPS_min_resource_percentage_dict = FLOPS_min_resource_percentage.min_resource_percentage_dict
         self.weights_min_resource_percentage_dict = weights_min_resource_percentage.min_resource_percentage_dict
@@ -20,6 +37,7 @@ class pruner:
         self.inextricable_connection_lambda = inextricable_connection_lambda
         self.conv_tree_ixs = conv_tree_ixs
         self.lowest_level_modules = lowest_level_modules
+        self.logger = logger
 
 
         self.tree_ix_2_list_of_initial_kernel_ixs = {}
@@ -40,6 +58,7 @@ class pruner:
         
     
 
+    @py_log.log(passed_logger=MY_LOGGER)
     def binary_search(arr, target):
         left, right = 0, len(arr) - 1
         
@@ -47,18 +66,21 @@ class pruner:
             mid = (left + right) // 2
             
             if arr[mid] == target:
+                py_log.log_locals(passed_logger=MY_LOGGER)
                 return mid
             elif arr[mid] < target:
                 left = mid + 1
             else:
                 right = mid - 1
         
+        py_log.log_locals(passed_logger=MY_LOGGER)
         return -1  # Target not found
     
 
 
 
 
+    @py_log.log(passed_logger=MY_LOGGER)
     def prune_current_layer(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
 
         # get the module
@@ -106,6 +128,10 @@ class pruner:
         # Pomoje bo treba imet samo pač structured, ker je local, ampak zdajle ne vem zadosti.
         # pass
 
+        py_log.log_locals(passed_logger=MY_LOGGER)
+        return
+
+    @py_log.log(passed_logger=MY_LOGGER)
     def prune_inextricably_following_layer(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
 
         # get the module
@@ -137,7 +163,9 @@ class pruner:
             module.running_var.grad = None
 
             self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
- 
+
+        py_log.log_locals(passed_logger=MY_LOGGER)
+        return
 
 
 
@@ -147,6 +175,7 @@ class pruner:
 
 
 
+    @py_log.log(passed_logger=MY_LOGGER)
     def prune_following_layer(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
 
 
@@ -174,7 +203,9 @@ class pruner:
 
         self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].pop(real_input_slice_ix)
 
-
+        
+        py_log.log_locals(passed_logger=MY_LOGGER)
+        return
 
 
 
@@ -242,6 +273,7 @@ class pruner:
 
         if to_prune is None:
             print("No more to prune.")
+            py_log.log_locals(passed_logger=MY_LOGGER)
             return
         
 
@@ -272,6 +304,8 @@ class pruner:
         print(f"Pruned {following_to_prune}")
 
 
+        py_log.log_locals(passed_logger=MY_LOGGER)
+        return
 
 
         
