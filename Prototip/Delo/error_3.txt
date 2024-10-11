@@ -1,0 +1,130 @@
+
+
+Pruned ((((((0,), 5), 1), 0), 3), 154)
+Pruned [((((((0,), 6), 1), 0), 0), 155)]
+
+Press enter to continue, any text to stop, g to continue and show graph.
+
+
+
+
+
+
+
+Pruned ((((((0,), 5), 1), 0), 3), 78)
+Pruned [((((((0,), 6), 1), 0), 0), 79)]
+
+Press enter to continue, any text to stop, g to continue and show graph.
+
+
+
+
+
+
+
+Pruned ((((((0,), 5), 1), 0), 0), 132)
+Pruned [((((((0,), 5), 1), 0), 3), 133)]
+
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 471)
+Pruned [((((((0,), 5), 1), 0), 3), 473)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 503)
+Pruned [((((((0,), 5), 1), 0), 3), 506)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 6), 1), 0), 0), 224)
+Pruned [((((((0,), 6), 1), 0), 3), 225)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 3), 0), 1), 0), 3), 414)
+Pruned [(((((((0,), 4), 0), 1), 0), 0), 415), ((((((0,), 5), 1), 0), 0), 927)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 205)
+Pruned [((((((0,), 5), 1), 0), 3), 207)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 4), 0), 1), 0), 3), 359)
+Pruned [((((((0,), 5), 1), 0), 0), 360)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 455)
+Pruned [((((((0,), 5), 1), 0), 3), 458)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 23)
+Pruned [((((((0,), 6), 1), 0), 0), 24)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 132)
+Pruned [((((((0,), 6), 1), 0), 0), 135)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 6), 1), 0), 0), 24)
+Pruned [((((((0,), 6), 1), 0), 3), 25)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 3), 0), 1), 0), 3), 454)
+Pruned [(((((((0,), 4), 0), 1), 0), 0), 456), ((((((0,), 5), 1), 0), 0), 968)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 299)
+Pruned [((((((0,), 5), 1), 0), 3), 302)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 83)
+Pruned [((((((0,), 6), 1), 0), 0), 86)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 207)
+Pruned [((((((0,), 6), 1), 0), 0), 213)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 3), 0), 1), 0), 3), 304)
+Pruned [(((((((0,), 4), 0), 1), 0), 0), 305), ((((((0,), 5), 1), 0), 0), 817)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 3), 0), 1), 0), 3), 455)
+Pruned [(((((((0,), 4), 0), 1), 0), 0), 459), ((((((0,), 5), 1), 0), 0), 971)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 113)
+Pruned [((((((0,), 5), 1), 0), 3), 114)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 207)
+Pruned [((((((0,), 6), 1), 0), 0), 214)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 6), 1), 0), 0), 41)
+Pruned [((((((0,), 6), 1), 0), 3), 43)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 6), 1), 0), 0), 248)
+Pruned [((((((0,), 6), 1), 0), 3), 252)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 476)
+Pruned [((((((0,), 5), 1), 0), 3), 483)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 109)
+Pruned [((((((0,), 6), 1), 0), 0), 113)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 439)
+Pruned [((((((0,), 5), 1), 0), 3), 444)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 4), 0), 1), 0), 3), 58)
+Pruned [((((((0,), 5), 1), 0), 0), 59)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 250)
+Pruned [((((((0,), 5), 1), 0), 3), 254)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 115)
+Pruned [((((((0,), 5), 1), 0), 3), 117)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 65)
+Pruned [((((((0,), 6), 1), 0), 0), 67)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned (((((((0,), 4), 0), 1), 0), 3), 208)
+Pruned [((((((0,), 5), 1), 0), 0), 210)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 396)
+Pruned [((((((0,), 5), 1), 0), 3), 403)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 0), 403)
+Pruned [((((((0,), 5), 1), 0), 3), 411)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 133)
+Pruned [((((((0,), 6), 1), 0), 0), 140)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Pruned ((((((0,), 5), 1), 0), 3), 186)
+Pruned [((((((0,), 6), 1), 0), 0), 195)]
+Press enter to continue, any text to stop, g to continue and show graph.
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/using_model_wrapper.py", line 978, in <module>
+    pruner_instance.prune(importance_dict, resource_calc, wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 264, in prune
+    initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
+IndexError: list index out of range

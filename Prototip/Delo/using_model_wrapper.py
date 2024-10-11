@@ -897,9 +897,9 @@ if __name__ == "__main__":
 
     test_activations = {0 : [test_kernel_combinator() for _ in range(8)]}
 
-    # for 16 batches, 4 kernels, 3x3 activation map, this needs to be a list of 16 tensors of shape (4, 3, 3)
+    # for 16 batch_size, 4 kernels, 3x3 activation map, this needs to be a list of 16 tensors of shape (4, 3, 3)
     # overall average kernel for it should have 1.5 everywhere
-    # L1_ADC should be [1.5, 0.5, 0.5, 1.5], since it is just the mean of the abses of the differences
+    # L1_ADC should be [1.5, 0.5, 0.5, 1.5], since it is just the mean of the abs-es of the differences
     # L2_ADC should be, for the first index: sqrt(3*3* 1.5**2) / 3*3
     # equals [sqrt(3*3) * sqrt(1.5**2) / 3*3,... ]
     # equals 3 * sqrt(1.5**2) / 9 = 1.5 / 3 = 0.5

@@ -1,0 +1,3 @@
+[submodule "Prototip/Delo/python_logger"]
+	path = Prototip/Delo/python_logger
+	url = https://github.com/MatevzVidovic/python_logger.git
