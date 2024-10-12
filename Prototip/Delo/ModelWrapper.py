@@ -250,7 +250,7 @@ def conf_matrix_to_mIoU(confusion_matrix):
 
 class ModelWrapper:
 
-    def __init__(self, model, dataloaders_dict, learning_parameters, model_name=""):
+    def __init__(self, model, dataloaders_dict, learning_parameters):
 
         # Get cpu, gpu or mps device for training.
         self.device = (
@@ -291,23 +291,29 @@ class ModelWrapper:
 
 
 
-        self.model_data_path = model_name + "_model/"
 
 
 
+        # Conceptually not needed here.
+        # Either give me the model class definition and make me make it here / load it from a file.
+        # Or give me the actual model and you deal with that stuff.
+        # Otherwise the mechanism of how to name the saved model will be scattered across 2 files.
 
-        # True if directory already exists
-        load_previous_model = os.path.isdir(self.model_data_path)
-        # Set to False if you want to rewrite data
-        # load_previous_model = False
+
+        # self.model_data_path = model_name + "_model/"
+
+        # # True if directory already exists
+        # load_previous_model = os.path.isdir(self.model_data_path)
+        # # Set to False if you want to rewrite data
+        # # load_previous_model = False
 
 
-        if load_previous_model:
-            prev_model_details = pd.read_csv(self.model_data_path + "previous_model_details.csv")
-            self.prev_serial_num = prev_model_details["previous_serial_num"][0]
-            self.model.load_state_dict(torch.load(self.model_data_path + "model_" + str(self.prev_serial_num) + ".pth"))
-        else:
-            self.prev_serial_num = 0
+        # if load_previous_model:
+        #     prev_model_details = pd.read_csv(self.model_data_path + "previous_model_details.csv")
+        #     self.prev_serial_num = prev_model_details["previous_serial_num"][0]
+        #     self.model.load_state_dict(torch.load(self.model_data_path + "model_" + str(self.prev_serial_num) + ".pth"))
+        # else:
+        #     self.prev_serial_num = 0
 
 
 
@@ -436,19 +442,23 @@ class ModelWrapper:
 
 
 
-    def save(self):
+
+    # This conceptually doesn't make sense to have here.
+    # This wrapper is only meant to handle the dirty work of training and testing.
+
+    # def save(self):
         
-        try:
-            os.mkdir(self.model_data_path)
-        except:
-            pass
+    #     try:
+    #         os.mkdir(self.model_data_path)
+    #     except:
+    #         pass
 
-        torch.save(self.model.state_dict(), self.model_data_path + "model_" + str(self.prev_serial_num+1) + ".pth")
+    #     torch.save(self.model.state_dict(), self.model_data_path + "model_" + str(self.prev_serial_num+1) + ".pth")
 
-        new_df = pd.DataFrame({"previous_serial_num": [self.prev_serial_num+1]})
-        new_df.to_csv(self.model_data_path + "previous_model_details.csv")
+    #     new_df = pd.DataFrame({"previous_serial_num": [self.prev_serial_num+1]})
+    #     new_df.to_csv(self.model_data_path + "previous_model_details.csv")
 
-        print("Saved PyTorch Model State")
+    #     print("Saved PyTorch Model State")
 
 
 

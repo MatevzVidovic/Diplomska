@@ -20,7 +20,6 @@ sys.path.insert(0, submodule_path)
 
 import python_logger.log_helper as py_log
 
-
 MY_LOGGER = logging.getLogger("prototip")
 
 

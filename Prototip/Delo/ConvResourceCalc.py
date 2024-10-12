@@ -1,11 +1,9 @@
 
 
-import numpy as np
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
 import copy
+
+from model_sorting import sort_tree_ixs
 
 
 
@@ -26,7 +24,7 @@ MY_LOGGER = logging.getLogger("prototip")
 
 # create object for calculating model's flops
 class ConvResourceCalc():
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def __init__(self, wrapper_model, initial_conv_resource_calc=None, target_modules=None):
         self.wrapper_model = wrapper_model
         self.initial_conv_resource_calc = initial_conv_resource_calc
@@ -46,7 +44,7 @@ class ConvResourceCalc():
         self.module_tree_ix_2_weights_dimensions = {}
     
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def get_copy_for_pickle(self):
 
         # deepcopy uses pickle in the background, so we have to do this:
@@ -65,20 +63,23 @@ class ConvResourceCalc():
         self.wrapper_model = temp_wrapper_model
         self.module_tree_ix_2_module_itself = temp_dict
 
+        
         return pickleable_object
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def _get_len_of_generator(self, gen):
+        
         return sum(1 for x in gen)
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def _is_leaf(self, model):
+        
         return self._get_len_of_generator(model.children()) == 0
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def calculate_layer(self, layer, x, tree_ix):
 
 
@@ -132,10 +133,11 @@ class ConvResourceCalc():
 
 
 
+        
         return y
     
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def calculate_resources(self, input_example):
         # tale ubistvu spremeni forward tako, da poklice trace_layer na vsakem. V trace nardis dejansko forward, poleg tega pa se
         # izracunas stevilo flopov.
@@ -146,7 +148,7 @@ class ConvResourceCalc():
         
 
 
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def modify_forward(module, curr_tree_ix=(0,), current_path_list=[]):
 
             module_name = type(module).__name__    #.lower()
@@ -168,11 +170,13 @@ class ConvResourceCalc():
             TypeError: ConvResourceCalc.calculate_resources.<locals>.modify_forward.<locals>.new_forward.<locals>.lambda_forward() takes 1 positional argument but 2 were given
             """
             if self._is_leaf(module):
-                @py_log.log(passed_logger=MY_LOGGER)
+                
                 def new_forward(m):
-                    @py_log.log(passed_logger=MY_LOGGER)
+                    
                     def lambda_forward(x):
+                        
                         return self.calculate_layer(m, x, curr_tree_ix)
+                    
                     return lambda_forward
 
                 module.old_forward = module.forward
@@ -207,7 +211,7 @@ class ConvResourceCalc():
 
 
 
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def restore_forward(model):
             
             model_name = type(model).__name__.lower()
@@ -238,7 +242,7 @@ class ConvResourceCalc():
 
         # We have the FLOPs for the leaves. Elsewhere it is 0.
         # Now we recursively calculate the FLOPs of middle modules.
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def recursively_populate_flops(curr_tree_ix=(0,)):
 
             # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
@@ -246,6 +250,7 @@ class ConvResourceCalc():
 
             # If leaf, return what we have calculated.
             if len(children_tree_ix_lists) == 0:
+                
                 return self.module_tree_ix_2_flops_num[curr_tree_ix]
 
 
@@ -255,12 +260,13 @@ class ConvResourceCalc():
 
             self.module_tree_ix_2_flops_num[curr_tree_ix] = cur_flops
             
+            
             return cur_flops
 
 
 
 
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def recursively_populate_weights_nums(curr_tree_ix=(0,)):
 
             # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
@@ -268,6 +274,7 @@ class ConvResourceCalc():
 
             # If leaf, return what we have calculated.
             if len(children_tree_ix_lists) == 0:
+                
                 return self.module_tree_ix_2_weights_num[curr_tree_ix]
 
 
@@ -276,6 +283,7 @@ class ConvResourceCalc():
                 cur_weights_num += recursively_populate_weights_nums(child_tree_ix)
 
             self.module_tree_ix_2_weights_num[curr_tree_ix] = cur_weights_num
+            
             
             return cur_weights_num
             
@@ -291,3 +299,33 @@ class ConvResourceCalc():
         # print(self.module_tree_ix_2_flops_num)
         # print(self.all_flops_num)
         recursively_populate_weights_nums()
+
+
+
+
+
+    def get_lowest_level_module_tree_ixs(self):
+
+        lowest_level_modules_tree_ixs = []
+        for tree_ix, children_list in self.module_tree_ix_2_children_tree_ix_list.items():
+            if len(children_list) == 0:
+                lowest_level_modules_tree_ixs.append(tree_ix)
+        
+        return lowest_level_modules_tree_ixs
+
+
+
+    def get_ordered_list_of_tree_ixs_for_layer_name(self, layer_name):
+        
+
+        applicable_tree_ixs = []
+        for tree_ix, module_name in self.module_tree_ix_2_name.items():
+            if module_name == layer_name:
+                applicable_tree_ixs.append(tree_ix)
+        
+        assert len(applicable_tree_ixs) > 0, f"No module with name {layer_name} found."
+
+        sorted_applicable_tree_ixs = sort_tree_ixs(applicable_tree_ixs)
+
+        
+        return sorted_applicable_tree_ixs

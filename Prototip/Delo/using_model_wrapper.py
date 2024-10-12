@@ -40,8 +40,8 @@ import python_logger.log_helper as py_log
 MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
-
-handlers = py_log.file_handler_setup(MY_LOGGER, "./python_logger", add_stdout_stream=False)
+python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
+handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
 # def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
 
 
@@ -79,7 +79,7 @@ dataloading_args = {
     "num_workers" : 4,
 }
 
-@py_log.log(passed_logger=MY_LOGGER)
+
 def get_data_loaders(**dataloading_args):
     
     data_path = dataloading_args["path_to_sclera_data"]
@@ -101,6 +101,7 @@ def get_data_loaders(**dataloading_args):
     print('val dataset len: ' + str(valid_dataset.__len__()))
     print('test dataset len: ' + str(test_dataset.__len__()))
 
+    
     return trainloader, validloader, testloader
 
 
@@ -212,16 +213,17 @@ if __name__ == "__main__":
 
     activations = {}
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def set_activations_hooks(activations: dict, tree_ixs, resource_calc: ConvResourceCalc):
         
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def get_activation(tree_ix):
-            @py_log.log(passed_logger=MY_LOGGER)
+            
             def hook(model, input, output):
                 if tree_ix not in activations:
                     activations[tree_ix] = []
                 activations[tree_ix].append(output.detach())
+            
             return hook
 
         tree_ix_2_hook_handle = {}
@@ -303,20 +305,23 @@ if __name__ == "__main__":
     But it's interestting that the previous IPAD code does it by name (train_with_pruning_combined.py/_layer_index_to_conv)
     """
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def generator_to_list(generator):
+        
         return [name for name, module in generator]
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def first_element(generator):
         name, module = next(generator)
         # return name
+        
         return module
     
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def second_element(generator):
         name, module = next(generator)
         name, module = next(generator)
+        
         return name
         # return module
 
@@ -363,7 +368,7 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def denest_tuple(tup):
         returning_list = []
         for item in tup:
@@ -371,17 +376,19 @@ if __name__ == "__main__":
                 returning_list.extend(denest_tuple(item))
             elif isinstance(item, int):
                 returning_list.append(item)
+        
         return returning_list
     
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def renest_tuple(lst):
         curr_tuple = (lst[0],)
         for item in lst[1:]:
             curr_tuple = (curr_tuple, item)
+        
         return curr_tuple
     
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def sort_tree_ixs(list_of_tree_ixs):
         
         denested_list = [denest_tuple(tree_ix) for tree_ix in list_of_tree_ixs]
@@ -392,6 +399,7 @@ if __name__ == "__main__":
 
         # print(denested_list)
         # print(sorted_denested_list)
+        
         return sorted_list
 
 
@@ -434,7 +442,7 @@ if __name__ == "__main__":
 
     tree_ix_2_layer_name = resource_calc.module_tree_ix_2_name
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def get_ordered_list_of_tree_ixs_for_layer_name(module_tree_ix_2_name, layer_name):
         
         applicable_tree_ixs = []
@@ -446,6 +454,7 @@ if __name__ == "__main__":
 
         sorted_applicable_tree_ixs = sort_tree_ixs(applicable_tree_ixs)
 
+        
         return sorted_applicable_tree_ixs
     
     conv_tree_ixs = get_ordered_list_of_tree_ixs_for_layer_name(tree_ix_2_layer_name, "Conv2d")
@@ -480,7 +489,7 @@ if __name__ == "__main__":
     #     new_tup = tuple(denest_tuple(tup))
     #     return new_tup
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def string_of_pruned(list_of_initial_ixs, initial_dim_size):
         ix_is_in_initial_ixs_list = []
         for i in range(initial_dim_size):
@@ -514,12 +523,13 @@ if __name__ == "__main__":
         if ix_in_False_territory > 0:
             string += f"-{initial_dim_size}"
 
+        
         return string
                 
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc: Union[None, ConvResourceCalc], initial_resource_calc: Union[None, ConvResourceCalc], pruner: Union[None, pruner]):
         # Draw the rectangle and label it
 
@@ -607,7 +617,7 @@ if __name__ == "__main__":
                 child_name = tree_ix_2_layer_name[child]
                 draw_tree(child, child_name, ax, x + i * child_width, y - height, child_width, height, max_depth - 1, resource_calc, initial_resource_calc, pruner)
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def visualize_tree(ax, resource_calc, initial_resource_calc: Union[None, ConvResourceCalc], pruner, width=1, height=0.1):
         tree = resource_calc.module_tree_ix_2_name
         max_depth = max(len(denest_tuple(k)) for k in tree.keys())
@@ -618,7 +628,7 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def model_graph(resource_calc, initial_resource_calc=None, pruner=None):
         fig, ax = plt.subplots()
         visualize_tree(ax, resource_calc, initial_resource_calc, pruner)
@@ -648,7 +658,7 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
         #    tree_ix -> skip_conn_starting_index
 
@@ -674,16 +684,21 @@ if __name__ == "__main__":
             conv_ix = conv_tree_ixs.index(tree_ix)
 
             if conv_ix == 16:
+                
                 return 64
             elif conv_ix == 14:
+                
                 return 128
             elif conv_ix == 12:
+                
                 return 256
             elif conv_ix == 10:
+                
                 return 512
 
 
         else:
+            
             return None
         
 
@@ -698,7 +713,7 @@ if __name__ == "__main__":
     """
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def unet_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
         # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
         
@@ -791,6 +806,7 @@ if __name__ == "__main__":
         if conv_ix == 18:
             conn_destinations = []
         
+        
         return conn_destinations
 
 
@@ -822,7 +838,7 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
         # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
         
@@ -858,6 +874,7 @@ if __name__ == "__main__":
             conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
         
 
+        
         return conn_destinations
     
 
@@ -866,11 +883,11 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
         assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
         
-        @py_log.log(passed_logger=MY_LOGGER)
+        
         def IPAD_kernel_importance_lambda(activations, conv_tree_ixs):
             # Returns dict tree_ix_2_list_of_kernel_importances
             # The ix-th importance is for the kernel currently on the ix-th place.
@@ -908,8 +925,10 @@ if __name__ == "__main__":
 
                 tree_ix_2_kernel_importances[tree_ix] = kernel_importance
             
+            
             return tree_ix_2_kernel_importances
             
+        
         return IPAD_kernel_importance_lambda
             
     
@@ -922,15 +941,17 @@ if __name__ == "__main__":
 
     # Testing the IPAD_kernel_importance_lambda_generator
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def test_one_kernel_creator(number):
         # make the batch_size 2, so the test is more real-life
         intermeds = torch.Tensor([[number, number, number], [number, number, number], [number, number, number]])
         result = torch.stack([intermeds for _ in range(2)], dim=(0))
+        
         return result
     
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def test_kernel_combinator():
+        
         return torch.stack([test_one_kernel_creator(i) for i in range(4)], dim=(1))
 
     test_conv_tree_ixs = [0]
@@ -971,10 +992,11 @@ if __name__ == "__main__":
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    
     def load_initial_conv_resource_calc() -> ConvResourceCalc:
         with open("initial_conv_resource_calc.pkl", "rb") as f:
             initial_resource_calc = pickle.load(f)
+        
         return initial_resource_calc
     
     initial_resource_calc = load_initial_conv_resource_calc()
