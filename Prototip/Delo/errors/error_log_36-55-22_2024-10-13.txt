@@ -1,0 +1,28 @@
+matevzvidovic@matevzvidovic-IdeaPad-3-17ALC6:~/Desktop/Diplomska/Prototip/Delo$ python3 main.py
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 10
+val dataset len: 10
+test dataset len: 10
+Device: cpu
+Pruned (((((0,), 0), 0), 3), 31)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 32), ((((((0,), 8), 1), 0), 0), 96)]
+Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.
+
+Pruned (((((((0,), 4), 0), 1), 0), 3), 348)
+Pruned [((((((0,), 5), 1), 0), 0), 349)]
+Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.
+
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 427, in <module>
+    model_wrapper.prune()
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 231, in prune
+    self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 295, in prune
+    initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
+IndexError: list index out of range

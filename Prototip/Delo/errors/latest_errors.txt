@@ -1,0 +1,236 @@
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 10
+val dataset len: 10
+test dataset len: 10
+train dataloader num of batches: 1
+val dataloader num of batches: 1
+test dataloader num of batches: 1
+Device: cpu
+loss: 0.596299  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 45), ((((((0,), 8), 1), 0), 0), 109)]
+loss: 0.587723  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 26)
+Pruned [(((((0,), 0), 0), 3), 27)]
+loss: 0.581519  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 60)
+Pruned [(((((0,), 0), 0), 3), 62)]
+loss: 0.579671  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 31)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 32), ((((((0,), 8), 1), 0), 0), 96)]
+loss: 0.581763  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 53)
+Pruned [(((((0,), 0), 0), 3), 55)]
+loss: 0.580216  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 59)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 62), ((((((0,), 8), 1), 0), 0), 126)]
+loss: 0.581463  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 9)
+Pruned [(((((0,), 0), 0), 3), 10)]
+loss: 0.568882  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 47), ((((((0,), 8), 1), 0), 0), 111)]
+loss: 0.567100  [   10/   10]
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 439, in <module>
+    model_wrapper.prune()
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 231, in prune
+    self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 299, in prune
+    real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+ValueError: 32 is not in list
+
+
+
+
+
+
+
+
+matevzvidovic@matevzvidovic-IdeaPad-3-17ALC6:~/Desktop/Diplomska/Prototip/Delo$ python3 main.py
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 10
+val dataset len: 10
+test dataset len: 10
+train dataloader num of batches: 1
+val dataloader num of batches: 1
+test dataloader num of batches: 1
+Device: cpu
+loss: 0.600864  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 45), ((((((0,), 8), 1), 0), 0), 109)]
+loss: 0.588498  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 26)
+Pruned [(((((0,), 0), 0), 3), 27)]
+loss: 0.578628  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 53)
+Pruned [(((((0,), 0), 0), 3), 55)]
+loss: 0.576989  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 59)
+Pruned [(((((0,), 0), 0), 3), 62)]
+loss: 0.579316  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 31)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 32), ((((((0,), 8), 1), 0), 0), 96)]
+loss: 0.583009  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 9)
+Pruned [(((((0,), 0), 0), 3), 10)]
+loss: 0.584012  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 59)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 62), ((((((0,), 8), 1), 0), 0), 126)]
+loss: 0.572748  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 47), ((((((0,), 8), 1), 0), 0), 111)]
+loss: 0.566531  [   10/   10]
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 439, in <module>
+    model_wrapper.prune()
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 231, in prune
+    self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 299, in prune
+    real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+ValueError: 32 is not in list
+
+
+
+
+
+
+
+
+
+
+
+python3 main.pymatevzvidovic@matevzvidovic-IdeaPad-3-17ALC6:~/Desktop/Diplomska/Prototip/Delo$ python3 main.py
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 10
+val dataset len: 10
+test dataset len: 10
+train dataloader num of batches: 1
+val dataloader num of batches: 1
+test dataloader num of batches: 1
+Device: cpu
+loss: 0.599707  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 45), ((((((0,), 8), 1), 0), 0), 109)]
+loss: 0.588325  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 26)
+Pruned [(((((0,), 0), 0), 3), 27)]
+loss: 0.582313  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 60)
+Pruned [(((((0,), 0), 0), 3), 62)]
+loss: 0.580509  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 31)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 32), ((((((0,), 8), 1), 0), 0), 96)]
+loss: 0.584918  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 53)
+Pruned [(((((0,), 0), 0), 3), 55)]
+loss: 0.574487  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 9)
+Pruned [(((((0,), 0), 0), 3), 10)]
+loss: 0.574819  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 59)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 62), ((((((0,), 8), 1), 0), 0), 126)]
+loss: 0.571723  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 47), ((((((0,), 8), 1), 0), 0), 111)]
+loss: 0.566408  [   10/   10]
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 439, in <module>
+    model_wrapper.prune()
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 231, in prune
+    self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 299, in prune
+    real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+ValueError: 32 is not in list
+
+
+
+
+
+
+
+
+
+
+
+
+
+matevzvidovic@matevzvidovic-IdeaPad-3-17ALC6:~/Desktop/Diplomska/Prototip/Delo$ python3 main.py
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 10
+val dataset len: 10
+test dataset len: 10
+train dataloader num of batches: 1
+val dataloader num of batches: 1
+test dataloader num of batches: 1
+Device: cpu
+loss: 0.606295  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 45), ((((((0,), 8), 1), 0), 0), 109)]
+loss: 0.589130  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 26)
+Pruned [(((((0,), 0), 0), 3), 27)]
+loss: 0.585453  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 60)
+Pruned [(((((0,), 0), 0), 3), 62)]
+loss: 0.580421  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 31)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 32), ((((((0,), 8), 1), 0), 0), 96)]
+loss: 0.582234  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 53)
+Pruned [(((((0,), 0), 0), 3), 55)]
+loss: 0.577262  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 59)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 62), ((((((0,), 8), 1), 0), 0), 126)]
+loss: 0.577088  [   10/   10]
+Pruned (((((0,), 0), 0), 0), 9)
+Pruned [(((((0,), 0), 0), 3), 10)]
+loss: 0.572367  [   10/   10]
+Pruned (((((0,), 0), 0), 3), 44)
+Pruned [(((((((0,), 1), 0), 1), 0), 0), 47), ((((((0,), 8), 1), 0), 0), 111)]
+loss: 0.564166  [   10/   10]
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 439, in <module>
+    model_wrapper.prune()
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 231, in prune
+    self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 299, in prune
+    real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+ValueError: 32 is not in list
+
+
+
+
+
+
+
+
+
+
+
+
+

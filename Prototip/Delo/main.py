@@ -19,16 +19,6 @@ from dataset import IrisDataset, transform
 
 from ModelWrapper import ModelWrapper
 
-from ConvResourceCalc import ConvResourceCalc
-
-from pruner import pruner
-
-from min_resource_percentage import min_resource_percentage
-
-
-from typing import Union
-
-import pandas as pd
 
 
 
@@ -56,8 +46,11 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 
 
 
-learning_rate = 1e-3
-
+learning_parameters = {
+    "learning_rate" : 1e-3,
+    "loss_fn" : nn.CrossEntropyLoss(),
+    "optimizer_class" : torch.optim.SGD
+}
 
 dataloading_args = {
 
@@ -92,20 +85,40 @@ def get_data_loaders(**dataloading_args):
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
+    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
+
+    # Actually, no. Let's not drop last.
+    # it makes no sense. i think this might have been done because the IPAD lambda was done only on the last batch, and so that
+    # batch needed to be big.
+
 
     print('train dataset len: ' + str(train_dataset.__len__()))
     print('val dataset len: ' + str(valid_dataset.__len__()))
     print('test dataset len: ' + str(test_dataset.__len__()))
 
+    print('train dataloader num of batches: ' + str(trainloader.__len__()))
+    print('val dataloader num of batches: ' + str(validloader.__len__()))
+    print('test dataloader num of batches: ' + str(testloader.__len__()))
+
     
     return trainloader, validloader, testloader
 
 
+
+
+
+
+train_dataloader, valid_dataloader, test_dataloader = get_data_loaders(**dataloading_args)# 
+
+dataloader_dict = {
+    "train" : train_dataloader,
+    "valid" : valid_dataloader,
+    "test" : test_dataloader,
+}
 
 
 
@@ -116,173 +129,6 @@ model_parameters = {
     "bilinear" : True,
     "pretrained" : False,
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-save_path = os.path.join(os.path.dirname(__file__), "saved")
-
-os.makedirs(save_path, exist_ok=True)
-
-
-if os.path.exists(os.path.join(save_path, "previous_model_details.csv")):
-    prev_model_details = pd.read_csv(os.path.join(save_path, "previous_model_details.csv"))
-    prev_serial_num = prev_model_details["previous_serial_num"][0]
-else:
-    prev_serial_num = 0
-
-
-
-
-model_class = UNet
-model_savefile_name = model_class.__name__ + "_" + str(prev_serial_num) + ".pth"
-model_path = os.path.join(save_path, model_savefile_name)
-
-
-if os.path.exists(model_path):
-    model = torch.load(model_path)
-else:    
-    model = UNet(**model_parameters)
-    prev_serial_num = None
-    
-
-
-
-
-
-
-
-
-train_dataloader, valid_dataloader, test_dataloader = get_data_loaders(**dataloading_args)
-
-dataloader_dict = {
-    "train" : train_dataloader,
-    "valid" : valid_dataloader,
-    "test" : test_dataloader,
-}
-
-
-
-
-
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-loss_fn = nn.CrossEntropyLoss() # nn.MSELoss()
-
-learning_dict = {
-    "optimizer" : optimizer,
-    "loss_fn" : loss_fn,
-}
-
-
-wrap_model = ModelWrapper(model, dataloader_dict, learning_dict)
-
-
-
-
-
-resource_calc = ConvResourceCalc(wrap_model)
-
-input_example = torch.randn(1, 1, 128, 128)
-resource_calc.calculate_resources(input_example)
-
-initial_resource_calc_path = os.path.join(save_path, "initial_conv_resource_calc.pkl")
-if os.path.exists(os.path.join(initial_resource_calc_path)):
-    with open(initial_resource_calc_path, "rb") as f:
-        initial_resource_calc = pickle.load(f)
-else:
-    # pickle resource_dict
-    with open(initial_resource_calc_path, "wb") as f:
-        initial_resource_calc = resource_calc.get_copy_for_pickle()
-        pickle.dump(initial_resource_calc, f)
-
-
-
-
-
-
-
-
-# conv_tree_ixs = []
-# for key, value in resource_calc.module_tree_ix_2_name.items():
-#     if value == "Conv2d":
-#         conv_tree_ixs.append(key)
-
-
-
-
-
-
-activations = {}
-original_hooks = {}
-
-
-def set_activations_hooks(activations: dict, resource_calc: ConvResourceCalc):
-    
-    tree_ixs = resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-    
-    def get_activation(tree_ix):
-        
-        def hook(model, input, output):
-            if tree_ix not in activations:
-                activations[tree_ix] = []
-            activations[tree_ix].append(output.detach())
-        
-        return hook
-
-    tree_ix_2_hook_handle = {}
-    for tree_ix in tree_ixs:
-        module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
-    
-    return tree_ix_2_hook_handle
-
-tree_ix_2_hook_handle = set_activations_hooks(activations, resource_calc)
-
-
-def remove_hooks(tree_ix_2_hook_handle):
-    for hook_handle in tree_ix_2_hook_handle.values():
-        hook_handle.remove()
-
-
-
-
-
-
-
-FLOPS_min_res_percents = min_resource_percentage(resource_calc.module_tree_ix_2_name)
-FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
-
-tree_ix_2_percentage_dict = {
-    (0,) : 0.2,
-    ((0,), 0) : 0.2,
-}
-
-FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
-
-
-weights_min_res_percents = min_resource_percentage(resource_calc.module_tree_ix_2_name)
-weights_min_res_percents.set_by_name("Conv2d", 0.2)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -576,25 +422,9 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
 importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
 
 
+input_example = torch.randn(1, 1, 128, 128)
 
-
-
-
-
-
-conv_tree_ixs = initial_resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-lowest_level_modules = resource_calc.get_lowest_level_module_tree_ixs()
-batch_norm_ixs = initial_resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
-
-if prev_serial_num is not None:
-    with open(os.path.join(save_path, f"pruner_{prev_serial_num}.pkl"), "rb") as f:
-        pruner_instance = pickle.load(f)
-else:
-    pruner_instance = pruner(FLOPS_min_res_percents, weights_min_res_percents, initial_resource_calc, unet_connection_lambda, unet_inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, MY_LOGGER)
-
-
-
-
+model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example, importance_lambda, unet_connection_lambda, unet_inextricable_connection_lambda)
 
 
 
@@ -603,56 +433,22 @@ else:
 
 inp = ""
 while inp == "" or inp == "g":
-
-    # print(activations)
-
-    activations.clear()
-
-    # set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
-
-    wrap_model.model.eval()
-    with torch.no_grad():
-        for i in range(10):
-            input_tensor = torch.randn(1, 1, 128, 128)
-            model(input_tensor)
     
-    # print(activations)
-    # print(f"Number of activations for [((((0,), 0), 0), 0)]: {len([((((0,), 0), 0), 0)])}")
-    # print(activations[((((0,), 0), 0), 0)][0].shape)
-    # input()
 
+    model_wrapper.train(1)
+    model_wrapper.prune()
 
-    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
-    resource_calc.calculate_resources(input_example)
-    importance_dict = importance_lambda(activations, conv_tree_ixs)
-    pruner_instance.prune(importance_dict, resource_calc, wrap_model)
-
-    resource_calc.calculate_resources(input_example)
 
     if inp == "g":
-        model_graph(resource_calc, initial_resource_calc, pruner_instance)
+        model_wrapper.model_graph()
 
-    inp = input("Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.\n")
-
-
-
+    # inp = input("Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.\n")
+    inp = ""
 
 
     if inp == "s":
 
-        curr_serial_num = prev_serial_num + 1 if prev_serial_num is not None else 0
-
-        remove_hooks(tree_ix_2_hook_handle)
-        new_model_path = os.path.join(save_path , model_class.__name__ + "_" + str(curr_serial_num) + ".pth")
-        torch.save(model, new_model_path)
-
-
-        with open(os.path.join(save_path, f"pruner_{curr_serial_num}.pkl"), "wb") as f:
-            pickle.dump(pruner_instance, f)
-        
-        
-        new_df = pd.DataFrame({"previous_serial_num": [curr_serial_num]})
-        new_df.to_csv(os.path.join(save_path, "previous_model_details.csv"))
+        model_wrapper.save()
 
 
         break

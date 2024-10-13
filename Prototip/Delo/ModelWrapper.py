@@ -1,240 +1,50 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import scipy as sp
-from scipy import sparse
 
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report
-
-import os
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 
-from torch.utils.data import Dataset
+import pickle
 
-from timeit import default_timer as timer
+
 
 from unet import UNet
 
-from dataset import IrisDataset, transform
+from TrainingWrapper import TrainingWrapper
+
+from ConvResourceCalc import ConvResourceCalc
+
+from pruner import pruner
+
+from min_resource_percentage import min_resource_percentage
+
+from model_vizualization import model_graph
+
+
+import pandas as pd
 
 
 
 
 
+# Logging preparation:
+
+import logging
+import sys
+import os
+
+# Assuming the submodule is located at 'python_logger'
+submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
+sys.path.insert(0, submodule_path)
+
+import python_logger.log_helper as py_log
 
 
+MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
 
-
-
-"""
-get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU are adapted from:
-from train_with_knowledge_distillation import get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU
-"""
-
-
-def get_conf_matrix(predictions, targets):
-    """
-    predictions and targets can be matrixes or tensors.
-    
-    In both cases we only get a single confusion matrix
-    - in the tensor case it is simply agreggated over all examples in the batch.
-    """
-
-
-    predictions_np = predictions.data.cpu().long().numpy()
-    targets_np = targets.cpu().long().numpy()
-    # for batch of predictions
-    # if len(np.unique(targets)) != 2:
-    #    print(len(np.unique(targets)))
-    
-    
-    try:
-        assert (predictions.shape == targets.shape)
-    except:
-        print("predictions.shape: ", predictions.shape)
-        print("targets.shape: ", targets.shape)
-        raise AssertionError
-
-
-
-
-
-    num_classes = 2
-
-    """
-    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,0]))
-    print(c)
-
-     PREDICTIONS
-     0, 1, 2, 3
-    [[1 0 0 1]   0 |
-     [0 0 0 0]   1 |
-     [0 1 1 0]   2  TARGETS
-     [0 0 0 1]]  3 |
-    """
-    mask = (targets_np >= 0) & (targets_np < num_classes)
-
-
-    # print(np.any(mask == False))
-    # False
-    """
-    I'm not sure why the mask is needed - wouldn't all the values be in this range?
-    And if they weren't, shouldn't we throw an error?
-    """
-
-
-    """
-    Example for 4 classes:
-    Possible target values are [0, 1, 2, 3].
-    
-    Possible label values are [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].
-    
-    Label values [0, 1, 2, 3] are those that are 0 in the target.
-    0 is for those who are also 0 in the prediction, 1 for those which are 1 in the prediction, etc.
-    Label values [4, 5, 6, 7] are those that are 1 in the target, etc.
-    Then this gets reshaped into a confusion matrix.
-    np.reshape fills the matrix row by row.
-    I don't like this, because in the 2 class case it is intuitive that background is the true negative,
-    and so this doesn't conform to the usual confusion matrix representation:
-    (predicted values as columns and target values as rows)
-    [[TP, FN],
-     [FP, TN]]
-
-    First, we tried transposing along the anti-diagonal (np.rot90(confusion_matrix, 2).T), but this is wrong.
-    Just perform an antidiagonal transpose on a 3x3 matrix on paper by hand and keep track of the column and row labels.
-    They switch places. It's all wrong.
-
-    Instead, we shold flip the columns along their centre, and then flip the rows along their centre.
-    Essentially reshuffling them along the centre. This way the labels stay correctly corresponding after each of the operations.
-    
-    This means performing flipud and fliplr.
-    But this is actually the same as just doing
-    np.rot90(confusion_matrix, 2)
-    and not doing the transpose.
-    """
-
-    # print(mask) # 2d/3d tensor of true/false
-    label = num_classes * targets_np[mask].astype('int') + predictions_np[
-        mask]  # gt_image[mask] vzame samo tiste vrednosti, kjer je mask==True
-    # print(mask.shape)  # batch_size, 128, 128
-    # print(label.shape) # batch_size * 128 * 128 (with batch_size==1:   = 16384)
-    # print(label)  # vector composed of 0, 1, 2, 3 (in the multilabel case)
-    count = np.bincount(label, minlength=num_classes ** 2)  # number of repetitions of each unique value
-    # print(count) # [14359   475    98  1452]
-    confusion_matrix = count.reshape(num_classes, num_classes)
-    confusion_matrix = np.rot90(confusion_matrix, 2)
-    # print(confusion_matrix)
-    # [[ 1452   475]
-    #  [   98 14359]]
-
-    return confusion_matrix
-
-
-
-
-
-def get_IoU_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    IoU = conf_matrix_to_IoU(confusion_matrix)
-
-    return IoU
-
-def conf_matrix_to_IoU(confusion_matrix):
-    """
-    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
-    print(c)
-    [[1 0 0 0]
-     [0 0 0 0]
-     [0 1 1 0]
-     [0 0 0 2]]
-    miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
-    print(miou) # 0.625
-    """
-
-    #print(confusion_matrix)
-    n_classes = 2
-    if confusion_matrix.shape != (n_classes, n_classes):
-        print(confusion_matrix.shape)
-        raise NotImplementedError()
-
-    IoU = np.diag(confusion_matrix) / (
-            np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
-            np.diag(confusion_matrix))
-
-    return IoU.item(1) # only IoU for sclera (not background)
-
-
-
-
-
-
-
-def get_F1_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    IoU = conf_matrix_to_F1(confusion_matrix)
-
-    return IoU
-
-def conf_matrix_to_F1(confusion_matrix):
-
-    TP = confusion_matrix[0][0]
-    FN = confusion_matrix[0][1]
-    FP = confusion_matrix[1][0]
-    TN = confusion_matrix[1][1]
-
-    precision = TP / (TP + FP)
-    recall = TP / (TP + FN)
-
-    F1 = 2 * (precision * recall) / (precision + recall)
-
-    return F1
-
-
-# On mIoU: It is particularly useful for multi-class segmentation tasks.
-# mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
-def get_mIoU_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    mIoU = conf_matrix_to_mIoU(confusion_matrix)
-
-    return mIoU
-
-
-def conf_matrix_to_mIoU(confusion_matrix):
-    """
-    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
-    print(c)
-    [[1 0 0 0]
-     [0 0 0 0]
-     [0 1 1 0]
-     [0 0 0 2]]
-    miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
-    print(miou) # 0.625
-    """
-
-    #print(confusion_matrix)
-    n_classes = 2
-    if confusion_matrix.shape != (n_classes, n_classes):
-        print(confusion_matrix.shape)
-        raise NotImplementedError()
-
-    MIoU = np.diag(confusion_matrix) / (
-            np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
-            np.diag(confusion_matrix))
-
-    if n_classes == 2:
-        print("mIoU computed with only two classes. Background omitted.")
-        return MIoU.item(1) # only IoU for sclera (not background)
-    else:
-        return np.mean(MIoU)
-
+python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
+handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
+# def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
 
 
 
@@ -250,39 +60,34 @@ def conf_matrix_to_mIoU(confusion_matrix):
 
 class ModelWrapper:
 
-    def __init__(self, model, dataloaders_dict, learning_parameters):
-
-        # Get cpu, gpu or mps device for training.
-        self.device = (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-
-        print(f"Device: {self.device}")
+    @py_log.log(passed_logger=MY_LOGGER)
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, importance_fn, connection_fn, inextricable_connection_fn):
 
 
 
-        self.model = model.to(self.device)
-        self.dataloaders_dict = dataloaders_dict
+        self.save_path = os.path.join(os.path.dirname(__file__), "saved")
+
+        os.makedirs(self.save_path, exist_ok=True)
 
 
+        if os.path.exists(os.path.join(self.save_path, "previous_model_details.csv")):
+            prev_model_details = pd.read_csv(os.path.join(self.save_path, "previous_model_details.csv"))
+            self.prev_serial_num = prev_model_details["previous_serial_num"][0]
+        else:
+            self.prev_serial_num = 0
 
-        # # Tole je v modelu ze:
-        # self.dropout = learning_parameters["dropout"]
-        # self.learning_rate = learning_parameters["learning_rate"]
+
+        self.model_class = model_class
+
+        model_savefile_name = self.model_class.__name__ + "_" + str(self.prev_serial_num) + ".pth"
+        model_path = os.path.join(self.save_path, model_savefile_name)
+
+        if os.path.exists(model_path):
+            self.model = torch.load(model_path)
+        else:    
+            self.model = UNet(**model_parameters)
+            self.prev_serial_num = None
         
-        # # Tole pomoje ze v dataloaderjih
-        # self.epochs = learning_parameters["epochs"]
-        # self.batch_size = learning_parameters["batch_size"]
-
-        self.optimizer = learning_parameters["optimizer"]
-        self.loss_fn = learning_parameters["loss_fn"]
-
-        # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
-        # self.gradient_clip_value = learning_parameters["gradient_clip_value"]
 
 
 
@@ -292,340 +97,167 @@ class ModelWrapper:
 
 
 
+        learning_rate = learning_dict["learning_rate"]
+        optimizer_class = learning_dict["optimizer_class"]
 
+        optimizer = optimizer_class(self.model.parameters(), lr=learning_rate)
 
-        # Conceptually not needed here.
-        # Either give me the model class definition and make me make it here / load it from a file.
-        # Or give me the actual model and you deal with that stuff.
-        # Otherwise the mechanism of how to name the saved model will be scattered across 2 files.
+        new_learning_dict = {
+            "optimizer": optimizer,
+            "loss_fn": learning_dict["loss_fn"],
+        }
 
-
-        # self.model_data_path = model_name + "_model/"
-
-        # # True if directory already exists
-        # load_previous_model = os.path.isdir(self.model_data_path)
-        # # Set to False if you want to rewrite data
-        # # load_previous_model = False
-
-
-        # if load_previous_model:
-        #     prev_model_details = pd.read_csv(self.model_data_path + "previous_model_details.csv")
-        #     self.prev_serial_num = prev_model_details["previous_serial_num"][0]
-        #     self.model.load_state_dict(torch.load(self.model_data_path + "model_" + str(self.prev_serial_num) + ".pth"))
-        # else:
-        #     self.prev_serial_num = 0
+        self.wrap_model = TrainingWrapper(self.model, dataloader_dict, new_learning_dict)
 
 
 
-    def train(self):
 
-        train_times = []
 
-        dataloader = self.dataloaders_dict["train"]
-    
-        size = len(dataloader.dataset)
-        self.model.train()
+        self.resource_calc = ConvResourceCalc(self.wrap_model)
 
-        start = timer()
+        self.input_example = input_example
+        self.resource_calc.calculate_resources(self.input_example)
 
-        for batch, (X, y) in enumerate(dataloader):
-            X, y = X.to(self.device), y.to(self.device)
+        initial_resource_calc_path = os.path.join(self.save_path, "initial_conv_resource_calc.pkl")
+        if os.path.exists(os.path.join(initial_resource_calc_path)):
+            with open(initial_resource_calc_path, "rb") as f:
+                self.initial_resource_calc = pickle.load(f)
+        else:
+            # pickle resource_dict
+            with open(initial_resource_calc_path, "wb") as f:
+                self.initial_resource_calc = self.resource_calc.get_copy_for_pickle()
+                pickle.dump(self.initial_resource_calc, f)
 
-            # Compute prediction error
-            pred = self.model(X)
-            loss = self.loss_fn(pred, y)
 
-            # Backpropagation
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
 
-            if batch % 20 == 0:
-                end = timer()
-                train_times.append(end - start)
-                start = timer()
-                loss, current = loss.item(), (batch + 1) * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+
+
+        self.activations = {}
+        self.original_hooks = {}
+
+
+        
+
+
+
+
+
+
+
+        self.FLOPS_min_res_percents = min_resource_percentage(self.resource_calc.module_tree_ix_2_name)
+        self.FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
+
+        tree_ix_2_percentage_dict = {
+            (0,) : 0.2,
+            ((0,), 0) : 0.2,
+        }
+
+        self.FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+
+
+        self.weights_min_res_percents = min_resource_percentage(self.resource_calc.module_tree_ix_2_name)
+        self.weights_min_res_percents.set_by_name("Conv2d", 0.2)
+
+
+
+
+
+
+
+        self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+        self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
+        self.batch_norm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
+
+        if self.prev_serial_num is not None:
+            with open(os.path.join(self.save_path, f"pruner_{self.prev_serial_num}.pkl"), "rb") as f:
+                self.pruner_instance = pickle.load(f)
+        else:
+            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, connection_fn, inextricable_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
+
+
+        self.importance_fn = importance_fn
+
+
+        self.tree_ix_2_hook_handle = self.set_activations_hooks(self.activations, self.resource_calc)
+
+
+
+
+
+    def set_activations_hooks(self, activations: dict, resource_calc: ConvResourceCalc):
             
-            # del X
-            # del y
-            # torch.cuda.empty_cache()
+        tree_ixs = resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+        
+        def get_activation(tree_ix):
+            
+            def hook(module, input, output):
+                if tree_ix not in activations:
+                    activations[tree_ix] = []
+                activations[tree_ix].append(output.detach())
+            
+            return hook
 
-        return train_times
+        tree_ix_2_hook_handle = {}
+        for tree_ix in tree_ixs:
+            module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
+            tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+        
+        self.tree_ix_2_hook_handle = tree_ix_2_hook_handle
+        
+
+    
+
+    def remove_hooks(self):
+        for hook_handle in self.tree_ix_2_hook_handle.values():
+            hook_handle.remove()
 
 
+    @py_log.log(passed_logger=MY_LOGGER)
+    def train(self, epochs=1):
+        self.activations.clear()
 
+        for _ in range(epochs):
+            self.wrap_model.train()
+
+    # set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
     def test(self):
+        pass
 
-        dataloader = self.dataloaders_dict["test"]
-
-        size = len(dataloader.dataset)
-        num_batches = len(dataloader)
-        self.model.eval()
-        test_loss, IoU, F1 = 0, 0, 0
-        IoU_as_avg_on_matrixes = 0
-        with torch.no_grad():
-            for X, y in dataloader:
-                    X, y = X.to(self.device), y.to(self.device)
-                    pred = self.model(X)
-
-                    # print("pred")
-                    # print(pred)
-                    # print("y")
-                    # print(y)
-                    # print("pred.shape")
-                    # print(pred.shape)
-                    # print("y.shape")
-                    # print(y.shape)
-
-
-
-
-
-                    # loss_fn computes the mean loss for the entire batch.
-                    # We cold also get the loss for each image, but we don't need to.
-                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
-
-                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.loss_fn(pred, y).item()
-
-
-
-
-
-                    pred_binary = pred[:, 1] > pred[:, 0]
-
-                    F1 += get_F1_from_predictions(pred_binary, y)
-                    IoU += get_IoU_from_predictions(pred_binary, y)
-
-
-                    # X and y are tensors of a batch, so we have to go over them all
-                    for i in range(X.shape[0]):
-
-                        pred_binary = pred[i][1] > pred[i][0]
-
-                        # pred_binary_cpu_np = (pred_binary.cpu()).numpy()
-                        # plt.subplot(2, 2, 1)
-                        # plt.imshow(X[i][0].cpu().numpy())
-                        # plt.subplot(2, 2, 2)
-                        # plt.imshow(y[i].cpu().numpy())
-                        # plt.subplot(2, 2, 3)
-                        # plt.imshow(pred_binary_cpu_np, cmap='gray')
-                        # plt.show()
-
-                        curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
-                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                        IoU_as_avg_on_matrixes += curr_IoU
-
-
-
-
-        test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
-        IoU /= num_batches
-        F1 /= num_batches
-        IoU_as_avg_on_matrixes /= size # should be same or even more accurate as (num_batches * batch_size)
-
-        print(f"Test Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
-        # print(f"IoU_as_avg_on_matrixes: {IoU_as_avg_on_matrixes:>.6f}")
-
-        # avg_losses.append(test_loss)
-        # IoUs.append(IoU)
-        # F1s.append(F1)
-
-        # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
-        # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
-
-        return test_loss, IoU, F1, IoU_as_avg_on_matrixes
-    
-
-
-
-
-
-    # This conceptually doesn't make sense to have here.
-    # This wrapper is only meant to handle the dirty work of training and testing.
-
-    # def save(self):
+    def prune(self):
+        # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+        self.resource_calc.calculate_resources(self.input_example)
+        importance_dict = self.importance_fn(self.activations, self.conv_tree_ixs)
+        self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
         
-    #     try:
-    #         os.mkdir(self.model_data_path)
-    #     except:
-    #         pass
-
-    #     torch.save(self.model.state_dict(), self.model_data_path + "model_" + str(self.prev_serial_num+1) + ".pth")
-
-    #     new_df = pd.DataFrame({"previous_serial_num": [self.prev_serial_num+1]})
-    #     new_df.to_csv(self.model_data_path + "previous_model_details.csv")
-
-    #     print("Saved PyTorch Model State")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # These are only helping functions and are not a necessary part of the wrapper.
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-    def loop_train_test(self, epochs):
-        avg_losses = []
-        IoUs = []
-        F1s = []
-
-        all_train_times = []
-
-        for t in range(epochs):
-            print(f"Epoch {t+1}\n-------------------------------")
-            train_times = self.train()
-            if len(train_times) > 0:
-                del train_times[0]
-            print(train_times)
-            all_train_times.extend(train_times)
-            
-            test_loss, IoU, F1, _ = self.test()
-            avg_losses.append(test_loss)
-            IoUs.append(IoU)
-            F1s.append(F1)
-            print("Loss: ", test_loss)
-            print("IoU: ", IoU)
-            print("F1: ", F1)
-
-
-
-
-        try:
-            os.mkdir(self.model_data_path)
-        except:
-            pass
-
-        """
-        Razlog za spodnji nacin kode:
-        File "/home/matevzvidovic/.local/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 677, in _extract_index
-            raise ValueError("All arrays must be of the same length")
-        ValueError: All arrays must be of the same length
-        """
-        a = {"train_times": all_train_times, "avg_losses": avg_losses, "IoUs": IoUs, "F1s": F1s}
-        new_df = pd.DataFrame.from_dict(a, orient='index')
-        new_df = new_df.transpose()
-        new_df.to_csv(self.model_data_path + "train_times_and_test_scores_" + str(self.prev_serial_num+1) + ".csv")
-
-
-
-        print("Done!")
+        self.resource_calc.calculate_resources(self.input_example)
+        
+        return
     
+    def model_graph(self):
+        model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance)
+        pass
 
-    def test_showcase(self):
+    def save(self):
+        curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
+
+        self.remove_hooks()
+        new_model_path = os.path.join(self.save_path , self.model_class.__name__ + "_" + str(curr_serial_num) + ".pth")
+
+        torch.save(self.model, new_model_path)
 
 
-        dataloader = self.dataloaders_dict["test"]
-
-        size = len(dataloader.dataset)
-        num_batches = len(dataloader)
-        self.model.eval()
-        test_loss, IoU, F1 = 0, 0, 0
-        IoU_as_avg_on_matrixes = 0
-        with torch.no_grad():
-            for X, y in dataloader:
-                    X, y = X.to(self.device), y.to(self.device)
-                    pred = self.model(X)
-
-                    # print("pred")
-                    # print(pred)
-                    # print("y")
-                    # print(y)
-                    # print("pred.shape")
-                    # print(pred.shape)
-                    # print("y.shape")
-                    # print(y.shape)
+        with open(os.path.join(self.save_path, f"pruner_{curr_serial_num}.pkl"), "wb") as f:
+            pickle.dump(self.pruner_instance, f)
+        
+        
+        new_df = pd.DataFrame({"previous_serial_num": [curr_serial_num]})
+        new_df.to_csv(os.path.join(self.save_path, "previous_model_details.csv"))
+        
+        return
 
 
 
-
-
-                    # loss_fn computes the mean loss for the entire batch.
-                    # We cold also get the loss for each image, but we don't need to.
-                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
-
-                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.loss_fn(pred, y).item()
-
-
-
-
-
-                    pred_binary = pred[:, 1] > pred[:, 0]
-
-                    F1 += get_F1_from_predictions(pred_binary, y)
-                    IoU += get_IoU_from_predictions(pred_binary, y)
-
-
-                    # X and y are tensors of a batch, so we have to go over them all
-                    for i in range(X.shape[0]):
-
-                        pred_binary = pred[i][1] > pred[i][0]
-
-    
-                        pred_binary_cpu_np = (pred_binary.cpu()).numpy()
-
-                        pred_grayscale_mask = pred[i][1].cpu().numpy() - pred[i][0].cpu().numpy()
-                        pred_grayscale_mask_min_max_normed = (pred_grayscale_mask - pred_grayscale_mask.min()) / (pred_grayscale_mask.max() - pred_grayscale_mask.min())
-
-                        plt.subplot(2, 2, 1)
-                        plt.gca().set_title('Original image')
-                        plt.imshow(X[i][0].cpu().numpy())
-                        plt.subplot(2, 2, 2)
-                        plt.gca().set_title('Ground truth')
-                        plt.imshow(y[i].cpu().numpy())
-                        plt.subplot(2, 2, 3)
-                        plt.gca().set_title('Binary predictions (sclera > bg)')
-                        plt.imshow(pred_binary_cpu_np, cmap='gray')
-                        plt.subplot(2, 2, 4)
-                        plt.gca().set_title('Sclera - bg, min-max normed')
-                        plt.imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
-                        plt.show()
-
-
-                        curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
-                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                        IoU_as_avg_on_matrixes += curr_IoU
-
-
-
-
-        test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
-        IoU /= num_batches
-        F1 /= num_batches
-        IoU_as_avg_on_matrixes /= size # should be same or even more accurate as (num_batches * batch_size)
-
-        print(f"Test Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
-        # print(f"IoU_as_avg_on_matrixes: {IoU_as_avg_on_matrixes:>.6f}")
-
-        # avg_losses.append(test_loss)
-        # IoUs.append(IoU)
-        # F1s.append(F1)
-
-        # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
-        # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
-
-        return test_loss, IoU, F1, IoU_as_avg_on_matrixes
-    
 
 
 

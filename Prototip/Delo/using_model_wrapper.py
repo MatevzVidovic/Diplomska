@@ -15,7 +15,7 @@ from unet import UNet
 
 from dataset import IrisDataset, transform
 
-from ModelWrapper import ModelWrapper
+from TrainingWrapper import ModelWrapper
 
 from ConvResourceCalc import ConvResourceCalc
 
