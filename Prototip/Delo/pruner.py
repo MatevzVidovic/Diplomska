@@ -6,11 +6,9 @@ import ConvResourceCalc
 
 from model_vizualization import model_graph
 
+from TrainingWrapper import TrainingWrapper
 
-import torch.nn.utils.prune as prune
 
-
-from typing import Union
 
 import logging
 import sys
@@ -54,6 +52,13 @@ class pruner:
             # 1. dim is the number input size of this layer.
             input_slice_num = initial_conv_resource_calc.module_tree_ix_2_weights_dimensions[tree_ix][1]
             self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix] = list(range(input_slice_num))
+
+        
+        self.pruning_logs = {
+            "conv" : [],
+            "batch_norm" : [],
+            "following" : []
+        }
         
         
     
@@ -163,7 +168,10 @@ class pruner:
             module.running_var.data = new_running_var
             module.running_var.grad = None
 
-            print(f"Pruned {tree_ix}, real kernel ix (in code real_input_slice_ix): {real_input_slice_ix}, initial_input_slice_ix: {self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_input_slice_ix]}")
+
+            initial_input_slice_ix = self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_input_slice_ix]
+            self.pruning_logs["batch_norm"].append((tree_ix, real_input_slice_ix, initial_input_slice_ix))
+            print(f"Pruned {tree_ix}, real kernel ix (in code real_input_slice_ix): {real_input_slice_ix}, initial_input_slice_ix: {initial_input_slice_ix}")
             self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
 
         py_log.log_locals(passed_logger=MY_LOGGER)
@@ -214,7 +222,7 @@ class pruner:
 
 
     
-    def prune(self, importance_dict, curr_conv_resource_calc, wrapper_model):
+    def prune(self, importance_dict, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
 
         
 
@@ -245,11 +253,11 @@ class pruner:
         # first we find all the tree_ixs which are disallowed directly
         disallowed_directly = set()
         for tree_ix in self.FLOPS_min_resource_percentage_dict:
-            if curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] <= self.FLOPS_min_resource_percentage_dict[tree_ix]:
+            if curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] < self.FLOPS_min_resource_percentage_dict[tree_ix]:
                 disallowed_directly.add(tree_ix)
 
         for tree_ix in self.weights_min_resource_percentage_dict:
-            if curr_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix] <= self.weights_min_resource_percentage_dict[tree_ix]:
+            if curr_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix] < self.weights_min_resource_percentage_dict[tree_ix]:
                 disallowed_directly.add(tree_ix)
         
 
@@ -264,6 +272,11 @@ class pruner:
                     if parent in disallowed_directly:
                         disallowed_tree_ixs.add(tree_ix)
                         break
+        
+        print(10*"-")
+        print(f"sortable_list[:5]: {sortable_list[:5]}")
+        print(f"disallowed_directly: {disallowed_directly}")
+        print(f"disallowed_tree_ixs: {disallowed_tree_ixs}")
 
 
         # Then we pick the least important one which isn't disallowed
@@ -297,6 +310,15 @@ class pruner:
         following_to_prune = self.connection_lambda(to_prune[0], initial_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
 
 
+        conv_tree_ixs = curr_conv_resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+        self.pruning_logs["conv"].append((conv_tree_ixs.index(to_prune[0]), to_prune[1], initial_kernel_ix))
+
+
+        # Transform the initial_kernel_ixs to real_kernel_ixs:
+        # Fix the following_to_prune to be in the form (tree_ix, real_input_slice_ix, inital_input_slice_ix)
+        # TODO: could do self.binary search for speed, but it is for later
+        following_to_prune = [(i, self.tree_ix_2_list_of_initial_input_slice_ixs[i].index(j), j) for i,j in following_to_prune]
+        self.pruning_logs["following"].append([(conv_tree_ixs.index(i), j, k) for i,j,k in following_to_prune])
 
 
 
@@ -315,23 +337,24 @@ class pruner:
             raise e
 
         # on those the method of next to be pruned (its a different pruning method)
-        for tree_ix, initial_input_slice_ix in following_to_prune:
-
-            log_var = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix]
-            log_var_2 = log_var
-            try:
-                real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
-            except ValueError:
-                print(f"Pruning {to_prune} failed.")
-                py_log.log_locals(passed_logger=MY_LOGGER)
-                model_graph(curr_conv_resource_calc, self.initial_conv_resource_calc, self)
-                input()
-                raise ValueError
+        for tree_ix, real_input_slice_ix, _ in following_to_prune:
 
             self.prune_following_layer(tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module)
         
-        print(f"Pruned {to_prune}")
-        print(f"Pruned {following_to_prune}")
+
+
+        
+
+
+
+        LLMs = curr_conv_resource_calc.get_lowest_level_module_tree_ixs()
+        # YOU MUSTN'T DO initial_ker_ixs[real_kernel_ix] OR .index(initial_input_slice_ix) HERE, BECAUSE THE PRUNING HAS HAPPENED SO THE LIST IS WRONG ALREADY
+        print(10*"-")
+        print(f"Pruned conv_tree_ix: {conv_tree_ixs.index(to_prune[0])}\n (LLM, kernel_ix) {LLMs.index(to_prune[0])}. {to_prune[1]} \n {to_prune}")
+        print(f"Pruned [(conv_tree_ix, LLM, inp_slice_ix),...] {[(conv_tree_ixs.index(i), LLMs.index(i), j, k) for i,j,k in following_to_prune]} \n {following_to_prune}")
+        print(10*"-")
+        print(4*"\n")
+
 
 
         py_log.log_locals(passed_logger=MY_LOGGER)

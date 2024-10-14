@@ -116,7 +116,7 @@ train_dataloader, valid_dataloader, test_dataloader = get_data_loaders(**dataloa
 
 dataloader_dict = {
     "train" : train_dataloader,
-    "valid" : valid_dataloader,
+    "validation" : valid_dataloader,
     "test" : test_dataloader,
 }
 
@@ -431,33 +431,158 @@ model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_p
 
 
 
-inp = ""
-while inp == "" or inp == "g":
+
+
+
+
+
+num_of_epochs_per_training = 1
+
+val_errors = []
+test_errors = []
+
+def validation_stop(val_errors, model_wrapper):
+    if len(val_errors) < 3:
+        return False
     
-
-    inp = input("""Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
-
-    if inp == "g":
-        model_wrapper.model_graph()
-        input("Press enter to continue.")
-
-    if inp == "s":
-        model_wrapper.save()
-        break
-
-
-    try:
-        repetitions = int(inp)
-        inp = ""
-    except ValueError:
-        repetitions = 1
-
-    if inp not in ["", "g", "s"]:
-        break
+    if val_errors[-1] > val_errors[-2] and val_errors[-2] > val_errors[-3]:
+        return True
     
-    for _ in range(repetitions):
-        model_wrapper.train(1)
-        model_wrapper.prune()
+    return False
+
+
+val_iter = 0
+
+train_iter_possible_stop = 4
+train_iter = 0
+
+while True:
+    
+    model_wrapper.train(num_of_epochs_per_training)
+    
+    val_error = model_wrapper.validation()
+    val_errors.append(val_error[0])
+
+    test_error = model_wrapper.test()
+    test_errors.append(test_error[0])
+
+
+    if validation_stop(val_errors, model_wrapper):
+
+        train_iter = 0
+
+        print(f"Validation errors so far: {val_errors}")
+        print(f"Test errors so far: {test_errors}")
+        
+        model_wrapper.save(str(val_iter))
+        val_iter += 1
+
+        inp = input("""Validation error is increasing. 
+                    Press enter to simply continue training until next validation stop.
+                    Enter p to prune one filter and continue the training.
+                    Enter g to show the graph of the model and re-ask for input.
+                    Enter l to print logs and re-ask for input.
+                    Enter any other text to stop (the model is saved already).\n""")
+        
+        if inp == "g":
+            model_wrapper.model_graph()
+            inp = input("""Validation error is increasing. 
+                    Press enter to simply continue training until next validation stop.
+                    Enter a number to prune that many filters at once and continue the training.
+                    Enter l to print logs and re-ask for input.
+                    Enter any other text to stop (the model is saved already).\n""")
+        
+        if inp == "l":
+            model_wrapper.print_logs()
+            inp = input("""Validation error is increasing. 
+                    Press enter to simply continue training until next validation stop.
+                    Enter a number to prune that many filters at once and continue the training.
+                    Enter any other text to stop (the model is saved already).\n""")
+        
+
+        # try:
+        #     prune_num = int(inp)
+        #     # TODO: make it so that it prunes the number of filters that the user inputs.
+        #     # Right now won't work, because activations don't change and so it keeps pruning the same filter.
+        #     # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
+        #     # because now it just takes the first one every time.
+        #     # model_wrapper.prune(prune_num)
+        #     model_wrapper.prune(1)
+        #     inp = ""
+        # except ValueError:
+        #     prune_num = None
+
+        if inp != "":
+            break
+
+
+        
+    train_iter += 1
+    if train_iter >= train_iter_possible_stop:
+        
+        train_iter = 0
+
+        inp = input(f"""{train_iter_possible_stop} trainings have been done without validation error stopping.
+                    Press enter to continue training.
+                    Enter a number to reset how many trainings without validation error stopping are needed before stopping.
+                    Enter p to prune anyways.
+                    Enter s to save.
+                    Press any other key to stop.\n""")
+        
+        try:
+            train_iter_possible_stop = int(inp)
+            inp = ""
+            print(f"Trainings without validation error stopping needed before stopping: {train_iter_possible_stop}")
+        except ValueError:
+            pass
+
+        if inp == "p":
+            model_wrapper.prune(1)
+            inp = ""
+        
+        if inp == "s":
+            model_wrapper.save(str(val_iter))
+            val_iter += 1
+            inp = ""
+
+        if inp != "":
+            break
+
+
+
+
+
+# while True:
+  
+
+#     inp = input("""Press enter to continue, b to stop (break) without saving, g show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
+
+#     if inp == "g":
+#         model_wrapper.model_graph()
+#         input("Press enter to continue.")
+
+#     if inp == "s":
+#         model_wrapper.save()
+#         break
+
+#     if inp == "p":
+#         model_wrapper.print_logs()
+    
+#     if inp == "b":
+#         break
+
+
+#     try:
+#         repetitions = int(inp)
+#         inp = ""
+#     except ValueError:
+#         repetitions = 1
+
+    
+#     if inp == "": 
+#         for _ in range(repetitions):
+#             model_wrapper.train(1)
+#             model_wrapper.prune()
 
 
 

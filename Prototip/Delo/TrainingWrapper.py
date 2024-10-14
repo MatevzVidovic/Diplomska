@@ -362,10 +362,12 @@ class TrainingWrapper:
         return train_times
 
 
+    def validation(self):
+        return self.test(dataloader_name="validation")
 
-    def test(self):
+    def test(self, dataloader_name="test"):
 
-        dataloader = self.dataloaders_dict["test"]
+        dataloader = self.dataloaders_dict[dataloader_name]
 
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
@@ -377,18 +379,6 @@ class TrainingWrapper:
             for X, y in dataloader:
                     X, y = X.to(self.device), y.to(self.device)
                     pred = self.model(X)
-
-                    # print("pred")
-                    # print(pred)
-                    # print("y")
-                    # print(y)
-                    # print("pred.shape")
-                    # print(pred.shape)
-                    # print("y.shape")
-                    # print(y.shape)
-
-
-
 
 
                     # loss_fn computes the mean loss for the entire batch.
@@ -414,14 +404,6 @@ class TrainingWrapper:
 
                         pred_binary = pred[i][1] > pred[i][0]
 
-                        # pred_binary_cpu_np = (pred_binary.cpu()).numpy()
-                        # plt.subplot(2, 2, 1)
-                        # plt.imshow(X[i][0].cpu().numpy())
-                        # plt.subplot(2, 2, 2)
-                        # plt.imshow(y[i].cpu().numpy())
-                        # plt.subplot(2, 2, 3)
-                        # plt.imshow(pred_binary_cpu_np, cmap='gray')
-                        # plt.show()
 
                         curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
                         # print(f"This image's IoU: {curr_IoU:>.6f}%")
@@ -435,7 +417,7 @@ class TrainingWrapper:
         F1 /= num_batches
         IoU_as_avg_on_matrixes /= size # should be same or even more accurate as (num_batches * batch_size)
 
-        print(f"Test Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
+        print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
         # print(f"IoU_as_avg_on_matrixes: {IoU_as_avg_on_matrixes:>.6f}")
 
         # avg_losses.append(test_loss)
@@ -445,7 +427,7 @@ class TrainingWrapper:
         # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
         # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
-        return test_loss, IoU, F1, IoU_as_avg_on_matrixes
+        return (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
     
 
 

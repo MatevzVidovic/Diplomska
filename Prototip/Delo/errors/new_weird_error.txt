@@ -1,3 +1,13 @@
+
+
+matplotlib error je bil, ker pomoje nisem po-x-al grafa ko sem šel naprej,
+in je bil event loop že mimo in je še kar obstajal graf
+The error message you're encountering, invalid command name "136519372459520delayed_destroy",
+ typically occurs in applications using the Tkinter library in Python. This error is related to the after method in Tkinter,
+ which schedules a function to be called after a certain amount of time.
+ If the window or widget is destroyed before the scheduled function is executed, it can lead to this error.
+
+
 matevzvidovic@matevzvidovic-IdeaPad-3-17ALC6:~/Desktop/Diplomska/Prototip/Delo$ python3 main.py
 path to file: ./sclera_data
 summary for train
