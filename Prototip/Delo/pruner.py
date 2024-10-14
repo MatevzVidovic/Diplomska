@@ -4,6 +4,8 @@
 import torch
 import ConvResourceCalc
 
+from model_vizualization import model_graph
+
 
 import torch.nn.utils.prune as prune
 
@@ -28,7 +30,7 @@ class pruner:
 
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, connection_lambda, inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, logger):
+    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, connection_lambda, inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.FLOPS_min_resource_percentage_dict = FLOPS_min_resource_percentage.min_resource_percentage_dict
         self.weights_min_resource_percentage_dict = weights_min_resource_percentage.min_resource_percentage_dict
@@ -36,7 +38,6 @@ class pruner:
         self.inextricable_connection_lambda = inextricable_connection_lambda
         self.conv_tree_ixs = conv_tree_ixs
         self.lowest_level_modules = lowest_level_modules
-        self.logger = logger
 
 
         self.tree_ix_2_list_of_initial_kernel_ixs = {}
@@ -106,6 +107,7 @@ class pruner:
             module.bias.grad = None
 
         # Now we have to update the list of initial kernels
+        print(f"Pruned {tree_ix}, real_kernel_ix: {real_kernel_ix}, initial_kernel_ix: {self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]}")
         self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_kernel_ix)
 
 
@@ -161,6 +163,7 @@ class pruner:
             module.running_var.data = new_running_var
             module.running_var.grad = None
 
+            print(f"Pruned {tree_ix}, real kernel ix (in code real_input_slice_ix): {real_input_slice_ix}, initial_input_slice_ix: {self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_input_slice_ix]}")
             self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
 
         py_log.log_locals(passed_logger=MY_LOGGER)
@@ -200,6 +203,7 @@ class pruner:
         module.weight.grad = None
 
 
+        print(f"Pruned {tree_ix}, real_input_slice_ix: {real_input_slice_ix}, initial_input_slice_ix: {self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix][real_input_slice_ix]}")
         self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].pop(real_input_slice_ix)
 
         
@@ -274,17 +278,14 @@ class pruner:
             print("No more to prune.")
             py_log.log_locals(passed_logger=MY_LOGGER)
             return
-        
 
-
-
-        # And we prune it.
-
-        tree_ix_2_module = curr_conv_resource_calc.module_tree_ix_2_module_itself
-
-        # method for pruning current
-        self.prune_current_layer(to_prune[0], to_prune[1], wrapper_model, tree_ix_2_module)
-
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # THIS HAS TO HAPPEN BEFORE ANY PRUNING TAKES PLACE.
+        # BEFORE IT DIDN'T - AND THIS MESSES UP THE ORDERING OF
+        # self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
+        # because one element is alredy popped because of the pruning.
+        # And everything is messed up.
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
 
         # to find the next (tree_ix, real_input_slice_ix) to prune, we have to go through the connection lambda
         # however, the lambda works on the indexes of the initial unpruned model.
@@ -294,9 +295,39 @@ class pruner:
 
         initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
         following_to_prune = self.connection_lambda(to_prune[0], initial_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
+
+
+
+
+
+
+        # And we prune it.
+
+        tree_ix_2_module = curr_conv_resource_calc.module_tree_ix_2_module_itself
+
+        try:
+            # method for pruning current
+            self.prune_current_layer(to_prune[0], to_prune[1], wrapper_model, tree_ix_2_module)
+        except KeyError as e:
+            print(f"Pruning {to_prune} failed.")
+            self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]]
+            py_log.log_locals(passed_logger=MY_LOGGER)
+            raise e
+
         # on those the method of next to be pruned (its a different pruning method)
         for tree_ix, initial_input_slice_ix in following_to_prune:
-            real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+
+            log_var = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix]
+            log_var_2 = log_var
+            try:
+                real_input_slice_ix = self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].index(initial_input_slice_ix) # could do self.binary search for speed, but it is for later
+            except ValueError:
+                print(f"Pruning {to_prune} failed.")
+                py_log.log_locals(passed_logger=MY_LOGGER)
+                model_graph(curr_conv_resource_calc, self.initial_conv_resource_calc, self)
+                input()
+                raise ValueError
+
             self.prune_following_layer(tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module)
         
         print(f"Pruned {to_prune}")

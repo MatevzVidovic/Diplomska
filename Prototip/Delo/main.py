@@ -435,23 +435,36 @@ inp = ""
 while inp == "" or inp == "g":
     
 
-    model_wrapper.train(1)
-    model_wrapper.prune()
-
+    inp = input("""Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
 
     if inp == "g":
         model_wrapper.model_graph()
-
-    # inp = input("Press enter to continue, any text to stop, g to continue and show graph, s to save and stop.\n")
-    inp = ""
-
+        input("Press enter to continue.")
 
     if inp == "s":
-
         model_wrapper.save()
-
-
         break
+
+
+    try:
+        repetitions = int(inp)
+        inp = ""
+    except ValueError:
+        repetitions = 1
+
+    if inp not in ["", "g", "s"]:
+        break
+    
+    for _ in range(repetitions):
+        model_wrapper.train(1)
+        model_wrapper.prune()
+
+
+
+
+    
+
+
 
 
 

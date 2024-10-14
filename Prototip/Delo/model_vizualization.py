@@ -8,8 +8,6 @@ from model_sorting import sort_tree_ixs, denest_tuple
 
 from ConvResourceCalc import ConvResourceCalc
 
-from pruner import pruner
-
 from typing import Union
 
 
@@ -94,7 +92,7 @@ def string_of_pruned(list_of_initial_ixs, initial_dim_size):
 
 
 
-def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc: Union[None, ConvResourceCalc], initial_resource_calc: Union[None, ConvResourceCalc], pruner: Union[None, pruner], lowest_level_modules):
+def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc: Union[None, ConvResourceCalc], initial_resource_calc: Union[None, ConvResourceCalc], pruner, lowest_level_modules):
     # Draw the rectangle and label it
 
 

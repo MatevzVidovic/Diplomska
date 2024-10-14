@@ -1,3 +1,19 @@
+
+
+
+
+
+
+
+log_45-38-23_2024-10-13
+log_47-38-23_2024-10-13
+log_54-38-23_2024-10-13
+log_55-38-23_2024-10-13
+
+
+
+
+
 path to file: ./sclera_data
 summary for train
 valid images: 1288
