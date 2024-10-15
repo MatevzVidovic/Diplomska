@@ -61,11 +61,12 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, importance_fn, connection_fn, inextricable_connection_fn):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example):
 
+        self.tree_ix_2_hook_handle = None
 
         self.model_class = model_class
-
+        
         self.save_path = os.path.join(os.path.dirname(__file__), "saved")
 
         os.makedirs(self.save_path, exist_ok=True)
@@ -131,34 +132,19 @@ class ModelWrapper:
 
 
 
+    def get_tree_ix_2_name(self):
+        return self.resource_calc.module_tree_ix_2_name
 
 
 
 
+    def initialize_pruning(self, importance_fn, connection_fn, inextricable_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
 
+        if self.tree_ix_2_hook_handle is not None:
+            self.remove_hooks()
 
-
-
-
-
-        self.FLOPS_min_res_percents = min_resource_percentage(self.resource_calc.module_tree_ix_2_name)
-        self.FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
-
-        tree_ix_2_percentage_dict = {
-            (0,) : 0.2,
-            ((0,), 0) : 0.2,
-        }
-
-        self.FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
-
-
-        self.weights_min_res_percents = min_resource_percentage(self.resource_calc.module_tree_ix_2_name)
-        self.weights_min_res_percents.set_by_name("Conv2d", 0.2)
-
-
-
-
-
+        self.FLOPS_min_res_percents = FLOPS_min_res_percents
+        self.weights_min_res_percents = weights_min_res_percents
 
 
         self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
@@ -168,6 +154,9 @@ class ModelWrapper:
         if self.prev_pruner_path is not None:
             with open(self.prev_pruner_path, "rb") as f:
                 self.pruner_instance = pickle.load(f)
+                # We need to load this, if the user changed it between the two runs.
+                self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents
+                self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents
         else:
             self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, connection_fn, inextricable_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
 
@@ -209,12 +198,15 @@ class ModelWrapper:
     def remove_hooks(self):
         for hook_handle in self.tree_ix_2_hook_handle.values():
             hook_handle.remove()
+        
+        self.tree_ix_2_hook_handle = None
 
 
     @py_log.log(passed_logger=MY_LOGGER)
     def train(self, epochs=1):
         for _ in range(epochs):
             self.wrap_model.train()
+
 
     def validation(self):
         # This is necessary, so we don't medle with the activations.
@@ -231,6 +223,7 @@ class ModelWrapper:
         test_result = self.wrap_model.test()
         self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
         return test_result
+
 
     def reset_activations(self):
 
@@ -278,9 +271,10 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
 
+        self.remove_hooks()
+
         curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
 
-        self.remove_hooks()
         new_model_path = os.path.join(self.save_path , self.model_class.__name__ + "_" + str(curr_serial_num) + "_" + str_identifier + ".pth")
 
         torch.save(self.model, new_model_path)
@@ -292,8 +286,10 @@ class ModelWrapper:
         
         new_df = pd.DataFrame({"previous_serial_num": [curr_serial_num], "previous_model_path": new_model_path, "previous_pruner_path": new_pruner_path})
         new_df.to_csv(os.path.join(self.save_path, "previous_model_details.csv"))
+
+        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
         
-        return
+        return (new_model_path, new_pruner_path)
 
 
 

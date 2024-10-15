@@ -1,16 +1,10 @@
 
-import operator as op
 
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-import pickle
-
-
-
-from model_vizualization import model_graph
-
+from min_resource_percentage import min_resource_percentage
 
 
 from unet import UNet
@@ -138,6 +132,8 @@ model_parameters = {
 
 
 
+# Go see model graph to help you construct these connection functions.
+# model_wrapper.model_graph()
 
 
 
@@ -419,177 +415,467 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
 
 
 
-importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
 
+if __name__ == "__main__":
 
-input_example = torch.randn(1, 1, 128, 128)
-
-model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example, importance_lambda, unet_connection_lambda, unet_inextricable_connection_lambda)
-
+    importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
 
 
 
 
 
+    input_example = torch.randn(1, 1, 128, 128)
+
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example)
 
 
 
 
 
-num_of_epochs_per_training = 1
+    tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
-val_errors = []
-test_errors = []
+    # Go see model graph to help you choose the right layers to prune.
+    # model_wrapper.model_graph()
 
-def validation_stop(val_errors, model_wrapper):
-    if len(val_errors) < 3:
+    # If you change FLOPS_min_res_percents and weights_min_res_percents between runnings of main, 
+    # the new onew will be used. So you can have an effect on your training by doing this.
+
+    FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
+
+    tree_ix_2_percentage_dict = {
+        (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped at 0.5. It is simply to show an example.
+    }
+    FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+
+
+    weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    weights_min_res_percents.set_by_name("Conv2d", 0.2)
+
+    model_wrapper.initialize_pruning(importance_lambda, unet_connection_lambda, unet_inextricable_connection_lambda, FLOPS_min_res_percents, weights_min_res_percents)
+
+
+
+
+
+
+
+def train_with_validation_by_hand():
+
+
+    num_of_epochs_per_training = 1
+
+    val_errors = []
+    test_errors = []
+
+    def validation_stop(val_errors, model_wrapper):
+        if len(val_errors) < 3:
+            return False
+        
+        if val_errors[-1] > val_errors[-2] and val_errors[-2] > val_errors[-3]:
+            return True
+        
         return False
-    
-    if val_errors[-1] > val_errors[-2] and val_errors[-2] > val_errors[-3]:
-        return True
-    
-    return False
 
 
-val_iter = 0
+    val_iter = 0
 
-train_iter_possible_stop = 4
-train_iter = 0
+    train_iter_possible_stop = 4
+    train_iter = 0
 
-while True:
-    
-    model_wrapper.train(num_of_epochs_per_training)
-    
-    val_error = model_wrapper.validation()
-    val_errors.append(val_error[0])
-
-    test_error = model_wrapper.test()
-    test_errors.append(test_error[0])
-
-
-    if validation_stop(val_errors, model_wrapper):
-
-        train_iter = 0
-
-        print(f"Validation errors so far: {val_errors}")
-        print(f"Test errors so far: {test_errors}")
+    while True:
         
-        model_wrapper.save(str(val_iter))
-        val_iter += 1
-
-        inp = input("""Validation error is increasing. 
-                    Press enter to simply continue training until next validation stop.
-                    Enter p to prune one filter and continue the training.
-                    Enter g to show the graph of the model and re-ask for input.
-                    Enter l to print logs and re-ask for input.
-                    Enter any other text to stop (the model is saved already).\n""")
+        model_wrapper.train(num_of_epochs_per_training)
         
-        if inp == "g":
-            model_wrapper.model_graph()
-            inp = input("""Validation error is increasing. 
-                    Press enter to simply continue training until next validation stop.
-                    Enter a number to prune that many filters at once and continue the training.
-                    Enter l to print logs and re-ask for input.
-                    Enter any other text to stop (the model is saved already).\n""")
-        
-        if inp == "l":
-            model_wrapper.print_logs()
-            inp = input("""Validation error is increasing. 
-                    Press enter to simply continue training until next validation stop.
-                    Enter a number to prune that many filters at once and continue the training.
-                    Enter any other text to stop (the model is saved already).\n""")
-        
+        val_error = model_wrapper.validation()
+        val_errors.append(val_error[0])
 
-        # try:
-        #     prune_num = int(inp)
-        #     # TODO: make it so that it prunes the number of filters that the user inputs.
-        #     # Right now won't work, because activations don't change and so it keeps pruning the same filter.
-        #     # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
-        #     # because now it just takes the first one every time.
-        #     # model_wrapper.prune(prune_num)
-        #     model_wrapper.prune(1)
-        #     inp = ""
-        # except ValueError:
-        #     prune_num = None
-
-        if inp != "":
-            break
+        test_error = model_wrapper.test()
+        test_errors.append(test_error[0])
 
 
-        
-    train_iter += 1
-    if train_iter >= train_iter_possible_stop:
-        
-        train_iter = 0
+        if validation_stop(val_errors, model_wrapper):
 
-        inp = input(f"""{train_iter_possible_stop} trainings have been done without validation error stopping.
-                    Press enter to continue training.
-                    Enter a number to reset how many trainings without validation error stopping are needed before stopping.
-                    Enter p to prune anyways.
-                    Enter s to save.
-                    Press any other key to stop.\n""")
-        
-        try:
-            train_iter_possible_stop = int(inp)
-            inp = ""
-            print(f"Trainings without validation error stopping needed before stopping: {train_iter_possible_stop}")
-        except ValueError:
-            pass
+            train_iter = 0
 
-        if inp == "p":
-            model_wrapper.prune(1)
-            inp = ""
-        
-        if inp == "s":
+            print(f"Validation errors so far: {val_errors}")
+            print(f"Test errors so far: {test_errors}")
+            
             model_wrapper.save(str(val_iter))
             val_iter += 1
-            inp = ""
 
-        if inp != "":
+            inp = input("""Validation error is increasing. 
+                        Press enter to simply continue training until next validation stop.
+                        Enter p to prune one filter and continue the training.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter l to print logs and re-ask for input.
+                        Enter any other text to stop (the model is saved already).\n""")
+            
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""Validation error is increasing. 
+                        Press enter to simply continue training until next validation stop.
+                        Enter a number to prune that many filters at once and continue the training.
+                        Enter l to print logs and re-ask for input.
+                        Enter any other text to stop (the model is saved already).\n""")
+            
+            if inp == "l":
+                model_wrapper.print_logs()
+                inp = input("""Validation error is increasing. 
+                        Press enter to simply continue training until next validation stop.
+                        Enter a number to prune that many filters at once and continue the training.
+                        Enter any other text to stop (the model is saved already).\n""")
+            
+
+            # try:
+            #     prune_num = int(inp)
+            #     # TODO: make it so that it prunes the number of filters that the user inputs.
+            #     # Right now won't work, because activations don't change and so it keeps pruning the same filter.
+            #     # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
+            #     # because now it just takes the first one every time.
+            #     # model_wrapper.prune(prune_num)
+            #     model_wrapper.prune(1)
+            #     inp = ""
+            # except ValueError:
+            #     prune_num = None
+
+            if inp != "":
+                break
+
+
+            
+        train_iter += 1
+        if train_iter >= train_iter_possible_stop:
+            
+            train_iter = 0
+
+            inp = input(f"""{train_iter_possible_stop} trainings have been done without validation error stopping.
+                        Press enter to continue training.
+                        Enter a number to reset how many trainings without validation error stopping are needed before stopping.
+                        Enter p to prune anyways.
+                        Enter s to save.
+                        Press any other key to stop.\n""")
+            
+            try:
+                train_iter_possible_stop = int(inp)
+                inp = ""
+                print(f"Trainings without validation error stopping needed before stopping: {train_iter_possible_stop}")
+            except ValueError:
+                pass
+
+            if inp == "p":
+                model_wrapper.prune(1)
+                inp = ""
+            
+            if inp == "s":
+                model_wrapper.save(str(val_iter))
+                val_iter += 1
+                inp = ""
+
+            if inp != "":
+                break
+
+
+
+
+
+
+def train_by_hand():
+
+    while True:
+    
+
+        inp = input("""Press enter to continue, b to stop (break) without saving, g show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
+
+        if inp == "g":
+            model_wrapper.model_graph()
+            input("Press enter to continue.")
+
+        if inp == "s":
+            model_wrapper.save()
+            break
+
+        if inp == "p":
+            model_wrapper.print_logs()
+        
+        if inp == "b":
             break
 
 
+        try:
+            repetitions = int(inp)
+            inp = ""
+        except ValueError:
+            repetitions = 1
+
+        
+        if inp == "": 
+            for _ in range(repetitions):
+                model_wrapper.train(1)
+                model_wrapper.prune()
 
 
 
-# while True:
-  
 
-#     inp = input("""Press enter to continue, b to stop (break) without saving, g show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
 
-#     if inp == "g":
-#         model_wrapper.model_graph()
-#         input("Press enter to continue.")
 
-#     if inp == "s":
-#         model_wrapper.save()
-#         break
 
-#     if inp == "p":
-#         model_wrapper.print_logs()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def is_previous_model(model_path, model_wrapper, get_last_model_path = False):
+
+    import pandas as pd
+    prev_model_details = pd.read_csv(os.path.join(model_wrapper.save_path, "previous_model_details.csv"))
+    prev_model_path = prev_model_details["previous_model_path"][0]
+
+    returner = model_path == prev_model_path
+
+    if get_last_model_path:
+        returner = (returner, prev_model_path)
+
+    return returner
+
+
+def delete_old_model(model_path, model_wrapper):
+
+    import os
     
-#     if inp == "b":
-#         break
+    is_prev, prev_model_path = is_previous_model(model_path, model_wrapper, get_last_model_path=True)
+    
+    if is_prev:
+        print("The model you are trying to delete is the last model that was saved. You can't delete it.")
+        return False
+    
+    os.remove(prev_model_path)
+    return True
 
 
-#     try:
-#         repetitions = int(inp)
-#         inp = ""
-#     except ValueError:
-#         repetitions = 1
+
+
+
+class TrainingLogs:
+
+    def __init__(self, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]) -> None:
+        
+        self.number_of_epochs_per_training = number_of_epochs_per_training
+        self.last_train_iter = last_train_iter
+        self.deleted_models_errors = deleted_models_errors
+
+        # of the form (val_error, test_error, train_iter, model_path)
+        self.errors = []
+
+    def add_error(self, val_error, test_error, train_iter, model_path):
+        self.errors.append((val_error, test_error, train_iter, model_path))
+        self.last_train_iter = train_iter
 
     
-#     if inp == "": 
-#         for _ in range(repetitions):
-#             model_wrapper.train(1)
-#             model_wrapper.prune()
+    def __str__(self):
+        returner = ""
+        returner += f"Number of epochs per training: {self.number_of_epochs_per_training}\n"
+        returner += f"Last train iteration: {self.last_train_iter}\n"
+        returner += f"Errors: {self.errors}\n"
+        returner += f"Deleted models errors: {self.deleted_models_errors}\n"
+        return returner
+    
+# with the exception of keeping (k+1) models when one of the worse models is the last model we have 
+# (we have to keep it to continue training)
+def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrapper: ModelWrapper):
 
+    # sort by validation error
+    sorted_errors = sorted(training_logs.errors, key = lambda x: x[0], reverse=True)
 
+    to_delete = []
 
+    while len(sorted_errors) > 0 and (len(training_logs.errors) - len(to_delete)) > k:
 
+        error = sorted_errors.pop(0)
+        model_path = error[3]
+
+        if is_previous_model(model_path, model_wrapper):
+            continue
+
+        to_delete.append(error)
     
 
 
+    for error in to_delete:
+        model_path = error[3]
+        os.remove(model_path)
+    
+
+    to_keep = [error for error in training_logs.errors if error not in to_delete]
+    new_training_logs = TrainingLogs(training_logs.number_of_epochs_per_training, training_logs.last_train_iter, training_logs.deleted_models_errors)
+    for error in to_keep:
+        new_training_logs.add_error(*error)
+
+    new_training_logs.deleted_models_errors.extend(to_delete)
+    
+    return new_training_logs
+
+ 
+
+
+def train_automatically_training_phase():
+
+    num_of_epochs_per_training = 1
+    train_iter_possible_stop = 5
+
+
+    import pandas as pd
+    import pickle
+
+
+
+
+
+    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
+    os.makedirs(save_path, exist_ok=True)
+
+    previous_training_phase_details_path = os.path.join(save_path, "previous_training_phase_details.csv")
+
+    if os.path.exists(previous_training_phase_details_path):
+        prev_training_phase_details = pd.read_csv(previous_training_phase_details_path)
+        prev_training_phase_serial_num = prev_training_phase_details["previous_serial_num"][0]
+        prev_training_logs_path = prev_training_phase_details["previous_training_logs_path"][0]
+    else:
+        prev_training_phase_serial_num = None
+        prev_training_logs_path = None
+    
+
+    if prev_training_phase_serial_num is None:
+        curr_training_phase_serial_num = 0
+    else:
+        curr_training_phase_serial_num = prev_training_phase_serial_num + 1
+
+
+    if prev_training_logs_path is None:
+        training_logs = TrainingLogs(num_of_epochs_per_training)
+    else:
+        training_logs = pickle.load(open(prev_training_logs_path, "rb"))
+        
+
+
+
+
+
+
+
+
+
+
+
+    train_iter = training_logs.last_train_iter
+    
+    if train_iter is None:
+        train_iter = 0
+    else:
+        train_iter += 1 # because we are starting a new training phase
+
+    initial_train_iter = train_iter
+
+    while True:
+
+
+        
+        model_wrapper.train(num_of_epochs_per_training)
+
+        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
+
+        val_error = model_wrapper.validation()[0]
+
+        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
+
+
+
+        test_error = model_wrapper.test()[0]
+
+        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
+
+        model_wrapper.reset_activations()
+
+        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
+
+        # print(model_wrapper)
+
+
+
+
+
+
+        new_model_path, _ = model_wrapper.save(str(train_iter))
+
+        training_logs.add_error(val_error, test_error, train_iter, new_model_path)
+
+        # This has to be done before saving the training logs.
+        # Otherwise we wil load a training_logs that will still have something in its errors that it has actually deleted.
+        # e.g. Errors: [(0.6350785493850708, 0.6345304846763611, 0, 6), (0.6335894465446472, 0.6331750154495239, 1, 7), (0.6319190859794617, 0.6316145658493042, 2, 8), (0.630038321018219, 0.6299036741256714, 3, 9)]
+        # But model 6 has actually been already deleted: [(0.6350785493850708, 0.6345304846763611, 0, 6)]
+        
+        # The conceptual lifetime of training logs is created/loaded -> added to -> model_deletion -> saved
+        # And then the process can repeat. Deletion can't be after saved, it makes no sense. Just think of doing just one iteration of it.
+        training_logs = delete_all_but_best_k_models(3, training_logs, model_wrapper)
+
+        
+
+        new_training_logs_path = os.path.join(save_path, f"training_logs_{curr_training_phase_serial_num}_{train_iter}.pkl")
+        with open(new_training_logs_path, "wb") as f:
+            pickle.dump(training_logs, f)
+        
+        new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num],
+                                "previous_training_logs_path": new_training_logs_path})
+        new_df.to_csv(os.path.join(save_path, "previous_training_phase_details.csv"))
+
+
+
+
+
+
+
+
+
+
+
+        train_iter += 1
+
+
+            
+        if (train_iter - initial_train_iter) % train_iter_possible_stop == 0:
+            
+            
+            inp = input(f"""{train_iter_possible_stop} trainings have been done error stopping.
+                        Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Press enter to continue training.
+                        Enter a number to reset in how many trainings we ask you this again.
+                        Press any other key to stop.\n""")
+            
+            try:
+                train_iter_possible_stop = int(inp)
+                inp = ""
+                print(f"New trainings before stopping: {train_iter_possible_stop}")
+            except ValueError:
+                pass
+
+            if inp != "":
+                break
+
+
+
+
+if __name__ == "__main__":
+
+    train_automatically_training_phase()
 
 
 
