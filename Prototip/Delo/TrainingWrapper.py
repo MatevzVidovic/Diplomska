@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+import gc
 
 import os
 
@@ -37,6 +38,35 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 
 
 
+
+
+def print_cuda_memory():
+    # Get total memory
+    total_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3  # in GB
+
+    # Get allocated memory
+    allocated_memory = torch.cuda.memory_allocated(0) / 1024**3  # in GB
+
+    # Get reserved memory
+    reserved_memory = torch.cuda.memory_reserved(0) / 1024**3  # in GB
+
+    # Get free memory
+    free_memory = total_memory - allocated_memory
+
+    print(5*"\n" + 10*"-")
+    print(f"Total memory: {total_memory:.2f} GB")
+    print(f"Allocated memory: {allocated_memory:.2f} GB")
+    print(f"Reserved memory: {reserved_memory:.2f} GB")
+    print(f"Free memory: {free_memory:.2f} GB")
+
+    print(torch.cuda.memory_stats())
+    print(5*"\n" + 10*"-")
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                print(f"Tensor {obj.size()} {obj.device}")
+        except:
+            pass
 
 
 
@@ -324,7 +354,42 @@ class TrainingWrapper:
         #     self.prev_serial_num = 0
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    """
+    
+
+
+train_times = []
+
+def train(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    model.train()
+
+    start = timer()
+
+    for batch, (X, y) in enumerate(dataloader):
+        X, y = X.to(device), y.to(device)
+
+        # Compute prediction error
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 20 == 0:
+            end = timer()
+            train_times.append(end - start)
+            start = timer()
+            loss, current = loss.item(), (batch + 1) * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        
+        # del X
+        # del y
+        # torch.cuda.empty_cache()
+        # """
+    
     def train(self):
 
         train_times = []
@@ -335,6 +400,8 @@ class TrainingWrapper:
         self.model.train()
 
         start = timer()
+
+        # print_cuda_memory()
 
         for batch, (X, y) in enumerate(dataloader):
             X, y = X.to(self.device), y.to(self.device)
@@ -348,16 +415,19 @@ class TrainingWrapper:
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            if batch % 20 == 0:
+            if batch % 1 == 0:
                 end = timer()
                 train_times.append(end - start)
                 start = timer()
                 loss, current = loss.item(), (batch + 1) * len(X)
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
             
-            # del X
-            # del y
+            # print_cuda_memory()
+
+            # del X, y, pred, loss
             # torch.cuda.empty_cache()
+
+            # print_cuda_memory()
 
         return train_times
 

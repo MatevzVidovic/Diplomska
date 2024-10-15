@@ -181,8 +181,9 @@ class ModelWrapper:
             def hook(module, input, output):
                 if tree_ix not in activations:
                     activations[tree_ix] = []
-                activations[tree_ix].append(output.detach())
-            
+                # activations[tree_ix].append(output.detach())
+                activations[tree_ix] = [output.detach()]
+
             return hook
 
         tree_ix_2_hook_handle = {}

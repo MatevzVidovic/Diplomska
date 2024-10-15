@@ -53,7 +53,7 @@ learning_parameters = {
 dataloading_args = {
 
 
-    "testrun" : True,
+    "testrun" : False,
    
 
     # Image resize setting - don't know what it should be.
