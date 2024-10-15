@@ -231,7 +231,7 @@ class ModelWrapper:
         self.activations = {}
         self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
 
-    def prune(self, num_of_prunes: int):
+    def prune(self, num_of_prunes: int = 1):
 
         for _ in range(num_of_prunes):
             # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore

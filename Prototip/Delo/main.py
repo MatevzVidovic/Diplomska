@@ -7,6 +7,10 @@ from torch.utils.data import DataLoader
 from min_resource_percentage import min_resource_percentage
 
 
+import pandas as pd
+import pickle
+
+
 from unet import UNet
 
 from dataset import IrisDataset, transform
@@ -459,6 +463,21 @@ if __name__ == "__main__":
 
 
 
+def validation_stop(val_errors):
+    # returns True when you should stop
+
+    if len(val_errors) < 3:
+        return False
+    
+    returner = val_errors[-1] > val_errors[-2] and val_errors[-1] > val_errors[-3]
+
+    # if previous metric doesn't say we should return, we also go check another metric:
+    # if the current validation error is higher than either of the 4. and 5. back
+    # we should stop. Because it means we are not improving.
+    if not returner and len(val_errors) >= 5:
+        returner = val_errors[-1] > val_errors[-4] or val_errors[-1] > val_errors[-5]
+        
+    return returner
 
 def train_with_validation_by_hand():
 
@@ -468,14 +487,6 @@ def train_with_validation_by_hand():
     val_errors = []
     test_errors = []
 
-    def validation_stop(val_errors, model_wrapper):
-        if len(val_errors) < 3:
-            return False
-        
-        if val_errors[-1] > val_errors[-2] and val_errors[-2] > val_errors[-3]:
-            return True
-        
-        return False
 
 
     val_iter = 0
@@ -494,7 +505,7 @@ def train_with_validation_by_hand():
         test_errors.append(test_error[0])
 
 
-        if validation_stop(val_errors, model_wrapper):
+        if validation_stop(val_errors):
 
             train_iter = 0
 
@@ -527,17 +538,17 @@ def train_with_validation_by_hand():
                         Enter any other text to stop (the model is saved already).\n""")
             
 
-            # try:
-            #     prune_num = int(inp)
-            #     # TODO: make it so that it prunes the number of filters that the user inputs.
-            #     # Right now won't work, because activations don't change and so it keeps pruning the same filter.
-            #     # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
-            #     # because now it just takes the first one every time.
-            #     # model_wrapper.prune(prune_num)
-            #     model_wrapper.prune(1)
-            #     inp = ""
-            # except ValueError:
-            #     prune_num = None
+            try:
+                prune_num = int(inp)
+                # TODO: make it so that it prunes the number of filters that the user inputs.
+                # Right now won't work, because activations don't change and so it keeps pruning the same filter.
+                # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
+                # because now it just takes the first one every time.
+                # model_wrapper.prune(prune_num)
+                model_wrapper.prune()
+                inp = ""
+            except ValueError:
+                prune_num = None
 
             if inp != "":
                 break
@@ -727,14 +738,11 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
  
 
 
-def train_automatically_training_phase():
+def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False):
 
     num_of_epochs_per_training = 1
-    train_iter_possible_stop = 5
 
 
-    import pandas as pd
-    import pickle
 
 
 
@@ -785,6 +793,9 @@ def train_automatically_training_phase():
 
     initial_train_iter = train_iter
 
+
+    validation_errors = []
+
     while True:
 
 
@@ -794,6 +805,7 @@ def train_automatically_training_phase():
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
         val_error = model_wrapper.validation()[0]
+        validation_errors.append(val_error)
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
@@ -870,12 +882,22 @@ def train_automatically_training_phase():
             if inp != "":
                 break
 
+        
+        if validation_phase and validation_stop(validation_errors):
+            model_wrapper.prune()
+            validation_errors = []
+
+
+
+
 
 
 
 if __name__ == "__main__":
 
-    train_automatically_training_phase()
+    # train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase)
+    
+    train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True)
 
 
 
