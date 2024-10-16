@@ -53,7 +53,7 @@ learning_parameters = {
 dataloading_args = {
 
 
-    "testrun" : True,
+    "testrun" : False,
    
 
     # Image resize setting - don't know what it should be.
@@ -85,8 +85,8 @@ def get_data_loaders(**dataloading_args):
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
+    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
@@ -790,11 +790,7 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
  
 
 
-def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False):
-
-    num_of_epochs_per_training = 1
-
-
+def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1):
 
 
 
@@ -856,14 +852,14 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
-        val_error = model_wrapper.validation()[0]
+        val_error = model_wrapper.validation()[error_ix]
         validation_errors.append(val_error)
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
 
 
-        test_error = model_wrapper.test()[0]
+        test_error = model_wrapper.test()[error_ix]
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
@@ -920,7 +916,7 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
                         Press enter to continue training.
                         Enter a number to reset in how many trainings we ask you this again.
-                        Press p to prune anyways.
+                        Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
                         Press any other key to stop.\n""")
             
             try:
@@ -930,10 +926,10 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
             except ValueError:
                 pass
 
-            if inp == "p":
-                model_wrapper.prune()
-                validation_errors = []
-                inp = ""
+            # if inp == "p":
+            #     model_wrapper.prune()
+            #     validation_errors = []
+            #     inp = ""
 
             if inp != "":
                 break
@@ -953,9 +949,10 @@ if __name__ == "__main__":
 
     # train_with_validation_by_hand()
 
-    train_automatically_training_phase(train_iter_possible_stop=1000)
+    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+    train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
     
-    # train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True)
+    # train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True, error_ix=3, num_of_epochs_per_training=2)
 
 
 
