@@ -66,7 +66,9 @@ dataloading_args = {
     "n_classes" : 2,
 
     # DataLoader params
-    "batch_size" : 16,
+    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
+    #  since val and test use torch.no_grad() and therefore use less memory. 
+    "batch_size" : 256, 
     "shuffle" : False, # TODO shuffle??
     "num_workers" : 4,
 }
@@ -363,9 +365,52 @@ def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowes
 
 
 
+# When each batch is processed, the averaging_objects function is called.
+# Here you define how you would like to create your averaging objects through one epoch of training.
+# This function shows how we would like to update our average of the activations (outputs)
+# for the convolutional layers (because in the background this is only set for convolutional layers).
+# At each iteration the mean is corrects so far. So at the end the mean is also correct.
+# It is better to train with larger batch sizes so numerical errors of the iterative mean calculation are smaller.
+
+# Proof:
+# The first mean is correct so far. It is avg_0 = \sum x_i / n_0 where n_0 is the number of elements of the 0-th iteration.
+# by the same logic, avg_1 is also correct (the average of just the next batch).
+# The second mean avg_{1,2} is (n_0 * avg _0 + n_1 * avg_1) / (n_0 + n_1) = 
+# (n_0 * (\sum x_i / n_0) + n_1 * (\sum x_j / n_1)) / (n_0 + n_1) =
+# ( \sum x_i + \sum x_j ) / (n_0 + n_1)
+# # Which is the correct mean of all the elements. By induction, the same logic applies to all iterations.  
+
+INITIAL_AVG_OBJECT = (0, None)
+def averaging_objects(module, input, output, prev_avg_object):
+
+    batch_size = output.shape[0]
+    batch_mean = output.mean(dim=(0))
+
+    if prev_avg_object[1] is None:
+        new_avg_object = (batch_size, batch_mean)
+        return new_avg_object
+
+    new_avg_object = (prev_avg_object[0] + batch_size, 
+                      (prev_avg_object[0] * prev_avg_object[1] + batch_size * batch_mean) / (prev_avg_object[0] + batch_size))
+
+    return new_avg_object 
+
+if __name__ == "__main__":
+    averaging_mechanism = {
+        "initial_avg_object" : INITIAL_AVG_OBJECT,
+        "averaging_function" : averaging_objects
+    }
 
 
 
+# An additional function could be applied in between the averaging function and the importance function.
+# If we were, for example, interested in a specific interaction between the active outputs (not the averaged ones)
+# with our averaging object. For example, to calculate the correlation between the output and our average activations.
+# Then the averaging function would be applied in the first pass through the network and we would make our averaging objects.
+# Then this middle function would be used and we would calculate our batch_importances (correlations) for each batch.
+# Then the final importance function we see below us would only be used to combine these batch_importances.
+# For example to average them or to sum them.
+# But this is not currently implemented.
 
 
 
@@ -373,7 +418,7 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
     assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
     
     
-    def IPAD_kernel_importance_lambda(activations, conv_tree_ixs):
+    def IPAD_kernel_importance_lambda(averaging_objects: dict, conv_tree_ixs):
         # Returns dict tree_ix_2_list_of_kernel_importances
         # The ix-th importance is for the kernel currently on the ix-th place.
         # To convert this ix to the initial unpruned models kernel ix, use the pruner's
@@ -382,16 +427,7 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
         tree_ix_2_kernel_importances = {}
         for tree_ix in conv_tree_ixs:
 
-            curr_batch_outputs = activations[tree_ix]
-            # print("len(curr_batch_outputs):")
-            # print(len(curr_batch_outputs))
-            # print("curr_batch_outputs[0].shape:")
-            # print(curr_batch_outputs[0].shape)
-            curr_batch_outputs = torch.cat(curr_batch_outputs, dim=(0))
-            # print(curr_batch_outputs.shape)
-            # print(type(curr_batch_outputs))
-            # print(curr_batch_outputs)
-            kernels_average_activation = curr_batch_outputs.mean(dim=(0))
+            kernels_average_activation = averaging_objects[tree_ix][1]
             # print(kernels_average_activation.shape)
             # print(kernels_average_activation)
             overall_average_activation = kernels_average_activation.mean(dim=(0))
@@ -456,7 +492,7 @@ if __name__ == "__main__":
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    model_wrapper.initialize_pruning(importance_lambda, unet_connection_lambda, unet_inextricable_connection_lambda, FLOPS_min_res_percents, weights_min_res_percents)
+    model_wrapper.initialize_pruning(importance_lambda, averaging_mechanism, unet_connection_lambda, unet_inextricable_connection_lambda, FLOPS_min_res_percents, weights_min_res_percents)
 
 
 

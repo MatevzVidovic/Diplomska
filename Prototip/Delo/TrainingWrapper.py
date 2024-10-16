@@ -40,33 +40,40 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 
 
 
-def print_cuda_memory():
+def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=True, do_free_mem=True, do_mem_stats=True, do_gc_tensor_objects=True):
+    
     # Get total memory
-    total_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3  # in GB
+    if do_total_mem:
+        total_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3  # in GB
+        print(f"Total memory: {total_memory:.2f} GB")
+    
+    if do_allocated_mem:
+        # Get allocated memory
+        allocated_memory = torch.cuda.memory_allocated(0) / 1024**3
+        print(f"Allocated memory: {allocated_memory:.2f} GB")
+    
+    if do_reserved_mem:
+        # Get reserved memory
+        reserved_memory = torch.cuda.memory_reserved(0) / 1024**3
+        print(f"Reserved memory: {reserved_memory:.2f} GB")
+    
+    if do_free_mem:
+        # Get free memory
+        free_memory = total_memory - allocated_memory
+        print(f"Free memory: {free_memory:.2f} GB")
+    
 
-    # Get allocated memory
-    allocated_memory = torch.cuda.memory_allocated(0) / 1024**3  # in GB
-
-    # Get reserved memory
-    reserved_memory = torch.cuda.memory_reserved(0) / 1024**3  # in GB
-
-    # Get free memory
-    free_memory = total_memory - allocated_memory
-
-    print(5*"\n" + 10*"-")
-    print(f"Total memory: {total_memory:.2f} GB")
-    print(f"Allocated memory: {allocated_memory:.2f} GB")
-    print(f"Reserved memory: {reserved_memory:.2f} GB")
-    print(f"Free memory: {free_memory:.2f} GB")
-
-    print(torch.cuda.memory_stats())
-    print(5*"\n" + 10*"-")
-    for obj in gc.get_objects():
-        try:
-            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                print(f"Tensor {obj.size()} {obj.device}")
-        except:
-            pass
+    if do_mem_stats:
+        # Get memory stats
+        print(torch.cuda.memory_stats())
+    
+    if do_gc_tensor_objects:
+        for obj in gc.get_objects():
+            try:
+                if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                    print(f"Tensor {obj.size()} {obj.device}")
+            except:
+                pass
 
 
 
@@ -427,9 +434,28 @@ def train(dataloader, model, loss_fn, optimizer):
             # del X, y, pred, loss
             # torch.cuda.empty_cache()
 
-            # print_cuda_memory()
+            print_cuda_memory()
 
         return train_times
+
+
+    def epoch_pass(self, dataloader_name="train"):
+
+        dataloader = self.dataloaders_dict[dataloader_name]
+
+        self.model.eval()
+        with torch.no_grad():
+            for X, y in dataloader:
+                    X, y = X.to(self.device), y.to(self.device)
+                    self.model(X)
+
+
+
+
+
+
+
+    
 
 
     def validation(self):

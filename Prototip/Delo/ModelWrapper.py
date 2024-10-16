@@ -63,8 +63,6 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example):
 
-        self.tree_ix_2_hook_handle = None
-
         self.model_class = model_class
         
         self.save_path = os.path.join(os.path.dirname(__file__), "saved")
@@ -138,10 +136,7 @@ class ModelWrapper:
 
 
 
-    def initialize_pruning(self, importance_fn, connection_fn, inextricable_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
-
-        if self.tree_ix_2_hook_handle is not None:
-            self.remove_hooks()
+    def initialize_pruning(self, importance_fn, averaging_mechanism: dict, connection_fn, inextricable_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
 
         self.FLOPS_min_res_percents = FLOPS_min_res_percents
         self.weights_min_res_percents = weights_min_res_percents
@@ -161,18 +156,30 @@ class ModelWrapper:
             self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, connection_fn, inextricable_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
 
 
+        self.initial_averaging_object = averaging_mechanism["initial_averaging_object"]
+        self.averaging_function = averaging_mechanism["averaging_function"]
         self.importance_fn = importance_fn
 
 
 
 
-        self.activations = {}
-        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
+
+
+
+
+    @py_log.log(passed_logger=MY_LOGGER)
+    def train(self, epochs=1):
+        for _ in range(epochs):
+            self.wrap_model.train()
 
 
 
 
 
+
+
+
+    """
     def set_activations_hooks(self, activations: dict, resource_calc: ConvResourceCalc, tree_ixs: list):
             
         
@@ -183,6 +190,28 @@ class ModelWrapper:
                     activations[tree_ix] = []
                 # activations[tree_ix].append(output.detach())
                 activations[tree_ix] = [output.detach()]
+
+            return hook
+
+        tree_ix_2_hook_handle = {}
+        for tree_ix in tree_ixs:
+            module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
+            tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+        
+        self.tree_ix_2_hook_handle = tree_ix_2_hook_handle
+    """
+
+    
+    def set_averaging_objects_hooks(self, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc: ConvResourceCalc, tree_ixs: list):
+            
+        
+        def get_activation(tree_ix):
+            
+            def hook(module, input, output):
+                if tree_ix not in averaging_objects:
+                    averaging_objects[tree_ix] = initial_averaging_object
+
+                averaging_objects[tree_ix] = averaging_function(module, input, output, averaging_objects[tree_ix])
 
             return hook
 
@@ -203,54 +232,42 @@ class ModelWrapper:
         self.tree_ix_2_hook_handle = None
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
-    def train(self, epochs=1):
-        for _ in range(epochs):
-            self.wrap_model.train()
 
+    def epoch_pass(self):
+        self.wrap_model.epoch_pass(dataloader_name="train")
+
+
+    def prune(self, num_of_prunes: int = 1):
+
+        for _ in range(num_of_prunes):
+
+            self.averaging_objects = {}
+            self.set_averaging_objects_hooks(self.initial_averaging_object, self.averaging_function, self.averaging_objects, self.resource_calc, self.conv_tree_ixs)
+
+            self.epoch_pass()
+
+            # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+            self.resource_calc.calculate_resources(self.input_example)
+            importance_dict = self.importance_fn(self.averaging_objects, self.conv_tree_ixs)
+            self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+
+            self.remove_hooks()
+            self.activations = {}
+        
+
+
+        return
 
     def validation(self):
-        # This is necessary, so we don't medle with the activations.
-        self.remove_hooks()
         val_results = self.wrap_model.validation()
-        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
         return val_results
 
 
     # set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
     def test(self):
         # This is necessary, so we don't medle with the activations.
-        self.remove_hooks()
         test_result = self.wrap_model.test()
-        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
         return test_result
-
-
-    def reset_activations(self):
-
-        self.remove_hooks()
-        self.activations = {}
-        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
-
-    def prune(self, num_of_prunes: int = 1):
-
-        for _ in range(num_of_prunes):
-            # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
-            self.resource_calc.calculate_resources(self.input_example)
-            importance_dict = self.importance_fn(self.activations, self.conv_tree_ixs)
-            self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
-        
-        self.resource_calc.calculate_resources(self.input_example)
-        
-
-        # I don't know why
-        # self.activations.clear()
-        # doesn't work. But for some reason, on the second pass of pruning, self.activations is empty.
-        # Maybe the hooks are somehow hellbound to the previous activations dictionary.
-        # I do not know.
-        self.reset_activations()
-        
-        return
     
 
 
@@ -272,6 +289,7 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
 
+        # In case there still are any. We can't save the model if there are.
         self.remove_hooks()
 
         curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
@@ -287,8 +305,6 @@ class ModelWrapper:
         
         new_df = pd.DataFrame({"previous_serial_num": [curr_serial_num], "previous_model_path": new_model_path, "previous_pruner_path": new_pruner_path})
         new_df.to_csv(os.path.join(self.save_path, "previous_model_details.csv"))
-
-        self.set_activations_hooks(self.activations, self.resource_calc, self.conv_tree_ixs)
         
         return (new_model_path, new_pruner_path)
 
