@@ -254,7 +254,7 @@ class ModelWrapper:
             self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
 
             self.remove_hooks()
-            self.activations = {}
+            self.averaging_objects = {}
 
             # This needs to be done so the gradient computation graph is updated.
             # Otherwise it expects gradients of the old shapes.
