@@ -867,8 +867,6 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
-        model_wrapper.reset_activations()
-
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
         # print(model_wrapper)
@@ -922,6 +920,7 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
                         Press enter to continue training.
                         Enter a number to reset in how many trainings we ask you this again.
+                        Press p to prune anyways.
                         Press any other key to stop.\n""")
             
             try:
@@ -930,6 +929,11 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                 print(f"New trainings before stopping: {train_iter_possible_stop}")
             except ValueError:
                 pass
+
+            if inp == "p":
+                model_wrapper.prune()
+                validation_errors = []
+                inp = ""
 
             if inp != "":
                 break
@@ -947,11 +951,11 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
 if __name__ == "__main__":
 
-    train_with_validation_by_hand()
+    # train_with_validation_by_hand()
 
-    # train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase)
+    train_automatically_training_phase(train_iter_possible_stop=1000)
     
-    # train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True)
+    # train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True)
 
 
 

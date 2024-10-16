@@ -152,8 +152,8 @@ class ModelWrapper:
             with open(self.prev_pruner_path, "rb") as f:
                 self.pruner_instance = pickle.load(f)
                 # We need to load this, if the user changed it between the two runs.
-                self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents
-                self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents
+                self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents.min_resource_percentage_dict
+                self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents.min_resource_percentage_dict
         else:
             self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, connection_fn, inextricable_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
 
