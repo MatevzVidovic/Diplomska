@@ -323,7 +323,6 @@ class TrainingWrapper:
         # self.epochs = learning_parameters["epochs"]
         # self.batch_size = learning_parameters["batch_size"]
 
-        self.optimizer = learning_parameters["optimizer"]
         self.loss_fn = learning_parameters["loss_fn"]
 
         # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
@@ -360,6 +359,10 @@ class TrainingWrapper:
         # else:
         #     self.prev_serial_num = 0
 
+
+
+    def initialize_optimizer(self, optimizer_class, learning_rate):
+        self.optimizer = optimizer_class(self.model.parameters(), lr=learning_rate)
 
     """
     
@@ -434,7 +437,7 @@ def train(dataloader, model, loss_fn, optimizer):
             # del X, y, pred, loss
             # torch.cuda.empty_cache()
 
-            print_cuda_memory()
+            # print_cuda_memory()
 
         return train_times
 

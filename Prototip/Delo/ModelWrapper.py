@@ -97,19 +97,16 @@ class ModelWrapper:
 
 
 
-        learning_rate = learning_dict["learning_rate"]
-        optimizer_class = learning_dict["optimizer_class"]
-
-        optimizer = optimizer_class(self.model.parameters(), lr=learning_rate)
+        self.learning_rate = learning_dict["learning_rate"]
+        self.optimizer_class = learning_dict["optimizer_class"]
 
         new_learning_dict = {
-            "optimizer": optimizer,
             "loss_fn": learning_dict["loss_fn"],
         }
 
         self.wrap_model = TrainingWrapper(self.model, dataloader_dict, new_learning_dict)
 
-
+        self.initialize_optimizer()
 
 
 
@@ -132,6 +129,11 @@ class ModelWrapper:
 
     def get_tree_ix_2_name(self):
         return self.resource_calc.module_tree_ix_2_name
+
+
+
+    def initialize_optimizer(self):
+        self.wrap_model.initialize_optimizer(self.optimizer_class, self.learning_rate)
 
 
 
@@ -253,6 +255,10 @@ class ModelWrapper:
 
             self.remove_hooks()
             self.activations = {}
+
+            # This needs to be done so the gradient computation graph is updated.
+            # Otherwise it expects gradients of the old shapes.
+            self.initialize_optimizer()
         
 
 

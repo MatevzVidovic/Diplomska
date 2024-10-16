@@ -53,7 +53,7 @@ learning_parameters = {
 dataloading_args = {
 
 
-    "testrun" : False,
+    "testrun" : True,
    
 
     # Image resize setting - don't know what it should be.
@@ -68,7 +68,7 @@ dataloading_args = {
     # DataLoader params
     # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
     #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : 256, 
+    "batch_size" : 16,
     "shuffle" : False, # TODO shuffle??
     "num_workers" : 4,
 }
@@ -85,8 +85,8 @@ def get_data_loaders(**dataloading_args):
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=True)
     testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
@@ -397,7 +397,7 @@ def averaging_objects(module, input, output, prev_avg_object):
 
 if __name__ == "__main__":
     averaging_mechanism = {
-        "initial_avg_object" : INITIAL_AVG_OBJECT,
+        "initial_averaging_object" : INITIAL_AVG_OBJECT,
         "averaging_function" : averaging_objects
     }
 
@@ -527,7 +527,7 @@ def train_with_validation_by_hand():
 
     val_iter = 0
 
-    train_iter_possible_stop = 4
+    train_iter_possible_stop = 1
     train_iter = 0
 
     while True:
@@ -931,9 +931,11 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
 if __name__ == "__main__":
 
+    train_with_validation_by_hand()
+
     # train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase)
     
-    train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True)
+    # train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True)
 
 
 
