@@ -210,10 +210,13 @@ class ModelWrapper:
         def get_activation(tree_ix):
             
             def hook(module, input, output):
+                
+                detached_output = output.detach()
+
                 if tree_ix not in averaging_objects:
                     averaging_objects[tree_ix] = initial_averaging_object
 
-                averaging_objects[tree_ix] = averaging_function(module, input, output, averaging_objects[tree_ix])
+                averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
 
             return hook
 
@@ -228,6 +231,12 @@ class ModelWrapper:
     
 
     def remove_hooks(self):
+        
+        if self.tree_ix_2_hook_handle is None:
+            raise ValueError("In remove_hooks: self.tree_ix_2_hook_handle is already None")
+            # print("In remove_hooks: self.tree_ix_2_hook_handle is already None")
+            # return
+        
         for hook_handle in self.tree_ix_2_hook_handle.values():
             hook_handle.remove()
         
@@ -295,8 +304,9 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
 
+        # There shouldn't be.
         # In case there still are any. We can't save the model if there are.
-        self.remove_hooks()
+        # self.remove_hooks()
 
         curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
 

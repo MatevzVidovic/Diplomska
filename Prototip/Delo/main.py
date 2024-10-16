@@ -380,9 +380,25 @@ def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowes
 # ( \sum x_i + \sum x_j ) / (n_0 + n_1)
 # # Which is the correct mean of all the elements. By induction, the same logic applies to all iterations.  
 
+
+# IF USING INPUT OR MODULE WEIGHTS, YOU HAVE TO DETACH THEM!!!!!
+# Also, input is a tuple, so you have to figure out what it really is first - I haven't looked into it.
+# The output has already been detached, so we don't need to worry about backpropagation.
+# You can do .detach() again, which won't change anything, it's idempotent.
+# If they weren't detached, they remain in the computational graph and keep being in the gradient calculation during loss.backward().
+# Because of pruning, this shows an error like so:
+#  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py", line 424, in train
+#     loss.backward()
+#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/_tensor.py", line 522, in backward
+#     torch.autograd.backward(
+#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 266, in backward
+#     Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+# RuntimeError: Function ConvolutionBackward0 returned an invalid gradient at index 1 - got [128, 255, 3, 3] but expected shape compatible with [128, 256, 3, 3]
+
+
 INITIAL_AVG_OBJECT = (0, None)
 def averaging_objects(module, input, output, prev_avg_object):
-
+    
     batch_size = output.shape[0]
     batch_mean = output.mean(dim=(0))
 
