@@ -251,13 +251,27 @@ class pruner:
         # Now we go through all tree_ixs once, and then for all conv tree ix-s we go to the root. Not as nice.
 
         # first we find all the tree_ixs which are disallowed directly
+
+        print(self.FLOPS_min_resource_percentage_dict)
+
         disallowed_directly = set()
         for tree_ix in self.FLOPS_min_resource_percentage_dict:
-            if curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] < self.FLOPS_min_resource_percentage_dict[tree_ix]:
+            try:
+                curr_flops_percentage = curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] / self.initial_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix]
+            except ZeroDivisionError:
+                curr_flops_percentage = 0
+            print(self.FLOPS_min_resource_percentage_dict[tree_ix])
+            print(curr_flops_percentage)
+            if curr_flops_percentage < self.FLOPS_min_resource_percentage_dict[tree_ix]:
                 disallowed_directly.add(tree_ix)
 
         for tree_ix in self.weights_min_resource_percentage_dict:
-            if curr_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix] < self.weights_min_resource_percentage_dict[tree_ix]:
+            try:
+                curr_weights_percentage = curr_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix] / self.initial_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix]
+            except ZeroDivisionError:
+                curr_weights_percentage = 0
+                
+            if curr_weights_percentage < self.weights_min_resource_percentage_dict[tree_ix]:
                 disallowed_directly.add(tree_ix)
         
 

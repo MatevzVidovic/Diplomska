@@ -22,6 +22,8 @@ from model_vizualization import model_graph
 
 import pandas as pd
 
+import shutil
+
 
 
 
@@ -75,6 +77,12 @@ class ModelWrapper:
             self.prev_serial_num = prev_model_details["previous_serial_num"][0]
             self.prev_model_path = prev_model_details["previous_model_path"][0]
             self.prev_pruner_path = prev_model_details["previous_pruner_path"][0]
+
+            # To help with migration after I changed pruner.py right after the training phase 
+            # (no prunings had happened so I could just create a new pruner instance)
+            if self.prev_pruner_path == "None":
+                self.prev_pruner_path = None
+
         else:
             self.prev_serial_num = None
             self.prev_model_path = None
@@ -323,7 +331,33 @@ class ModelWrapper:
         new_df.to_csv(os.path.join(self.save_path, "previous_model_details.csv"))
         
         return (new_model_path, new_pruner_path)
+    
 
+    def create_safety_copy_of_existing_models(self, str_identifier: str):
+
+        model_name = str(self.model_class.__name__)
+        safety_copy_dir = os.path.join(self.save_path, f"saved_safety_copies_{str_identifier}")
+
+        try:
+            # Create the safety copy directory if it doesn't exist
+            os.makedirs(safety_copy_dir, exist_ok=True)
+
+            # Iterate through all files in self.save_path
+            for filename in os.listdir(self.save_path):
+                if filename.startswith(model_name):
+                    src_file = os.path.join(self.save_path, filename)
+                    dst_file = os.path.join(safety_copy_dir, filename)
+                    
+                    # Copy the file
+                    shutil.copy2(src_file, dst_file)
+                    print(f"Copied {filename} to {safety_copy_dir}")
+
+        except OSError as e:
+            print(f"Error creating safety copies: {e}")
+
+
+
+        
 
 
 

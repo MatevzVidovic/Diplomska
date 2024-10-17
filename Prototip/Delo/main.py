@@ -790,6 +790,92 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
  
 
 
+# What we pruned is already saved in pruner_istance.pruning_logs
+# We just need to keep track of the corresponding train_iter to be able to know when which pruning happened.
+# That's what this function is for.
+def log_pruning_train_iter(train_iter):
+    
+    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
+    os.makedirs(save_path, exist_ok=True)
+
+    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
+
+
+    if os.path.exists(pruning_train_iter_path):
+        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
+    else:
+        pruning_train_iters = []
+    
+    pruning_train_iters.append((train_iter, False))
+
+    with open(pruning_train_iter_path, "wb") as f:
+        pickle.dump(pruning_train_iters, f)
+
+
+# When we prune, we save the training iter of that pruning.
+# But what if we stop the training before that pruned model is actually saved?
+# This function sets the flag for the train_iter actually being confirmed.
+def confirm_last_pruning_train_iter():
+    
+    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
+    os.makedirs(save_path, exist_ok=True)
+
+    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
+
+
+    if os.path.exists(pruning_train_iter_path):
+        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
+    else:
+        return
+    
+    if len(pruning_train_iters) == 0:
+        return
+    
+    pruning_train_iters[-1] = (pruning_train_iters[-1][0], True)
+
+    with open(pruning_train_iter_path, "wb") as f:
+        pickle.dump(pruning_train_iters, f)
+
+
+# If we stop the training before the pruned model is saved, 
+# the last train iter would have turned to true in the next saving iteration,
+# despite the fact it was never saved and has no effect.
+# That's why we have to clean it up before training.
+def clean_up_pruning_train_iters():
+
+    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
+    os.makedirs(save_path, exist_ok=True)
+
+    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
+
+
+    if os.path.exists(pruning_train_iter_path):
+        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
+    else:
+        return
+
+    if len(pruning_train_iters) == 0:
+        return
+    
+    if pruning_train_iters[-1][1] == False:
+        pruning_train_iters = pruning_train_iters[:-1]
+
+    with open(pruning_train_iter_path, "wb") as f:
+        pickle.dump(pruning_train_iters, f)
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
 def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1):
 
 
@@ -798,6 +884,8 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
     save_path = os.path.join(os.path.dirname(__file__), "saved_main")
     os.makedirs(save_path, exist_ok=True)
+
+    clean_up_pruning_train_iters()
 
     previous_training_phase_details_path = os.path.join(save_path, "previous_training_phase_details.csv")
 
@@ -853,6 +941,10 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
         val_error = model_wrapper.validation()[error_ix]
+
+        if error_ix in [1, 2, 3]:
+            val_error = 1 - val_error
+
         validation_errors.append(val_error)
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
@@ -860,6 +952,9 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
 
         test_error = model_wrapper.test()[error_ix]
+
+        if error_ix in [1, 2, 3]:
+            test_error = 1 - test_error
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
@@ -873,6 +968,7 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
 
         new_model_path, _ = model_wrapper.save(str(train_iter))
+        confirm_last_pruning_train_iter()
 
         training_logs.add_error(val_error, test_error, train_iter, new_model_path)
 
@@ -926,10 +1022,13 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
             except ValueError:
                 pass
 
-            # if inp == "p":
-            #     model_wrapper.prune()
-            #     validation_errors = []
-            #     inp = ""
+            if inp == "p":
+                model_wrapper.prune()
+                # This will ensure I have the best k models from every pruning phase.
+                model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
+                log_pruning_train_iter(train_iter)
+                validation_errors = []
+                inp = ""
 
             if inp != "":
                 break
@@ -937,6 +1036,10 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
         
         if validation_phase and validation_stop(validation_errors):
             model_wrapper.prune()
+
+            # This will ensure I have the best k models from every pruning phase.
+            model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
+            log_pruning_train_iter(train_iter)
             validation_errors = []
 
 
@@ -950,9 +1053,9 @@ if __name__ == "__main__":
     # train_with_validation_by_hand()
 
     # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
-    train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
+    # train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
     
-    # train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True, error_ix=3, num_of_epochs_per_training=2)
+    train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True, error_ix=3, num_of_epochs_per_training=2)
 
 
 
