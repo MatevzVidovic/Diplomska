@@ -418,6 +418,12 @@ def train(dataloader, model, loss_fn, optimizer):
 
             # Compute prediction error
             pred = self.model(X)
+
+            print("pred")
+            print(pred)
+            print("y")
+            print(y)
+
             loss = self.loss_fn(pred, y)
 
             # Backpropagation

@@ -11,7 +11,7 @@ import pandas as pd
 import pickle
 
 
-from unet import UNet
+from ResNet import ResNet, Bottleneck
 
 from dataset import IrisDataset, transform
 
@@ -22,24 +22,7 @@ from ModelWrapper import ModelWrapper
 
 # Logging preparation:
 
-import logging
-import sys
 import os
-
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-
-MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
-MY_LOGGER.setLevel(logging.DEBUG)
-
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
-# def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
-
 
 
 
@@ -53,7 +36,7 @@ learning_parameters = {
 dataloading_args = {
 
 
-    "testrun" : False,
+    "testrun" : True,
    
 
     # Image resize setting - don't know what it should be.
@@ -123,11 +106,10 @@ dataloader_dict = {
 
 
 model_parameters = {
-    # layer sizes
-    "n_channels" : 1,
-    "n_classes" : 2,
-    "bilinear" : True,
-    "pretrained" : False,
+    "ResBlock" : Bottleneck,
+    "layer_list" : [3,4,6,3],
+    "num_classes" : 1,
+    "num_channels" : 1
   }
 
 
@@ -482,7 +464,8 @@ if __name__ == "__main__":
 
     input_example = torch.randn(1, 1, 128, 128)
 
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example)
+    model_wrapper = ModelWrapper(ResNet, model_parameters, dataloader_dict, learning_parameters, input_example)
+
 
 
 
@@ -511,6 +494,9 @@ if __name__ == "__main__":
     model_wrapper.initialize_pruning(importance_lambda, averaging_mechanism, unet_connection_lambda, unet_inextricable_connection_lambda, FLOPS_min_res_percents, weights_min_res_percents)
 
 
+
+    model_wrapper.model_graph()
+    input()
 
 
 
