@@ -51,7 +51,7 @@ dataloading_args = {
     # DataLoader params
     # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
     #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : 16,
+    "batch_size" : 2,
     "shuffle" : False, # TODO shuffle??
     "num_workers" : 4,
 }
@@ -108,7 +108,7 @@ dataloader_dict = {
 model_parameters = {
     "ResBlock" : Bottleneck,
     "layer_list" : [3,4,6,3],
-    "num_classes" : 1,
+    "num_classes" : 2,
     "num_channels" : 1
   }
 
@@ -126,47 +126,47 @@ model_parameters = {
 
 
 
-def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
-    #    tree_ix -> skip_conn_starting_index
+# def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
+#     #    tree_ix -> skip_conn_starting_index
 
-    # It could be done programatically, however:
-    # Assuming the layers that have skip connections have only one source of them,
-    # we could calculate how many inputs come from the previous layer.
-    # That is then the starting ix of skip connections.
+#     # It could be done programatically, however:
+#     # Assuming the layers that have skip connections have only one source of them,
+#     # we could calculate how many inputs come from the previous layer.
+#     # That is then the starting ix of skip connections.
 
-    # To make this function, go look in the drawn matplotlib graph.
-    # On the upstream, just look at the convolution's weight dimensions.
-    # They are: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
-    # (output_dimensions - input_dimensions) is the ix of the first skip connection
+#     # To make this function, go look in the drawn matplotlib graph.
+#     # On the upstream, just look at the convolution's weight dimensions.
+#     # They are: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+#     # (output_dimensions - input_dimensions) is the ix of the first skip connection
 
 
 
-    # Oh, I see. This is easily programmable.
-    # Just use "initial_conv_resource_calc.pkl" and use 
-    # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
-    # And that's it haha.
+#     # Oh, I see. This is easily programmable.
+#     # Just use "initial_conv_resource_calc.pkl" and use 
+#     # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
+#     # And that's it haha.
 
-    conv_ix = None
-    if tree_ix in conv_tree_ixs:
-        conv_ix = conv_tree_ixs.index(tree_ix)
+#     conv_ix = None
+#     if tree_ix in conv_tree_ixs:
+#         conv_ix = conv_tree_ixs.index(tree_ix)
 
-        if conv_ix == 16:
+#         if conv_ix == 16:
             
-            return 64
-        elif conv_ix == 14:
+#             return 64
+#         elif conv_ix == 14:
             
-            return 128
-        elif conv_ix == 12:
+#             return 128
+#         elif conv_ix == 12:
             
-            return 256
-        elif conv_ix == 10:
+#             return 256
+#         elif conv_ix == 10:
             
-            return 512
+#             return 512
 
 
-    else:
+#     else:
         
-        return None
+#         return None
     
 
 
@@ -181,6 +181,162 @@ It is very early stage.
 
 
 
+
+# Now we sometimes need to add a convolutional layer to this pruning,
+# because in a ResNet bottleneck block, the input into the block is added to the output of the block.
+# So they need to be the same dimensions.
+# So if the convolution we originally pruned is right before a bottleneck block, the input into the bottleneck layer changes,
+# so we need to prune the kernel_ix of the last convolution of the bottleneck block as well, 
+# so that its output will have the same dimensions as the input of the bottlencek layer.
+
+# There is a possible sequential layer at the tail end of a bottleneck layer. It is supposed to (up/down) sample the input of the bottleneck layer to the same dimensions as the so-far output of the bottleneck layer.
+# Since the bottleneck layer changed the dimensions compared to the input.
+# So in this situation this convolutional layer of this sequential block will have to have it's kernel_ix pruned.
+
+
+
+
+# So it really is always the last convolution in the bottleneck block that has to be pruned - just in different ways.
+
+# Just that sometimes that means kernel-pruning the last convolution in the ordinary flow of the network, so that the bottleneck layer output matches the input of the bottleneck layer. (and the input gets added after that)
+# And sometimes that means input-pruning the sequential (up/down) sampling layer, so that its input matches the input of the bottleneck layer
+# (so that it can transform the input into the dimensions of the output of the regular flow of the bottleneck layer - as is the job of this sequential layer all along).
+
+
+# This also means that if the last convolution of the regular flow of the bottleneck layer is kernel pruned,
+# the the (up-dpwn) sampling sequential layer has to be kernel-pruned - so that its output dimensions will match the above-mentioned layer's output and the addition will be able to happen.
+# And the first layer of the next bottleneck block has to be input-pruned - the regular flow of the network needs to match..
+
+
+# So, basically:
+# - batchnorm is always inextricably pruned
+# - the next layer in the regular flow is allways input-pruned
+# - the up/down sampling layer should never be chosen to be pruned (set the FLOPS_min_res_percents to 1.1 so it never is)
+# - if the layer right before the bottleneck layer in the regular flow of the network is kernel-pruned, we need to either
+#       - (if that bottleneck has no up/down sampling layer) kernel-prune the last convolution in the bottleneck layer, 
+#       - (if the bottleneck layer has one) input-prune the up/down sampling layer
+# - if the last convolution in the bottleneck layer is kernel-pruned, we need to (besides the regular flow input-pruing) either:
+#       - (if there is an upsampling layer) kernel-prune the up/down sampling layer
+#       - (if there is no upsampling layer), nothing special happens. BUT IMPORTANTLY!!!!!!!! 
+# !!!!!!!!!!!But this kernel-pruning should only occur as a result of the pruning of the layer right before this bottleneck.
+#         Because if we were to start the pruning cycle by directly pruning this layer, 
+#            this would mismatch the dimensions of the input of the bottleneck layer (since the layer right before this bottleneck wouldnt be pruned).
+
+# So:
+# - we have to know all  right-before-regular-ending-bottleneck layers, right-before-(up/down)sampling-ending-bottleneck layers,
+#  all regular-ending-bottleneck layers, and all (up/down)sampling-ending-bottleneck layers.
+# 
+# - For regular-ending-bottleneck layers, we have to know what layer is the ending one, and disallow it from pruning.
+# 
+# - For (up/down)sampling-ending-bottleneck layers, we have to know what layer is the regular-flow ending one, and what layer is the (up/down) sampler.
+#       - for regular-flow ending ones, the upsampler needs to be in inextricably_pruned().
+#           - THIS ALSO MEANS, that for the upsampler, WE NEED TO MIND THE INEX_TO_PRUNE AND FOLLOWING_TO_PRUNE(): the following to prune() has to return [] (since it is not a part of the regular flow) and inextricably_prune() has to return only the batchnorm.
+#           - But the disallowing through the FLOPS_min_res_percents is already nicely bypassed, since that is only used in the kernel decision part of pruning.
+#      - the (up/down) sampler, is disallowed from deciding to prune it.
+# 
+# - For right-before-regular-ending-bottleneck layers, the ending-layer needs to be added to inextricably-pruned. (this also nicely bypases the FLOPS_min_res_percents)
+#  
+# - For right-before-(up/down)sampling-ending-bottleneck layers, the upsampling layer needs to be added to following_to_prune()
+
+
+# So:
+#
+# - set diasslowed to FLOPs_min_res_percents (upsamplers and last regular flow layer in bottlenecks without upsamplers)
+#  
+# - inextricable-connection lambda:
+#       - add batchnorm
+#       - if right-before-regular-ending-bottleneck:
+#           - if no upsampler, prune last regular flow layer
+#       - if last regular flow layer is pruned (only allowed to be directly chosen when there is an upsampler):
+#             - if upsampler, prune upsampler
+# 
+# - connection lambda:
+#      - if this is upsampler, return empty list
+#      - add next regular flow layer
+#     - if right-before-regular-ending-bottleneck:
+#        - if has upsampler, add upsampler
+#   
+
+
+
+
+
+
+
+
+# [(right_before_conv_ix, bottleneck_last_regular_conv_ix, possibly_bottlenek_upsampler_conv_ix)]
+BOTTLENECK_LIST = [
+    (0, 3),
+    (3, 6),
+    (6, 9),
+    (9, 12, 13),
+    (12, 16),
+    (16, 19),
+    (19, 22),
+    (22, 25, 26),
+    (25, 29),
+    (29, 32),
+    (32, 35),
+    (35, 38),
+    (38, 41),
+    (41, 44, 45),
+    (44, 48),
+    (48, 51)
+]
+
+class BottleneckHelper():
+
+    def __init__(self) -> None:
+        self.bottleneck_list = BOTTLENECK_LIST
+
+        self.right_before_bottleneck = [bottleneck[0] for bottleneck in self.bottleneck_list]
+        self.regular_flow_botleneck_ends = [bottleneck[1] for bottleneck in self.bottleneck_list]
+        self.upsamplers = [bottleneck[2] for bottleneck in self.bottleneck_list if len(bottleneck) == 3]
+    
+
+    def is_right_before_bottleneck(self, conv_ix):
+        return conv_ix in self.right_before_bottleneck
+    
+    def is_regular_flow_bottleneck_end(self, conv_ix):
+        return conv_ix in self.regular_flow_botleneck_ends
+    
+    def is_upsampler(self, conv_ix):
+        return conv_ix in self.upsamplers
+    
+    
+    def get_bottleneck_ix_from_right_before(self, right_before_conv_ix):
+        bottleneck_ix = self.right_before_bottleneck.index(right_before_conv_ix)
+        return bottleneck_ix
+    
+    def get_bottleneck_ix_from_regular_flow_end(self, regular_flow_end_conv_ix):
+        bottleneck_ix = self.regular_flow_botleneck_ends.index(regular_flow_end_conv_ix)
+        return bottleneck_ix
+
+    def bottleneck_has_upsampler(self, bottleneck_ix):
+        return len(self.bottleneck_list[bottleneck_ix]) == 3
+    
+    def get_disallowed_conv_ixs(self):
+        disallowed_conv_ixs = []
+        for bottleneck in self.bottleneck_list:
+            if len(bottleneck) == 3:
+                disallowed_conv_ixs.append(bottleneck[2])
+            else:
+                disallowed_conv_ixs.append(bottleneck[1])
+
+        return disallowed_conv_ixs
+    
+
+BH = BottleneckHelper()
+
+REGULAR_FLOW_CONV_IXS = [i for i in range(53) if i not in BH.upsamplers]
+
+DISALLOWED_CONV_IXS = BH.get_disallowed_conv_ixs()
+
+
+
+
+
+
 def unet_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
     # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
     
@@ -189,120 +345,52 @@ def unet_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modul
     # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
 
 
-    conn_destinations = []
+    # - connection lambda:
+    #      - if this is upsampler, return empty list
+    #      - add next regular flow layer
+    #     - if right-before-regular-ending-bottleneck:
+    #        - if has upsampler, add upsampler
 
-    # we kind of only care about convolutional modules.
-    # We just need to prune there (and possibly something with the batch norm layer)
-    # So it would make sense to transform the tree_ix to the ordinal number of 
-    # the convolutional module, and work with that ix instead.
+    bh = BH
+
+    conn_destinations = []
 
     conv_ix = None
     if tree_ix in conv_tree_ixs:
         conv_ix = conv_tree_ixs.index(tree_ix)
-        conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
-
-    # We made it so that for conv layers who receive as input the previous layer and a skip connection
-    # the first inpute slices are of the previous layer. This makes the line above as elegant as it is.
-    # We will, however, have to deal with more trouble with skip connections. 
 
     
-    # (however, we included in a different way, because it is more elegant and makes more sense that way) 
-    # For the more general option (e.g. to include pruning of some other affected layers)
-    # we can instead work with "lowest_level_modules" indexes.
-    # These are modules that appear the lowest in the tree, and are the ones that actually 
-    # do the work. Data passes through them. They arent just composites of less complex modules.
-    # They are the actual building blocks.
-
-    LLM_ix = None
-    if tree_ix in lowest_level_modules:
-        LLM_ix = lowest_level_modules.index(tree_ix)
-
-
-
-
-    # We already handled the regular connections for convolutional networks.
-    # Now, here come skip connections.
-    # For explanation, look at the graphic in the original U-net paper.
-    
-    # We have to know where the skip connections start.
-    # What real index is the zeroth index of the skip connections for the goal layer?
-    # In this way we can then use the tree_ix to get the base ix.
-
-    # For this, we will for now create a second function where we hardcode this.
-    # It could be done programatically, however:
-    # Assuming the layers that have skip connections have only one source of them,
-    # we could calculate how many inputs come from the previous layer.
-    # That is then the starting ix of skip connections.
-
-    # To do this, we look at the code where the skip connections of the model are defined:
-    # def forward(self, x):
-        # x1 = self.inc(x)
-        # x2 = self.down1(x1)
-        # x3 = self.down2(x2)
-        # x4 = self.down3(x3)
-        # x5 = self.down4(x4)
-        # x = self.up1(x5, x4)
-        # x = self.up2(x, x3)
-        # x = self.up3(x, x2)
-        # x = self.up4(x, x1)
-        # logits = self.outc(x)
-        # return logits
-    
-    # We then look at the graphic of our network. We see that the inc block and first three down blocks create skip connections.
-    # Therefore the last (second) convolution in those blocks will be senging the skip connection forward.
-    # This is how we identify the particular convolutional modules (LLMs) that are involved in skip connections.
+    # For batchnorms, this is empty.
+    if conv_ix is None:
+        return conn_destinations
     
 
-    # if conv_ix in [1, 3, 5, 7]:
+    # If this is upsampler, return empty list
+    if bh.is_upsampler(conv_ix):
+        return conn_destinations
     
-    goal_conv_ix = None
-    if conv_ix == 1:
-        goal_conv_ix = 16
-    elif conv_ix == 3:
-        goal_conv_ix = 14
-    elif conv_ix == 5:
-        goal_conv_ix = 12
-    elif conv_ix == 7:
-        goal_conv_ix = 10
-    
-    if goal_conv_ix is not None:
-        goal_input_slice_ix = kernel_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_conv_ix], conv_tree_ixs)
-        conn_destinations.append((conv_tree_ixs[goal_conv_ix], goal_input_slice_ix))
 
-    # outc has no next convolution
-    if conv_ix == 18:
-        conn_destinations = []
-    
-    
+    # outconv has no next convolution, and is not before a bottleneck
+    if conv_ix == 52:
+        return conn_destinations
+
+
+    if conv_ix in REGULAR_FLOW_CONV_IXS:
+        regular_flow_ix = REGULAR_FLOW_CONV_IXS.index(conv_ix)
+        target_conv_ix = REGULAR_FLOW_CONV_IXS[regular_flow_ix+1]
+        target_tree_ix = conv_tree_ixs[target_conv_ix]
+        conn_destinations.append((target_tree_ix, kernel_ix))
+
+    if bh.is_right_before_bottleneck(conv_ix):
+        bottleneck_ix = bh.get_bottleneck_ix_from_right_before(conv_ix)
+        if bh.bottleneck_has_upsampler(bottleneck_ix):
+            target_conv_ix = bh.bottleneck_list[bottleneck_ix][2]
+            target_tree_ix = conv_tree_ixs[target_conv_ix]
+            conn_destinations.append((target_tree_ix, kernel_ix))
+
     return conn_destinations
-
-
     
-
-    # if idx == 6:
-    #     next_idxs_list.append
-
-
-
-    # # output is: [(goal_tree_ix_1, goal_input_slice_ix_1), (goal_tree_ix_2, goal_input_slice_ix_2),...] 
-    #         # Output of conv2 in each down block also goes to conv1 in corresponding up block
-    # if layer_index == 1:
-    #     next_conv_idx = [2, 16]
-    # elif layer_index == 3:
-    #     next_conv_idx = [4, 14]
-    # elif layer_index == 5:
-    #     next_conv_idx = [6, 12]
-    # elif layer_index == 7:
-    #     next_conv_idx = [8, 10]
-    # # outc has no next convolution
-    # elif layer_index >= 18:
-    #     next_conv_idx = []
-    # # Every other convolution output just goes to the next one
-    # else:
-    #     next_conv_idx = [layer_index + 1]
-
-
-
+    # We have no skip connections here.
 
 
 
@@ -321,7 +409,16 @@ def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowes
     # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
     # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
     # There are possibly more such layers and more types of such layers, so we made this function more general.
-    
+
+    bh = BH
+
+
+    # - inextricable-connection lambda:
+    #       - add batchnorm
+    #       - if right-before-regular-ending-bottleneck:
+    #           - if no upsampler, prune last regular flow layer
+    #       - if last regular flow layer is pruned (only allowed to be directly chosen when there is an upsampler):
+    #             - if upsampler, prune upsampler
 
 
     conv_ix = None
@@ -335,13 +432,38 @@ def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowes
     
 
     conn_destinations = []
-    
-    # out.conv doesn't have a batchnorm after it.
-    if conv_ix < 18:
-        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
-    
 
+
+    # For the batchnorms, this should simply be an empty list.
+    if conv_ix is None:
+        return conn_destinations
+
+
+
+    # Adding the batchnorm.
+    # out.conv doesn't have a batchnorm after it.
+    if conv_ix < 52:
+        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
+
+    # Look at comment block above!
+    if bh.is_right_before_bottleneck(conv_ix):
+        bottleneck_ix = bh.get_bottleneck_ix_from_right_before(conv_ix)
+        if not bh.bottleneck_has_upsampler(bottleneck_ix):
+            target_conv_ix = bh.bottleneck_list[bottleneck_ix][1]
+            target_tree_ix = conv_tree_ixs[target_conv_ix]
+            conn_destinations.append((target_tree_ix, kernel_ix))
     
+    # Look at comment block above!
+    if bh.is_regular_flow_bottleneck_end(conv_ix):
+        bottleneck_ix = bh.get_bottleneck_ix_from_regular_flow_end(conv_ix)
+
+        if bh.bottleneck_has_upsampler(bottleneck_ix):
+            target_conv_ix = bh.bottleneck_list[bottleneck_ix][2]
+            target_tree_ix = conv_tree_ixs[target_conv_ix]
+            conn_destinations.append((target_tree_ix, kernel_ix))
+
+
+
     return conn_destinations
 
 
@@ -488,6 +610,34 @@ if __name__ == "__main__":
     FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
 
 
+
+    # We have to do this due to this schema above:
+    # So:
+    #
+    # - set diasslowed to FLOPs_min_res_percents (upsamplers and last regular flow layer in bottlenecks without upsamplers)
+    #  
+    # - inextricable-connection lambda:
+    #       - add batchnorm
+    #       - if right-before-regular-ending-bottleneck:
+    #           - if no upsampler, prune last regular flow layer
+    #       - if last regular flow layer is pruned (only allowed to be directly chosen when there is an upsampler):
+    #             - if upsampler, prune upsampler
+    # 
+    # - connection lambda:
+    #      - if this is upsampler, return empty list
+    #      - add next regular flow layer
+    #     - if right-before-regular-ending-bottleneck:
+    #        - if has upsampler, add upsampler
+    #
+    conv_tree_ixs = FLOPS_min_res_percents.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+    disallowed_dict = {}
+    for tree_ix in DISALLOWED_CONV_IXS:
+        disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+    FLOPS_min_res_percents.set_by_tree_ix_dict(disallowed_dict)
+    
+
+
+
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
@@ -495,8 +645,8 @@ if __name__ == "__main__":
 
 
 
-    model_wrapper.model_graph()
-    input()
+    # model_wrapper.model_graph()
+    # input()
 
 
 
@@ -999,6 +1149,7 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                         Press enter to continue training.
                         Enter a number to reset in how many trainings we ask you this again.
                         Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press g to show the graph of the model and re-ask for input.
                         Press any other key to stop.\n""")
             
             try:
@@ -1008,13 +1159,26 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
             except ValueError:
                 pass
 
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""Press enter to continue training.
+                        Enter p to prune anyways.
+                        Enter any other text to stop (the model is saved already).\n""")
+
             if inp == "p":
                 model_wrapper.prune()
                 # This will ensure I have the best k models from every pruning phase.
                 model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
                 log_pruning_train_iter(train_iter)
                 validation_errors = []
-                inp = ""
+                inp = input("""Press enter to continue training.
+                            Press g to show the graph of the model and re-ask for input.
+                        Enter any other text to stop (the model is saved already).\n""")
+            
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""Press enter to continue training.
+                        Enter any other text to stop (the model is saved already).\n""")
 
             if inp != "":
                 break
@@ -1041,7 +1205,7 @@ if __name__ == "__main__":
     # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
     # train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
     
-    train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True, error_ix=3, num_of_epochs_per_training=2)
+    train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True, error_ix=3, num_of_epochs_per_training=1)
 
 
 

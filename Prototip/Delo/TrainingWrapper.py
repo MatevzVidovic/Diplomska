@@ -71,7 +71,8 @@ def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=
         for obj in gc.get_objects():
             try:
                 if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                    print(f"Tensor {obj.size()} {obj.device}")
+                    size_mb = obj.element_size() * obj.nelement() / 1024**2
+                    print(f"Tensor {obj.size()} {obj.device}, {size_mb:.2f} MB")
             except:
                 pass
 
@@ -402,6 +403,7 @@ def train(dataloader, model, loss_fn, optimizer):
     
     def train(self):
 
+
         train_times = []
 
         dataloader = self.dataloaders_dict["train"]
@@ -416,13 +418,17 @@ def train(dataloader, model, loss_fn, optimizer):
         for batch, (X, y) in enumerate(dataloader):
             X, y = X.to(self.device), y.to(self.device)
 
+
             # Compute prediction error
             pred = self.model(X)
 
-            print("pred")
-            print(pred)
-            print("y")
-            print(y)
+            # print_cuda_memory()
+
+            # print("pred")
+            # print(pred.shape)
+            # print("y")
+            # print(y.shape)
+
 
             loss = self.loss_fn(pred, y)
 

@@ -90,6 +90,17 @@ class pruner:
 
         # get the module
         module = tree_ix_2_module[tree_ix]
+
+        if type(module) == torch.nn.BatchNorm2d:
+            self.prune_batchnorm(tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module)
+            return
+
+
+        # This has to happen before pruning, so that the initial_kernel_ix is correct.
+        initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]
+        self.pruning_logs["conv"].append((self.conv_tree_ixs.index(tree_ix), real_kernel_ix, initial_kernel_ix))
+
+
         old_weights = module.weight.data
 
         # print(f"old_weights.shape: {old_weights.shape}")
@@ -112,13 +123,12 @@ class pruner:
             module.bias.grad = None
 
         # Now we have to update the list of initial kernels
-        print(f"Pruned {tree_ix}, real_kernel_ix: {real_kernel_ix}, initial_kernel_ix: {self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]}")
+        print(f"Pruned {tree_ix}, real_kernel_ix: {real_kernel_ix}, initial_kernel_ix: {initial_kernel_ix}")
         self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_kernel_ix)
 
 
-        inextricable_following_to_prune = self.inextricable_connection_lambda(tree_ix, real_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
-        for tree_ix, real_input_slice_ix in inextricable_following_to_prune:
-            self.prune_inextricably_following_layer(tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module)
+
+
 
 
 
@@ -138,41 +148,49 @@ class pruner:
         return
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def prune_inextricably_following_layer(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
+    def prune_batchnorm(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
 
         # get the module
         module = tree_ix_2_module[tree_ix]
         
-        if type(module) == torch.nn.BatchNorm2d:
+    
 
-            # For the comments of the lines, go look at pruner.prune_current_layer()
-            # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+        # For the comments of the lines, go look at pruner.prune_current_layer()
+        # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
 
-            old_weights = module.weight.data
-            new_weights = torch.cat([old_weights[:real_input_slice_ix], old_weights[real_input_slice_ix+1:]], dim=0)
-            module.weight.data = new_weights
-            module.weight.grad = None
+        old_weights = module.weight.data
+        new_weights = torch.cat([old_weights[:real_input_slice_ix], old_weights[real_input_slice_ix+1:]], dim=0)
+        module.weight.data = new_weights
+        module.weight.grad = None
 
-            old_bias = module.bias.data
-            new_bias = torch.cat([old_bias[:real_input_slice_ix], old_bias[real_input_slice_ix+1:]], dim=0)
-            module.bias.data = new_bias
-            module.bias.grad = None
+        old_bias = module.bias.data
+        new_bias = torch.cat([old_bias[:real_input_slice_ix], old_bias[real_input_slice_ix+1:]], dim=0)
+        module.bias.data = new_bias
+        module.bias.grad = None
 
-            old_running_mean = module.running_mean.data
-            new_running_mean = torch.cat([old_running_mean[:real_input_slice_ix], old_running_mean[real_input_slice_ix+1:]], dim=0)
-            module.running_mean.data = new_running_mean
-            module.running_mean.grad = None
+        old_running_mean = module.running_mean.data
+        new_running_mean = torch.cat([old_running_mean[:real_input_slice_ix], old_running_mean[real_input_slice_ix+1:]], dim=0)
+        module.running_mean.data = new_running_mean
+        module.running_mean.grad = None
 
-            old_running_var = module.running_var.data
-            new_running_var = torch.cat([old_running_var[:real_input_slice_ix], old_running_var[real_input_slice_ix+1:]], dim=0)
-            module.running_var.data = new_running_var
-            module.running_var.grad = None
+        old_running_var = module.running_var.data
+        new_running_var = torch.cat([old_running_var[:real_input_slice_ix], old_running_var[real_input_slice_ix+1:]], dim=0)
+        module.running_var.data = new_running_var
+        module.running_var.grad = None
 
 
-            initial_input_slice_ix = self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_input_slice_ix]
-            self.pruning_logs["batch_norm"].append((tree_ix, real_input_slice_ix, initial_input_slice_ix))
-            print(f"Pruned {tree_ix}, real kernel ix (in code real_input_slice_ix): {real_input_slice_ix}, initial_input_slice_ix: {initial_input_slice_ix}")
-            self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
+        initial_input_slice_ix = self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_input_slice_ix]
+        self.pruning_logs["batch_norm"].append((tree_ix, real_input_slice_ix, initial_input_slice_ix))
+        print(f"Pruned {tree_ix}, real kernel ix (in code real_input_slice_ix): {real_input_slice_ix}, initial_input_slice_ix: {initial_input_slice_ix}")
+        self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
+
+
+
+
+
+
+
+
 
         py_log.log_locals(passed_logger=MY_LOGGER)
         return
@@ -252,7 +270,7 @@ class pruner:
 
         # first we find all the tree_ixs which are disallowed directly
 
-        print(self.FLOPS_min_resource_percentage_dict)
+        # print(self.FLOPS_min_resource_percentage_dict)
 
         disallowed_directly = set()
         for tree_ix in self.FLOPS_min_resource_percentage_dict:
@@ -260,8 +278,8 @@ class pruner:
                 curr_flops_percentage = curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] / self.initial_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix]
             except ZeroDivisionError:
                 curr_flops_percentage = 0
-            print(self.FLOPS_min_resource_percentage_dict[tree_ix])
-            print(curr_flops_percentage)
+            # print(self.FLOPS_min_resource_percentage_dict[tree_ix])
+            # print(curr_flops_percentage)
             if curr_flops_percentage < self.FLOPS_min_resource_percentage_dict[tree_ix]:
                 disallowed_directly.add(tree_ix)
 
@@ -305,6 +323,15 @@ class pruner:
             print("No more to prune.")
             py_log.log_locals(passed_logger=MY_LOGGER)
             return
+        
+        self.prune_one_layer(to_prune, curr_conv_resource_calc, wrapper_model)
+        
+
+
+
+    def prune_one_layer(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
+        
+
 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # THIS HAS TO HAPPEN BEFORE ANY PRUNING TAKES PLACE.
@@ -320,21 +347,24 @@ class pruner:
         # Then put that in the lambda to get the goal's initial_input_slice_ix.
         # Then change that to the real_input_slice_ix (the ix of where the initial slice is right now).
 
+        # print(self.tree_ix_2_list_of_initial_kernel_ixs)
+        # print(to_prune)
+
         initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
         following_to_prune = self.connection_lambda(to_prune[0], initial_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
 
-
-        conv_tree_ixs = curr_conv_resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-        self.pruning_logs["conv"].append((conv_tree_ixs.index(to_prune[0]), to_prune[1], initial_kernel_ix))
+        # print(f"following_to_prune: {following_to_prune}")
+        # print(self.connection_lambda)
+        # print(to_prune)
+        # print(self.conv_tree_ixs)
+        # print(self.lowest_level_modules)
 
 
         # Transform the initial_kernel_ixs to real_kernel_ixs:
         # Fix the following_to_prune to be in the form (tree_ix, real_input_slice_ix, inital_input_slice_ix)
         # TODO: could do self.binary search for speed, but it is for later
         following_to_prune = [(i, self.tree_ix_2_list_of_initial_input_slice_ixs[i].index(j), j) for i,j in following_to_prune]
-        self.pruning_logs["following"].append([(conv_tree_ixs.index(i), j, k) for i,j,k in following_to_prune])
-
-
+        self.pruning_logs["following"].append([(self.conv_tree_ixs.index(i), j, k) for i,j,k in following_to_prune])
 
 
         # And we prune it.
@@ -349,6 +379,8 @@ class pruner:
             self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]]
             py_log.log_locals(passed_logger=MY_LOGGER)
             raise e
+        
+
 
         # on those the method of next to be pruned (its a different pruning method)
         for tree_ix, real_input_slice_ix, _ in following_to_prune:
@@ -361,13 +393,24 @@ class pruner:
 
 
 
-        LLMs = curr_conv_resource_calc.get_lowest_level_module_tree_ixs()
-        # YOU MUSTN'T DO initial_ker_ixs[real_kernel_ix] OR .index(initial_input_slice_ix) HERE, BECAUSE THE PRUNING HAS HAPPENED SO THE LIST IS WRONG ALREADY
+        # LLMs = curr_conv_resource_calc.get_lowest_level_module_tree_ixs()
+        # # YOU MUSTN'T DO initial_ker_ixs[real_kernel_ix] OR .index(initial_input_slice_ix) HERE, BECAUSE THE PRUNING HAS HAPPENED SO THE LIST IS WRONG ALREADY
+        # print(10*"-")
+        # print(f"Pruned conv_tree_ix: {conv_tree_ixs.index(to_prune[0])}\n (LLM, kernel_ix) {LLMs.index(to_prune[0])}. {to_prune[1]} \n {to_prune}")
+        # print(f"Pruned [(conv_tree_ix, LLM, inp_slice_ix),...] {[(conv_tree_ixs.index(i), LLMs.index(i), j, k) for i,j,k in following_to_prune]} \n {following_to_prune}")
+        # print(10*"-")
+        # print(4*"\n")
+
+
+        # Basically, first we prune the current layer, 
+        # then we prune the following layers - which really means just correcting the input dimensions of the following layers.
+
+        # Now we do the recursion step. We find the layers which are "inextricably connected" to the pruned layer.
+        # Which really means that their kernels get pruned because of this - so the same pruning happens to them as did to the first layer.
         print(10*"-")
-        print(f"Pruned conv_tree_ix: {conv_tree_ixs.index(to_prune[0])}\n (LLM, kernel_ix) {LLMs.index(to_prune[0])}. {to_prune[1]} \n {to_prune}")
-        print(f"Pruned [(conv_tree_ix, LLM, inp_slice_ix),...] {[(conv_tree_ixs.index(i), LLMs.index(i), j, k) for i,j,k in following_to_prune]} \n {following_to_prune}")
-        print(10*"-")
-        print(4*"\n")
+        inextricable_following_to_prune = self.inextricable_connection_lambda(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)
+        for tree_ix, kernel_ix in inextricable_following_to_prune:
+            self.prune_one_layer((tree_ix, kernel_ix), curr_conv_resource_calc, wrapper_model)
 
 
 

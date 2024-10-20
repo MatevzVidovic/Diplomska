@@ -216,7 +216,7 @@ class IrisDataset(Dataset):
 
     def __len__(self):
         if self.testrun:
-            return 70
+            return 30
         return len(self.list_files)
     
     def mask_exists(self, mask_folder_path, file_name_no_suffix):
