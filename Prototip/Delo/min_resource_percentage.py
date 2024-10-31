@@ -1,5 +1,8 @@
 
 
+
+from model_sorting import sort_tree_ixs
+
 import logging
 import python_logger.log_helper as py_log
 
@@ -40,6 +43,21 @@ class min_resource_percentage:
         for tree_ix, percentage in tree_ix_2_percentage_dict.items():
             assert tree_ix in self.tree_ix_2_name_dict, f"Tree ix {tree_ix} not found in tree_ix_2_name_dict."
             self.min_resource_percentage_dict[tree_ix] = percentage
+
+    
+    def get_ordered_list_of_tree_ixs_for_layer_name(self, layer_name):
+
+        applicable_tree_ixs = []
+        for tree_ix, module_name in self.tree_ix_2_name_dict.items():
+            if module_name == layer_name:
+                applicable_tree_ixs.append(tree_ix)
+
+        assert len(applicable_tree_ixs) > 0, f"No module with name {layer_name} found."
+
+        sorted_applicable_tree_ixs = sort_tree_ixs(applicable_tree_ixs)
+
+
+        return sorted_applicable_tree_ixs
             
 
 

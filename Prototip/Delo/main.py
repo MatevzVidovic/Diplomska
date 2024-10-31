@@ -53,7 +53,7 @@ learning_parameters = {
 dataloading_args = {
 
 
-    "testrun" : False,
+    "testrun" : True,
    
 
     # Image resize setting - don't know what it should be.
@@ -340,23 +340,23 @@ def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowes
     # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
     # There are possibly more such layers and more types of such layers, so we made this function more general.
     
+    conn_destinations = []
+
+    LLM_ix = None
+    if tree_ix in lowest_level_modules:
+        LLM_ix = lowest_level_modules.index(tree_ix)
 
 
     conv_ix = None
     if tree_ix in conv_tree_ixs:
         conv_ix = conv_tree_ixs.index(tree_ix)
+    
+        # out.conv doesn't have a batchnorm after it.
+        if conv_ix < 18:
+            conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
 
-    LLM_ix = None
-    if tree_ix in lowest_level_modules:
-        LLM_ix = lowest_level_modules.index(tree_ix)
-    
-    
 
-    conn_destinations = []
-    
-    # out.conv doesn't have a batchnorm after it.
-    if conv_ix < 18:
-        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
+    # for batchnorm, conn_destinations is simply empty
     
 
     
@@ -876,7 +876,7 @@ def clean_up_pruning_train_iters():
 
 
 
-def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1):
+def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, num_of_filters_to_prune=1):
 
 
 
@@ -1013,6 +1013,15 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                         Press enter to continue training.
                         Enter a number to reset in how many trainings we ask you this again.
                         Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press g to show the graph of the model and re-ask for input.
+                        Press any other key to stop.\n""")
+            
+            
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""Press enter to continue training.
+                        Enter a number to reset in how many trainings we ask you this again.
+                        Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
                         Press any other key to stop.\n""")
             
             try:
@@ -1023,19 +1032,27 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
                 pass
 
             if inp == "p":
-                model_wrapper.prune()
+                model_wrapper.prune(num_of_filters_to_prune)
                 # This will ensure I have the best k models from every pruning phase.
                 model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
                 log_pruning_train_iter(train_iter)
                 validation_errors = []
-                inp = ""
+                inp = input("""Press enter to continue training.
+                            Press g to show the graph of the model and re-ask for input.
+                        Enter any other text to stop (the model is saved already).\n""")
+
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""Press enter to continue training.
+                        Enter any other text to stop (the model is saved already).\n""")
 
             if inp != "":
                 break
 
+
         
         if validation_phase and validation_stop(validation_errors):
-            model_wrapper.prune()
+            model_wrapper.prune(num_of_filters_to_prune)
 
             # This will ensure I have the best k models from every pruning phase.
             model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
@@ -1055,7 +1072,7 @@ if __name__ == "__main__":
     # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
     # train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
     
-    train_automatically_training_phase(train_iter_possible_stop=1, validation_phase=True, error_ix=3, num_of_epochs_per_training=2)
+    train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True, error_ix=3, num_of_epochs_per_training=2, num_of_filters_to_prune=10)
 
 
 

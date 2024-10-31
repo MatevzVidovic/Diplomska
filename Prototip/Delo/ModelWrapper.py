@@ -80,7 +80,7 @@ class ModelWrapper:
 
             # To help with migration after I changed pruner.py right after the training phase 
             # (no prunings had happened so I could just create a new pruner instance)
-            if self.prev_pruner_path == "None":
+            if self.prev_pruner_path == "remake_pruner":
                 self.prev_pruner_path = None
 
         else:
