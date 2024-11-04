@@ -1,56 +1,26 @@
 
 
+
+
+import logging
+import python_logger.log_helper as py_log
+
+MY_LOGGER = logging.getLogger("prototip")
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
+
+import os
 import torch
-from torch import nn
-
 import pickle
-
-
-
-from unet import UNet
-
-from TrainingWrapper import TrainingWrapper
-
-from ConvResourceCalc import ConvResourceCalc
-
-from pruner import pruner
-
-from min_resource_percentage import min_resource_percentage
-
-from model_vizualization import model_graph
-
-
 import pandas as pd
-
 import shutil
 
 
-
-
-
-# Logging preparation:
-
-import logging
-import sys
-import os
-
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-
-MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
-MY_LOGGER.setLevel(logging.DEBUG)
-
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
-# def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
-
-
-
-
+from TrainingWrapper import TrainingWrapper
+from ConvResourceCalc import ConvResourceCalc
+from pruner import pruner
+from model_vizualization import model_graph
 
 
 
@@ -146,7 +116,7 @@ class ModelWrapper:
 
 
 
-    def initialize_pruning(self, importance_fn, averaging_mechanism: dict, connection_fn, inextricable_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
+    def initialize_pruning(self, importance_fn, averaging_mechanism: dict, input_slice_connection_fn, kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
 
         self.FLOPS_min_res_percents = FLOPS_min_res_percents
         self.weights_min_res_percents = weights_min_res_percents
@@ -163,7 +133,7 @@ class ModelWrapper:
                 self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents.min_resource_percentage_dict
                 self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents.min_resource_percentage_dict
         else:
-            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, connection_fn, inextricable_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
+            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
 
 
         self.initial_averaging_object = averaging_mechanism["initial_averaging_object"]
@@ -186,30 +156,6 @@ class ModelWrapper:
 
 
 
-
-
-
-    """
-    def set_activations_hooks(self, activations: dict, resource_calc: ConvResourceCalc, tree_ixs: list):
-            
-        
-        def get_activation(tree_ix):
-            
-            def hook(module, input, output):
-                if tree_ix not in activations:
-                    activations[tree_ix] = []
-                # activations[tree_ix].append(output.detach())
-                activations[tree_ix] = [output.detach()]
-
-            return hook
-
-        tree_ix_2_hook_handle = {}
-        for tree_ix in tree_ixs:
-            module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-            tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
-        
-        self.tree_ix_2_hook_handle = tree_ix_2_hook_handle
-    """
 
     
     def set_averaging_objects_hooks(self, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc: ConvResourceCalc, tree_ixs: list):
@@ -242,8 +188,6 @@ class ModelWrapper:
         
         if self.tree_ix_2_hook_handle is None:
             raise ValueError("In remove_hooks: self.tree_ix_2_hook_handle is already None")
-            # print("In remove_hooks: self.tree_ix_2_hook_handle is already None")
-            # return
         
         for hook_handle in self.tree_ix_2_hook_handle.values():
             hook_handle.remove()
@@ -279,16 +223,12 @@ class ModelWrapper:
         
 
 
-        return
-
     def validation(self):
         val_results = self.wrap_model.validation()
         return val_results
 
 
-    # set_activations_hooks(activations, conv_modules_tree_ixs, resource_calc)
     def test(self):
-        # This is necessary, so we don't medle with the activations.
         test_result = self.wrap_model.test()
         return test_result
     
@@ -311,10 +251,6 @@ class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
-
-        # There shouldn't be.
-        # In case there still are any. We can't save the model if there are.
-        # self.remove_hooks()
 
         curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
 

@@ -1,12 +1,17 @@
 
 
 
-from model_sorting import sort_tree_ixs
 
 import logging
 import python_logger.log_helper as py_log
 
-MY_LOGGER = logging.getLogger("prototip")
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
+
+from model_sorting import sort_tree_ixs
+
 
 class min_resource_percentage:
 

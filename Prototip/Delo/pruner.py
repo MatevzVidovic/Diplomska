@@ -1,5 +1,12 @@
 
 
+import logging
+import python_logger.log_helper as py_log
+
+MY_LOGGER = logging.getLogger("prototip")
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
 
 import torch
 import ConvResourceCalc
@@ -10,17 +17,7 @@ from TrainingWrapper import TrainingWrapper
 
 
 
-import logging
-import sys
-import os
 
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-MY_LOGGER = logging.getLogger("prototip")
 
 
 class pruner:
@@ -28,12 +25,12 @@ class pruner:
 
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, connection_lambda, inextricable_connection_lambda, conv_tree_ixs, batch_norm_ixs, lowest_level_modules):
+    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, batch_norm_ixs, lowest_level_modules):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.FLOPS_min_resource_percentage_dict = FLOPS_min_resource_percentage.min_resource_percentage_dict
         self.weights_min_resource_percentage_dict = weights_min_resource_percentage.min_resource_percentage_dict
-        self.connection_lambda = connection_lambda
-        self.inextricable_connection_lambda = inextricable_connection_lambda
+        self.input_slice_connection_fn = input_slice_connection_fn
+        self.kernel_connection_fn = kernel_connection_fn
         self.conv_tree_ixs = conv_tree_ixs
         self.lowest_level_modules = lowest_level_modules
 
@@ -62,26 +59,6 @@ class pruner:
         
         
     
-
-    @py_log.log(passed_logger=MY_LOGGER)
-    def binary_search(arr, target):
-        left, right = 0, len(arr) - 1
-        
-        while left <= right:
-            mid = (left + right) // 2
-            
-            if arr[mid] == target:
-                py_log.log_locals(passed_logger=MY_LOGGER)
-                return mid
-            elif arr[mid] < target:
-                left = mid + 1
-            else:
-                right = mid - 1
-        
-        py_log.log_locals(passed_logger=MY_LOGGER)
-        return -1  # Target not found
-    
-
 
 
 
@@ -335,20 +312,20 @@ class pruner:
         # And everything is messed up.
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
 
-        # to find the next (tree_ix, real_input_slice_ix) to prune, we have to go through the connection lambda
-        # however, the lambda works on the indexes of the initial unpruned model.
+        # to find the next (tree_ix, real_input_slice_ix) to prune, we have to go through the connection fn
+        # however, the fn works on the indexes of the initial unpruned model.
         # So, we have to find out the initial_kernel_ix of the real kernel_ix.
-        # Then put that in the lambda to get the goal's initial_input_slice_ix.
+        # Then put that in the fn to get the goal's initial_input_slice_ix.
         # Then change that to the real_input_slice_ix (the ix of where the initial slice is right now).
 
         # print(self.tree_ix_2_list_of_initial_kernel_ixs)
         # print(to_prune)
 
         initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]][to_prune[1]]
-        following_to_prune = self.connection_lambda(to_prune[0], initial_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
+        following_to_prune = self.input_slice_connection_fn(to_prune[0], initial_kernel_ix, self.conv_tree_ixs, self.lowest_level_modules)
 
         # print(f"following_to_prune: {following_to_prune}")
-        # print(self.connection_lambda)
+        # print(self.input_slice_connection_fn)
         # print(to_prune)
         # print(self.conv_tree_ixs)
         # print(self.lowest_level_modules)
@@ -402,7 +379,7 @@ class pruner:
         # Now we do the recursion step. We find the layers which are "inextricably connected" to the pruned layer.
         # Which really means that their kernels get pruned because of this - so the same pruning happens to them as did to the first layer.
         print(10*"-")
-        inextricable_following_to_prune = self.inextricable_connection_lambda(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)
+        inextricable_following_to_prune = self.kernel_connection_fn(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)
         for tree_ix, kernel_ix in inextricable_following_to_prune:
             self.prune_one_layer((tree_ix, kernel_ix), curr_conv_resource_calc, wrapper_model)
 

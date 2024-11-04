@@ -1,25 +1,21 @@
 
 
+
+
+import logging
+import python_logger.log_helper as py_log
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
+
 import torch.nn as nn
 import copy
 
 from model_sorting import sort_tree_ixs
 
 
-
-
-import logging
-import sys
-import os
-
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-
-MY_LOGGER = logging.getLogger("prototip")
 
 
 # create object for calculating model's flops

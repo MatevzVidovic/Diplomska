@@ -1,52 +1,27 @@
 
 
 
+
+
+import logging
+import python_logger.log_helper as py_log
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
+
+
+
 from torch import nn
-
-from model_sorting import sort_tree_ixs, denest_tuple
-
-
-from ConvResourceCalc import ConvResourceCalc
-
 from typing import Union
-
-
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 
-
-
-
-import logging
-import sys
-import os
-
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-
-MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
-MY_LOGGER.setLevel(logging.DEBUG)
-
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
-# def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
-
-
-
-
-
-
-
-
-
-
-
+from model_sorting import sort_tree_ixs, denest_tuple
+from ConvResourceCalc import ConvResourceCalc
 
 
 

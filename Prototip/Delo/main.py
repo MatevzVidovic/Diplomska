@@ -1,44 +1,38 @@
 
 
+import os
+import logging
+import python_logger.log_helper as py_log
+
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
+
+
+python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
+handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
+
+
+
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from min_resource_percentage import min_resource_percentage
-
-
+import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
-
+import argparse
 
 from unet import UNet
-
 from dataset import IrisDataset, transform
 
+from min_resource_percentage import min_resource_percentage
 from ModelWrapper import ModelWrapper
 
 
 
 
-# Logging preparation:
-
-import logging
-import sys
-import os
-
-# Assuming the submodule is located at 'python_logger'
-submodule_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-sys.path.insert(0, submodule_path)
-
-import python_logger.log_helper as py_log
-
-
-MY_LOGGER = logging.getLogger("prototip") # or any string instead of __name__. Mind this: same string, same logger.
-MY_LOGGER.setLevel(logging.DEBUG)
-
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
-# def file_handler_setup(logger, path_to_python_logger_folder, add_stdout_stream: bool = False)
 
 
 
@@ -92,7 +86,7 @@ def get_data_loaders(**dataloading_args):
     # I'm not sure why we're dropping last, but okay.
 
     # Actually, no. Let's not drop last.
-    # it makes no sense. i think this might have been done because the IPAD lambda was done only on the last batch, and so that
+    # it makes no sense. i think this might have been done because the IPAD fn was done only on the last batch, and so that
     # batch needed to be big.
 
 
@@ -192,15 +186,17 @@ def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
 
 
 """
-THIS HERE IS THE START OF BUILDING A CONNECTION LAMBDA
+THIS HERE IS THE START OF BUILDING A CONNECTION fn
 based on the _get_next_conv_id_list_recursive()
 It is very early stage.
 """
 
 
 
-def unet_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+def unet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
     # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
+
+    # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
     
     # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model initially (before pruning).
     # And it returns a list of tuples giving the following modules tree_ixs and the input_slice_ix
@@ -324,17 +320,19 @@ def unet_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modul
 
 
 
-def unet_inextricable_connection_lambda(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
     # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
     
     # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
     # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
     # for layers which are inextricably linked with the convolutional layer.
 
-    # Inextricably linked are in direct connection with the conv's kernel_ix, so they don't need the more complex lambda.
-    # We could have treated them with the regular lambda, but this way is better,
-    # because, in the pruner, we don't need to keep the output_slice_ix.
-    # Also it's simpler and conceptually makes more sense.
+    # Meant for batchnorm and special cases.
+
+    # Inextricably linked are in direct connection with the conv's current (not intitial) kernel_ix, so they don't need the more complex fn.
+    # We could have treated them in the regular way (through initial ixs), but this way is better,
+    # because, in the pruner, we don't need to keep track of the initial ixs (although we do anyways for accounting reasons).
+    # Also it's simpler and conceptually makes more sense - which is the main reason.
 
     # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
     # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
@@ -430,11 +428,11 @@ if __name__ == "__main__":
 
 
 
-def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
+def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
     assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
     
     
-    def IPAD_kernel_importance_lambda(averaging_objects: dict, conv_tree_ixs):
+    def IPAD_kernel_importance_fn(averaging_objects: dict, conv_tree_ixs):
         # Returns dict tree_ix_2_list_of_kernel_importances
         # The ix-th importance is for the kernel currently on the ix-th place.
         # To convert this ix to the initial unpruned models kernel ix, use the pruner's
@@ -466,7 +464,7 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
         return tree_ix_2_kernel_importances
         
     
-    return IPAD_kernel_importance_lambda
+    return IPAD_kernel_importance_fn
         
 
 
@@ -474,7 +472,7 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
 
 if __name__ == "__main__":
 
-    importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
+    importance_fn = IPAD_kernel_importance_fn_generator(0.5)
 
 
 
@@ -508,7 +506,25 @@ if __name__ == "__main__":
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    model_wrapper.initialize_pruning(importance_lambda, averaging_mechanism, unet_connection_lambda, unet_inextricable_connection_lambda, FLOPS_min_res_percents, weights_min_res_percents)
+    model_wrapper.initialize_pruning(importance_fn, averaging_mechanism, unet_input_slice_connection_fn, unet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -521,6 +537,9 @@ def validation_stop(val_errors):
     if len(val_errors) < 3:
         return False
     
+    if len(val_errors) >= 25:
+        return True
+    
     returner = val_errors[-1] > val_errors[-2] and val_errors[-1] > val_errors[-3]
 
     # if previous metric doesn't say we should return, we also go check another metric:
@@ -531,175 +550,11 @@ def validation_stop(val_errors):
         
     return returner
 
-def train_with_validation_by_hand():
-
-
-    num_of_epochs_per_training = 1
-
-    val_errors = []
-    test_errors = []
-
-
-
-    val_iter = 0
-
-    train_iter_possible_stop = 1
-    train_iter = 0
-
-    while True:
-        
-        model_wrapper.train(num_of_epochs_per_training)
-        
-        val_error = model_wrapper.validation()
-        val_errors.append(val_error[0])
-
-        test_error = model_wrapper.test()
-        test_errors.append(test_error[0])
-
-
-        if validation_stop(val_errors):
-
-            train_iter = 0
-
-            print(f"Validation errors so far: {val_errors}")
-            print(f"Test errors so far: {test_errors}")
-            
-            model_wrapper.save(str(val_iter))
-            val_iter += 1
-
-            inp = input("""Validation error is increasing. 
-                        Press enter to simply continue training until next validation stop.
-                        Enter p to prune one filter and continue the training.
-                        Enter g to show the graph of the model and re-ask for input.
-                        Enter l to print logs and re-ask for input.
-                        Enter any other text to stop (the model is saved already).\n""")
-            
-            if inp == "g":
-                model_wrapper.model_graph()
-                inp = input("""Validation error is increasing. 
-                        Press enter to simply continue training until next validation stop.
-                        Enter a number to prune that many filters at once and continue the training.
-                        Enter l to print logs and re-ask for input.
-                        Enter any other text to stop (the model is saved already).\n""")
-            
-            if inp == "l":
-                model_wrapper.print_logs()
-                inp = input("""Validation error is increasing. 
-                        Press enter to simply continue training until next validation stop.
-                        Enter a number to prune that many filters at once and continue the training.
-                        Enter any other text to stop (the model is saved already).\n""")
-            
-
-            try:
-                prune_num = int(inp)
-                # TODO: make it so that it prunes the number of filters that the user inputs.
-                # Right now won't work, because activations don't change and so it keeps pruning the same filter.
-                # It has to be implemented in pruner.prune() where we take the first n filters from the sorted list.
-                # because now it just takes the first one every time.
-                # model_wrapper.prune(prune_num)
-                model_wrapper.prune()
-                inp = ""
-            except ValueError:
-                prune_num = None
-
-            if inp != "":
-                break
-
-
-            
-        train_iter += 1
-        if train_iter >= train_iter_possible_stop:
-            
-            train_iter = 0
-
-            inp = input(f"""{train_iter_possible_stop} trainings have been done without validation error stopping.
-                        Press enter to continue training.
-                        Enter a number to reset how many trainings without validation error stopping are needed before stopping.
-                        Enter p to prune anyways.
-                        Enter s to save.
-                        Press any other key to stop.\n""")
-            
-            try:
-                train_iter_possible_stop = int(inp)
-                inp = ""
-                print(f"Trainings without validation error stopping needed before stopping: {train_iter_possible_stop}")
-            except ValueError:
-                pass
-
-            if inp == "p":
-                model_wrapper.prune(1)
-                inp = ""
-            
-            if inp == "s":
-                model_wrapper.save(str(val_iter))
-                val_iter += 1
-                inp = ""
-
-            if inp != "":
-                break
-
-
-
-
-
-
-def train_by_hand():
-
-    while True:
-    
-
-        inp = input("""Press enter to continue, b to stop (break) without saving, g show graph, s to save and stop.\n Enter a number to train and prune automatically for that number of times before asking for input again.\n""")
-
-        if inp == "g":
-            model_wrapper.model_graph()
-            input("Press enter to continue.")
-
-        if inp == "s":
-            model_wrapper.save()
-            break
-
-        if inp == "p":
-            model_wrapper.print_logs()
-        
-        if inp == "b":
-            break
-
-
-        try:
-            repetitions = int(inp)
-            inp = ""
-        except ValueError:
-            repetitions = 1
-
-        
-        if inp == "": 
-            for _ in range(repetitions):
-                model_wrapper.train(1)
-                model_wrapper.prune()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 def is_previous_model(model_path, model_wrapper, get_last_model_path = False):
 
-    import pandas as pd
     prev_model_details = pd.read_csv(os.path.join(model_wrapper.save_path, "previous_model_details.csv"))
     prev_model_path = prev_model_details["previous_model_path"][0]
 
@@ -712,9 +567,7 @@ def is_previous_model(model_path, model_wrapper, get_last_model_path = False):
 
 
 def delete_old_model(model_path, model_wrapper):
-
-    import os
-    
+   
     is_prev, prev_model_path = is_previous_model(model_path, model_wrapper, get_last_model_path=True)
     
     if is_prev:
@@ -876,7 +729,7 @@ def clean_up_pruning_train_iters():
 
 
 
-def train_automatically_training_phase(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, num_of_filters_to_prune=1):
+def train_automatically(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, num_of_filters_to_prune=1):
 
 
 
@@ -1003,48 +856,64 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
         train_iter += 1
 
-
-            
+        # Implement the stopping by hand. We need this for debugging.
+        
         if (train_iter - initial_train_iter) % train_iter_possible_stop == 0:
-            
             
             inp = input(f"""{train_iter_possible_stop} trainings have been done error stopping.
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
-                        Press enter to continue training.
-                        Enter a number to reset in how many trainings we ask you this again.
-                        Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press g to show the graph of the model and re-ask for input.
-                        Press any other key to stop.\n""")
+                        
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
             
             
             if inp == "g":
                 model_wrapper.model_graph()
-                inp = input("""Press enter to continue training.
-                        Enter a number to reset in how many trainings we ask you this again.
-                        Press p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press any other key to stop.\n""")
+                inp = input("""Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            if inp == "r":
+                show_results()
+                inp = input("""Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
             
             try:
                 train_iter_possible_stop = int(inp)
-                inp = ""
                 print(f"New trainings before stopping: {train_iter_possible_stop}")
+                inp = input("""Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
             except ValueError:
                 pass
 
+
             if inp == "p":
+                
                 model_wrapper.prune(num_of_filters_to_prune)
+
                 # This will ensure I have the best k models from every pruning phase.
                 model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
                 log_pruning_train_iter(train_iter)
                 validation_errors = []
-                inp = input("""Press enter to continue training.
-                            Press g to show the graph of the model and re-ask for input.
-                        Enter any other text to stop (the model is saved already).\n""")
+
+                inp = input("""Enter g to show the graph of the model and re-ask for input.
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
 
             if inp == "g":
                 model_wrapper.model_graph()
-                inp = input("""Press enter to continue training.
-                        Enter any other text to stop (the model is saved already).\n""")
+                inp = input("""Press Enter to continue training.
+                        Enter any other key to stop.\n""")
 
             if inp != "":
                 break
@@ -1061,18 +930,106 @@ def train_automatically_training_phase(train_iter_possible_stop=5, validation_ph
 
 
 
+def show_results():
 
+    try:
+        inp = input("Enter what comes between pruner_ and .pkl: ")
+
+        # pruner_instance = pickle.load(open("./saved/pruner_" + inp + ".pkl", "rb"))
+        # pruning_logs_dict = pruner_instance.pruning_logs
+
+        pruning_train_iter = pickle.load(open("./saved_main/pruning_train_iter.pkl", "rb"))
+        pruning_moments = [i[0] for i in pruning_train_iter]
+
+
+        training_logs = pickle.load(open("./saved_main/training_logs_" + inp + ".pkl", "rb"))
+
+        model_errors = training_logs.errors + training_logs.deleted_models_errors
+        model_errors.sort(key = lambda x: x[2])
+
+        val_errors = [error[0] for error in model_errors]
+        test_errors = [error[1] for error in model_errors]
+
+
+        # make a plot of the val errors and test errors over time
+        # make vertical lines for when pruning happened (in pruning moments)
+
+        plt.plot(val_errors, label="Validation errors")
+        plt.plot(test_errors, label="Test errors")
+        plt.ylabel("1 - IoU")
+        plt.xlabel("training iterations")
+
+        for moment in pruning_moments:
+            plt.axvline(x=moment, color="blue", linestyle="--")
+            
+
+
+
+
+        from matplotlib.patches import Patch
+
+        # Create the initial legend
+        plt.legend()
+
+        # Get current handles and labels
+        handles, labels = plt.gca().get_legend_handles_labels()
+
+        # Create a dummy handle for the arbitrary string
+        extra = Patch(facecolor='none', edgecolor='none', label='Arbitrary String')
+
+        # Append the new handle and label
+        # handles.append(extra)
+        # labels.append("Green line: 10 filters pruned")
+        handles.append(extra)
+        labels.append("Blue line: 1 filter pruned")
+
+        # Update the legend with the new entries
+        plt.legend(handles=handles, labels=labels)
+
+        plt.show()
+
+    except Exception as e:
+        # Print the exception message
+        print("An exception occurred in show_results():", e)
+        # Print the type of the exception
+        print("Exception type:", type(e).__name__)
+        print("Continuin operation.")
 
 
 
 if __name__ == "__main__":
 
-    # train_with_validation_by_hand()
 
-    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
-    # train_automatically_training_phase(train_iter_possible_stop=1000, error_ix=3, num_of_epochs_per_training=2)
+    parser = argparse.ArgumentParser(description="Process an optional positional argument.")
+
+    # Add the optional positional arguments
+    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
+                        help='An optional positional argument with a default value of 1e9')
+    parser.add_argument('validation_phase', nargs='?', type=bool, default=False,
+                        help='Boolean flag for validation phase')
     
-    train_automatically_training_phase(train_iter_possible_stop=1000, validation_phase=True, error_ix=3, num_of_epochs_per_training=2, num_of_filters_to_prune=10)
+    # Add the optional arguments
+    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+    parser.add_argument('--e_ix', type=int, default=3,
+                        help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
+    parser.add_argument('--nept', type=int, default=1,
+                        help='Number of epochs per training iteration')
+    parser.add_argument('--nftp', type=int, default=1,
+                        help='Number of filters to prune in one pruning')
+
+    args = parser.parse_args()
+
+    iter_possible_stop = args.iter_possible_stop
+    is_val_ph = args.validation_phase
+    err_ix = args.e_ix
+    num_ep_per_iter = args.nept
+    num_to_prune = args.nftp
+
+
+    
+    
+    train_automatically(train_iter_possible_stop=iter_possible_stop, validation_phase=is_val_ph, error_ix=err_ix,
+                         num_of_epochs_per_training=num_ep_per_iter, num_of_filters_to_prune=num_to_prune)
 
 
 
