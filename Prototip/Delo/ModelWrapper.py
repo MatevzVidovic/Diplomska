@@ -33,11 +33,12 @@ from model_vizualization import model_graph
 class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path):
 
         self.model_class = model_class
         
-        self.save_path = os.path.join(os.path.dirname(__file__), "saved")
+        # self.save_path = os.path.join(os.path.dirname(__file__), "saved")
+        self.save_path = os.path.join(save_path, "saved_model_wrapper")
 
         os.makedirs(self.save_path, exist_ok=True)
 
@@ -298,7 +299,15 @@ class ModelWrapper:
     def create_safety_copy_of_existing_models(self, str_identifier: str):
 
         model_name = str(self.model_class.__name__)
-        safety_copy_dir = os.path.join(self.save_path, f"saved_safety_copies_{str_identifier}")
+
+        # get dirname of savepath
+
+
+        parent_dir_path = os.path.dirname(self.save_path)
+        safety_path = os.path.join(parent_dir_path, "safety_copies")
+        os.makedirs(safety_path, exist_ok=True)
+
+        safety_copy_dir = os.path.join(safety_path, f"saved_safety_copies_{str_identifier}")
 
         try:
             # Create the safety copy directory if it doesn't exist

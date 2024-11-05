@@ -34,6 +34,10 @@ from ModelWrapper import ModelWrapper
 
 
 
+# save_path = os.path.join(os.path.dirname(__file__), "UNet")
+save_path = os.path.join(".", "UNet")
+
+main_save_path = os.path.join(save_path, "saved_main")
 
 
 
@@ -409,11 +413,11 @@ def averaging_objects(module, input, output, prev_avg_object):
 
     return new_avg_object 
 
-if __name__ == "__main__":
-    averaging_mechanism = {
-        "initial_averaging_object" : INITIAL_AVG_OBJECT,
-        "averaging_function" : averaging_objects
-    }
+
+averaging_mechanism = {
+    "initial_averaging_object" : INITIAL_AVG_OBJECT,
+    "averaging_function" : averaging_objects
+}
 
 
 
@@ -480,7 +484,7 @@ if __name__ == "__main__":
 
     input_example = torch.randn(1, 1, 128, 128)
 
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example)
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example, save_path)
 
 
 
@@ -507,6 +511,29 @@ if __name__ == "__main__":
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
     model_wrapper.initialize_pruning(importance_fn, averaging_mechanism, unet_input_slice_connection_fn, unet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -583,8 +610,12 @@ def delete_old_model(model_path, model_wrapper):
 
 class TrainingLogs:
 
-    def __init__(self, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]) -> None:
+    pickle_fileaname = "training_logs.pkl"
+
+    def __init__(self, tl_main_save_path, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]) -> None:
         
+        self.tl_main_save_path = tl_main_save_path
+
         self.number_of_epochs_per_training = number_of_epochs_per_training
         self.last_train_iter = last_train_iter
         self.deleted_models_errors = deleted_models_errors
@@ -596,6 +627,30 @@ class TrainingLogs:
         self.errors.append((val_error, test_error, train_iter, model_path))
         self.last_train_iter = train_iter
 
+    """
+    The picking and loading is done in such a way, because if we change where we are running the proram (like go onto another computer)
+    we want to just pass the main_save_path to TrainingLogs.load_or_create_training_logs() and it will load the training logs with the correct path,
+    because the tl_main_save_path is has the correct path to main_save_path.
+    But we also want to pickle to the new path, so we have to change the tl_main_save_path to the new path.
+    """
+
+    @staticmethod
+    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]):
+        os.makedirs(tl_main_save_path, exist_ok=True)
+        training_logs_path = os.path.join(tl_main_save_path, TrainingLogs.pickle_fileaname)
+        if os.path.exists(training_logs_path):
+            new_tl = pickle.load(open(training_logs_path, "rb"))
+            new_tl.tl_main_save_path = tl_main_save_path
+            return new_tl
+        return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, last_train_iter, deleted_models_errors)
+
+    @py_log.log(passed_logger=MY_LOGGER)
+    def pickle_training_logs(self):
+        py_log.log_locals(passed_logger=MY_LOGGER)
+        new_training_logs_path = os.path.join(self.tl_main_save_path, self.pickle_fileaname)
+        with open(new_training_logs_path, "wb") as f:
+            pickle.dump(self, f)
+
     
     def __str__(self):
         returner = ""
@@ -605,6 +660,12 @@ class TrainingLogs:
         returner += f"Deleted models errors: {self.deleted_models_errors}\n"
         return returner
     
+    def __repr__(self):
+        # Generate a string representation of the object
+        items = (f"{key}={value!r}" for key, value in self.__dict__.items())
+        return f"<{self.__class__.__name__}({', '.join(items)})>"
+
+
 # with the exception of keeping (k+1) models when one of the worse models is the last model we have 
 # (we have to keep it to continue training)
 def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrapper: ModelWrapper):
@@ -632,7 +693,7 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
     
 
     to_keep = [error for error in training_logs.errors if error not in to_delete]
-    new_training_logs = TrainingLogs(training_logs.number_of_epochs_per_training, training_logs.last_train_iter, training_logs.deleted_models_errors)
+    new_training_logs = TrainingLogs(training_logs.tl_main_save_path, training_logs.number_of_epochs_per_training, training_logs.last_train_iter, training_logs.deleted_models_errors)
     for error in to_keep:
         new_training_logs.add_error(*error)
 
@@ -642,82 +703,71 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
 
  
 
+class PrunigLogs:
 
-# What we pruned is already saved in pruner_istance.pruning_logs
-# We just need to keep track of the corresponding train_iter to be able to know when which pruning happened.
-# That's what this function is for.
-def log_pruning_train_iter(train_iter, pickleable_conv_resource_calc):
-    # Append the train_iter to the list of train_iters that correspond to prunings.
-    # Second value is a flag that tells us if the model was actually saved. It is False to begin with. When we save it, we set it to True.
+    pickle_filename = "pruning_logs.pkl"
 
+    def __init__(self, pl_main_save_path, pruning_logs=[]) -> None:
+        self.pl_main_save_path = pl_main_save_path
+        self.pruning_logs = pruning_logs
     
-    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
-    os.makedirs(save_path, exist_ok=True)
-
-    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
-
-
-    if os.path.exists(pruning_train_iter_path):
-        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
-    else:
-        pruning_train_iters = []
+    @staticmethod
+    def load_or_create_pruning_logs(pl_main_save_path, pruning_logs=[]):
+        os.makedirs(pl_main_save_path, exist_ok=True)
+        pruning_logs_path = os.path.join(pl_main_save_path, PrunigLogs.pickle_filename)
+        if os.path.exists(pruning_logs_path):
+            new_pl = pickle.load(open(pruning_logs_path, "rb"))
+            new_pl.pl_main_save_path = pl_main_save_path
+            return new_pl
+        return PrunigLogs(pl_main_save_path, pruning_logs)
     
-    pruning_train_iters.append((train_iter, False, pickleable_conv_resource_calc))
-
-    with open(pruning_train_iter_path, "wb") as f:
-        pickle.dump(pruning_train_iters, f)
-
-
-# When we prune, we save the training iter of that pruning.
-# But what if we stop the training before that pruned model is actually saved?
-# This function sets the flag for the train_iter actually being confirmed.
-def confirm_last_pruning_train_iter():
-    
-    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
-    os.makedirs(save_path, exist_ok=True)
-
-    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
+    @py_log.log(passed_logger=MY_LOGGER)
+    def pickle_pruning_logs(self):
+        new_pruning_logs_path = os.path.join(self.pl_main_save_path, self.pickle_filename)
+        with open(new_pruning_logs_path, "wb") as f:
+            pickle.dump(self, f)
 
 
-    if os.path.exists(pruning_train_iter_path):
-        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
-    else:
-        return
-    
-    if len(pruning_train_iters) == 0:
-        return
-    
-    pruning_train_iters[-1] = (pruning_train_iters[-1][0], True)
+    # What we pruned is already saved in pruner_istance.pruning_logs
+    # We just need to keep track of the corresponding train_iter to be able to know when which pruning happened.
+    # That's what this function is for.
+    def log_pruning_train_iter(self, train_iter, pickleable_conv_resource_calc):
+        # Append the train_iter to the list of train_iters that correspond to prunings.
+        # Second value is a flag that tells us if the model was actually saved. It is False to begin with. When we save it, we set it to True.
 
-    with open(pruning_train_iter_path, "wb") as f:
-        pickle.dump(pruning_train_iters, f)
+        self.pruning_logs.append((train_iter, False, pickleable_conv_resource_calc))
+
+        self.pickle_pruning_logs()
 
 
-# If we stop the training before the pruned model is saved, 
-# the last train iter would have turned to true in the next saving iteration,
-# despite the fact it was never saved and has no effect.
-# That's why we have to clean it up before training.
-def clean_up_pruning_train_iters():
+    # When we prune, we save the training iter of that pruning.
+    # But what if we stop the training before that pruned model is actually saved?
+    # This function sets the flag for the train_iter actually being confirmed.
+    def confirm_last_pruning_train_iter(self):
+        
+                
+        if len(self.pruning_logs) == 0:
+            return
+        
+        self.pruning_logs[-1] = (self.pruning_logs[-1][0], True , self.pruning_logs[-1][2])
 
-    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
-    os.makedirs(save_path, exist_ok=True)
-
-    pruning_train_iter_path = os.path.join(save_path, "pruning_train_iter.pkl")
+        self.pickle_pruning_logs()
 
 
-    if os.path.exists(pruning_train_iter_path):
-        pruning_train_iters = pickle.load(open(pruning_train_iter_path, "rb"))
-    else:
-        return
+    # If we stop the training before the pruned model is saved, 
+    # the last train iter would have turned to true in the next saving iteration,
+    # despite the fact it was never saved and has no effect.
+    # That's why we have to clean it up before training.
+    def clean_up_pruning_train_iters(self):
 
-    if len(pruning_train_iters) == 0:
-        return
-    
-    if pruning_train_iters[-1][1] == False:
-        pruning_train_iters = pruning_train_iters[:-1]
+        
+        if len(self.pruning_logs) == 0:
+            return
+        
+        if self.pruning_logs[-1][1] == False:
+            self.pruning_logs = self.pruning_logs[:-1]
 
-    with open(pruning_train_iter_path, "wb") as f:
-        pickle.dump(pruning_train_iters, f)
+        self.pickle_pruning_logs()
 
 
 
@@ -738,20 +788,19 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
 
 
-    save_path = os.path.join(os.path.dirname(__file__), "saved_main")
-    os.makedirs(save_path, exist_ok=True)
+    
+    os.makedirs(main_save_path, exist_ok=True)
 
-    clean_up_pruning_train_iters()
 
-    previous_training_phase_details_path = os.path.join(save_path, "previous_training_phase_details.csv")
+
+
+    previous_training_phase_details_path = os.path.join(main_save_path, "previous_training_phase_details.csv")
 
     if os.path.exists(previous_training_phase_details_path):
         prev_training_phase_details = pd.read_csv(previous_training_phase_details_path)
         prev_training_phase_serial_num = prev_training_phase_details["previous_serial_num"][0]
-        prev_training_logs_path = prev_training_phase_details["previous_training_logs_path"][0]
     else:
         prev_training_phase_serial_num = None
-        prev_training_logs_path = None
     
 
     if prev_training_phase_serial_num is None:
@@ -760,10 +809,10 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
         curr_training_phase_serial_num = prev_training_phase_serial_num + 1
 
 
-    if prev_training_logs_path is None:
-        training_logs = TrainingLogs(num_of_epochs_per_training)
-    else:
-        training_logs = pickle.load(open(prev_training_logs_path, "rb"))
+    training_logs = TrainingLogs.load_or_create_training_logs(main_save_path, num_of_epochs_per_training)
+
+    pruning_logs = PrunigLogs.load_or_create_pruning_logs(main_save_path)
+    pruning_logs.clean_up_pruning_train_iters()
         
 
 
@@ -824,7 +873,7 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
 
         new_model_path, _ = model_wrapper.save(str(train_iter))
-        confirm_last_pruning_train_iter()
+        pruning_logs.confirm_last_pruning_train_iter()
 
         training_logs.add_error(val_error, test_error, train_iter, new_model_path)
 
@@ -837,15 +886,11 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
         # And then the process can repeat. Deletion can't be after saved, it makes no sense. Just think of doing just one iteration of it.
         training_logs = delete_all_but_best_k_models(3, training_logs, model_wrapper)
 
+        training_logs.pickle_training_logs()
+        pruning_logs.pickle_pruning_logs()
         
-
-        new_training_logs_path = os.path.join(save_path, f"training_logs_{curr_training_phase_serial_num}_{train_iter}.pkl")
-        with open(new_training_logs_path, "wb") as f:
-            pickle.dump(training_logs, f)
-        
-        new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num],
-                                "previous_training_logs_path": new_training_logs_path})
-        new_df.to_csv(os.path.join(save_path, "previous_training_phase_details.csv"))
+        new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num]})
+        new_df.to_csv(os.path.join(main_save_path, "previous_training_phase_details.csv"))
 
 
 
@@ -906,7 +951,7 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
                 # This will ensure I have the best k models from every pruning phase.
                 model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
-                log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
+                pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
                 validation_errors = []
 
                 inp = input("""Enter g to show the graph of the model and re-ask for input.
@@ -928,7 +973,7 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
             # This will ensure I have the best k models from every pruning phase.
             model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
-            log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
+            pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
             validation_errors = []
 
 
@@ -936,16 +981,17 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 def show_results():
 
     try:
-        inp = input("Enter what comes between pruner_ and .pkl: ")
 
+        # inp = input("Enter what comes between pruner_ and .pkl: ")
         # pruner_instance = pickle.load(open("./saved/pruner_" + inp + ".pkl", "rb"))
         # pruning_logs_dict = pruner_instance.pruning_logs
 
-        pruning_train_iter = pickle.load(open("./saved_main/pruning_train_iter.pkl", "rb"))
-        pruning_moments = [i[0] for i in pruning_train_iter]
+
+        pruning_logs = pickle.load(open(os.path.join(main_save_path,"pruning_logs.pkl"), "rb"))
+        pruning_moments = [i[0] for i in pruning_logs.pruning_logs]
 
 
-        training_logs = pickle.load(open("./saved_main/training_logs_" + inp + ".pkl", "rb"))
+        training_logs = pickle.load(open(os.path.join(main_save_path, "training_logs.pkl"), "rb"))
 
         model_errors = training_logs.errors + training_logs.deleted_models_errors
         model_errors.sort(key = lambda x: x[2])
@@ -962,6 +1008,9 @@ def show_results():
 
         plt.plot(val_errors, label="Validation errors")
         plt.plot(test_errors, label="Test errors")
+
+        # plt.ylim(0, 1)
+
         plt.ylabel("1 - IoU")
         plt.xlabel("training iterations")
 
@@ -1045,7 +1094,6 @@ if __name__ == "__main__":
         "resource_name": resource_name,
         "original_percent_to_prune": percent_to_prune
     }
-
 
     
     
