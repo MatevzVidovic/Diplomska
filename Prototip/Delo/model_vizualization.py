@@ -113,12 +113,12 @@ def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc:
         if ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
             list_of_active_initial_kernel_ixs = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix]
             # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
-            initial_dim_size = initial_resource_calc.module_tree_ix_2_weights_dimensions[ix][0]
+            initial_dim_size = initial_resource_calc.resource_name_2_resource_dict["weights_dimensions"][ix][0]
             display_string += f"\nKernels pruned: [{string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)}]"
         
         if ix in pruner.tree_ix_2_list_of_initial_input_slice_ixs.keys():
             list_of_active_initial_input_slice_ixs = pruner.tree_ix_2_list_of_initial_input_slice_ixs[ix]
-            initial_dim_size = initial_resource_calc.module_tree_ix_2_weights_dimensions[ix][1]
+            initial_dim_size = initial_resource_calc.resource_name_2_resource_dict["weights_dimensions"][ix][1]
             display_string += f"\nInput slices pruned: [{string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)}]"
 
 

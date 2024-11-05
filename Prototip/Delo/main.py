@@ -646,7 +646,10 @@ def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrap
 # What we pruned is already saved in pruner_istance.pruning_logs
 # We just need to keep track of the corresponding train_iter to be able to know when which pruning happened.
 # That's what this function is for.
-def log_pruning_train_iter(train_iter):
+def log_pruning_train_iter(train_iter, pickleable_conv_resource_calc):
+    # Append the train_iter to the list of train_iters that correspond to prunings.
+    # Second value is a flag that tells us if the model was actually saved. It is False to begin with. When we save it, we set it to True.
+
     
     save_path = os.path.join(os.path.dirname(__file__), "saved_main")
     os.makedirs(save_path, exist_ok=True)
@@ -659,7 +662,7 @@ def log_pruning_train_iter(train_iter):
     else:
         pruning_train_iters = []
     
-    pruning_train_iters.append((train_iter, False))
+    pruning_train_iters.append((train_iter, False, pickleable_conv_resource_calc))
 
     with open(pruning_train_iter_path, "wb") as f:
         pickle.dump(pruning_train_iters, f)
@@ -729,7 +732,7 @@ def clean_up_pruning_train_iters():
 
 
 
-def train_automatically(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, num_of_filters_to_prune=1):
+def train_automatically(train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
 
 
@@ -899,11 +902,11 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
             if inp == "p":
                 
-                model_wrapper.prune(num_of_filters_to_prune)
+                curr_pickleable_conv_res_calc = model_wrapper.prune(**pruning_kwargs_dict)
 
                 # This will ensure I have the best k models from every pruning phase.
                 model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
-                log_pruning_train_iter(train_iter)
+                log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
                 validation_errors = []
 
                 inp = input("""Enter g to show the graph of the model and re-ask for input.
@@ -921,11 +924,11 @@ def train_automatically(train_iter_possible_stop=5, validation_phase=False, erro
 
         
         if validation_phase and validation_stop(validation_errors):
-            model_wrapper.prune(num_of_filters_to_prune)
+            curr_pickleable_conv_res_calc = model_wrapper.prune(**pruning_kwargs_dict)
 
             # This will ensure I have the best k models from every pruning phase.
             model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
-            log_pruning_train_iter(train_iter)
+            log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
             validation_errors = []
 
 
@@ -953,6 +956,9 @@ def show_results():
 
         # make a plot of the val errors and test errors over time
         # make vertical lines for when pruning happened (in pruning moments)
+
+        # make new plt
+        plt.figure()
 
         plt.plot(val_errors, label="Validation errors")
         plt.plot(test_errors, label="Test errors")
@@ -986,7 +992,7 @@ def show_results():
         # Update the legend with the new entries
         plt.legend(handles=handles, labels=labels)
 
-        plt.show()
+        plt.show(block=False)
 
     except Exception as e:
         # Print the exception message
@@ -1003,10 +1009,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process an optional positional argument.")
 
     # Add the optional positional arguments
-    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
-                        help='An optional positional argument with a default value of 1e9')
     parser.add_argument('validation_phase', nargs='?', type=bool, default=False,
                         help='Boolean flag for validation phase')
+    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
+                        help='An optional positional argument with a default value of 1e9')
     
     # Add the optional arguments
     # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
@@ -1014,22 +1020,37 @@ if __name__ == "__main__":
                         help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
     parser.add_argument('--nept', type=int, default=1,
                         help='Number of epochs per training iteration')
+    parser.add_argument('--pbop', type=bool, default=False,
+                        help='Prune by original percent, otherwise by number of filters')
     parser.add_argument('--nftp', type=int, default=1,
                         help='Number of filters to prune in one pruning')
+    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
+    parser.add_argument('--ptp', type=float, default=0.1, help='Percent to prune.')
 
     args = parser.parse_args()
 
-    iter_possible_stop = args.iter_possible_stop
     is_val_ph = args.validation_phase
+    iter_possible_stop = args.iter_possible_stop
     err_ix = args.e_ix
     num_ep_per_iter = args.nept
+
+    prune_by_original_percent = args.pbop
     num_to_prune = args.nftp
+    resource_name = args.rn
+    percent_to_prune = args.ptp
+
+    pruning_kwargs = {
+        "prune_by_original_percent": prune_by_original_percent,
+        "num_of_prunes": num_to_prune,
+        "resource_name": resource_name,
+        "original_percent_to_prune": percent_to_prune
+    }
 
 
     
     
     train_automatically(train_iter_possible_stop=iter_possible_stop, validation_phase=is_val_ph, error_ix=err_ix,
-                         num_of_epochs_per_training=num_ep_per_iter, num_of_filters_to_prune=num_to_prune)
+                         num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 
 

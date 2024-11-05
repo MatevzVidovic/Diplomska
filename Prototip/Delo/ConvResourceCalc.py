@@ -30,15 +30,21 @@ class ConvResourceCalc():
         else:
             self.target_modules = target_modules
         
-        self.module_tree_ix_2_flops_num = {}
-        self.module_tree_ix_2_weights_num = {}
 
         self.module_tree_ix_2_children_tree_ix_list = {}
         self.module_tree_ix_2_all_parents_to_root_tree_ix_list = {}
         self.module_tree_ix_2_name = {}
         self.module_tree_ix_2_module_itself = {}
-        self.module_tree_ix_2_weights_dimensions = {}
     
+
+        self.resource_name_2_resource_dict = {
+            "flops_num": {},
+            "weights_num": {},
+            "weights_dimensions": {},
+            "kernels_num": {}
+        }
+
+        
 
     
     def get_copy_for_pickle(self):
@@ -87,23 +93,28 @@ class ConvResourceCalc():
             # print(f"y: {y}")
             # print(f"assert: {y.shape[1] == layer.weight.size(0)}") # is true
 
+
+
+            # dimensions of layer weights:
+            # number of kernels (output chanels), depth of kernels (input chanels), kernel height, kernel width
+            cur_weights = layer.weight.size(0) * layer.weight.size(1) * layer.weight.size(2) * layer.weight.size(3)
+            self.resource_name_2_resource_dict["weights_num"][tree_ix] = cur_weights
+
+            self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
+
+            self.resource_name_2_resource_dict["kernels_num"][tree_ix] = layer.weight.size(0)
+
+
             # dimensions of the output:
             # batch_size, number of kernels (output chanels), height, width
             h = y.shape[2]
             w = y.shape[3]
 
-            # dimensions of layer weights:
-            # number of kernels (output chanels), number of kernels (input chanels), kernel height, kernel width
-            cur_weights = layer.weight.size(0) * layer.weight.size(1) * layer.weight.size(2) * layer.weight.size(3)
             cur_flops = h * w * cur_weights
+            self.resource_name_2_resource_dict["flops_num"][tree_ix] = cur_flops
 
 
-            self.module_tree_ix_2_flops_num[tree_ix] = cur_flops
-            self.all_flops_num += cur_flops
-            self.module_tree_ix_2_weights_dimensions[tree_ix] = list(layer.weight.shape)
-            self.module_tree_ix_2_weights_num[tree_ix] = cur_weights
-            self.all_weights_num += cur_weights
-
+            
             # This is false, because the kernels are now not zeroed out, but actually removed:
             # (the word filter is used, because this is from the previous code, where it was used) 
             # (Also, I think that would have been wrong also, because (layer.weight.size(0) - n_removed_filters) would be correct)
@@ -114,17 +125,16 @@ class ConvResourceCalc():
 
         elif isinstance(layer, nn.BatchNorm2d):
 
-            self.module_tree_ix_2_weights_dimensions[tree_ix] = list(layer.weight.shape)
+            # Dovolj FLOPs in weights dovolj malo, da ne upostevam.
+            for _, dict in self.resource_name_2_resource_dict.items():
+                dict[tree_ix] = 0
 
-            # Dovolj malo, da ne upostevam.
-            self.module_tree_ix_2_flops_num[tree_ix] = 0
-            self.module_tree_ix_2_weights_num[tree_ix] = 0
+            self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
 
 
         else:
-            self.module_tree_ix_2_flops_num[tree_ix] = 0
-            self.module_tree_ix_2_weights_num[tree_ix] = 0
-
+            for _, dict in self.resource_name_2_resource_dict.items():
+                dict[tree_ix] = 0
         
 
 
@@ -137,11 +147,8 @@ class ConvResourceCalc():
     def calculate_resources(self, input_example):
         # tale ubistvu spremeni forward tako, da poklice trace_layer na vsakem. V trace nardis dejansko forward, poleg tega pa se
         # izracunas stevilo flopov.
-        #self.original_flops = 0
-        self.all_flops_num = 0
-        self.all_weights_num = 0
-
         
+                
 
 
         
@@ -190,29 +197,28 @@ class ConvResourceCalc():
 
                 modify_forward(child, new_tree_ix, children_path_list)
 
-
-            # # Direct approach:
+            """
+            # Direct approach:
                         
-            # for submodule in module.modules():
-            #     if isinstance(submodule, self.target_modules):
+            for submodule in module.modules():
+                if isinstance(submodule, self.target_modules):
 
-            #         def new_forward(layer):
-            #             def lambda_forward(x):
-            #                 return self.calculate_layer(layer, x, submodule)
+                    def new_forward(layer):
+                        def lambda_forward(x):
+                            return self.calculate_layer(layer, x, submodule)
 
-            #             return lambda_forward
+                        return lambda_forward
 
-            #         submodule.old_forward = submodule.forward
-            #         submodule.forward = new_forward(submodule)
+                    submodule.old_forward = submodule.forward
+                    submodule.forward = new_forward(submodule)
+            """
 
 
 
         
-        def restore_forward(model):
-            
-            model_name = type(model).__name__.lower()
-            
-            for child in model.children():
+        def restore_forward(module):
+                        
+            for child in module.children():
                 # leaf node
                 if self._is_leaf(child) and hasattr(child, 'old_forward'):
                     child.forward = child.old_forward
@@ -220,26 +226,26 @@ class ConvResourceCalc():
                 else:
                     restore_forward(child)
 
+            """
+            # Direct approach:
 
-            # # Direct approach:
-
-            # for submodule in module.modules():
-            #     print(submodule)
-            #     if isinstance(submodule, self.target_modules) and hasattr(submodule, 'old_forward'):
-            #         submodule.forward = submodule.old_forward
-            #         submodule.old_forward = None
+            for submodule in module.modules():
+                print(submodule)
+                if isinstance(submodule, self.target_modules) and hasattr(submodule, 'old_forward'):
+                    submodule.forward = submodule.old_forward
+                    submodule.old_forward = None
 
 
-            # print(10*"\n" + "Children:")
-            # for child in module.children():
-            #     print(child)
+            print(10*"\n" + "Children:")
+            for child in module.children():
+                print(child)
+            """
         
 
-
-        # We have the FLOPs for the leaves. Elsewhere it is 0.
-        # Now we recursively calculate the FLOPs of middle modules.
-        
-        def recursively_populate_flops(curr_tree_ix=(0,)):
+        # We have calculations for the leaves - they are already in the dict.
+        # Now we have to calculate the resources of the middle modules,
+        # by simply summing the resources of their children.
+        def recursively_calculate(tree_ix_2_resource_dict_to_populate, curr_tree_ix=(0,)):
 
             # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
             children_tree_ix_lists = self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix]
@@ -247,41 +253,19 @@ class ConvResourceCalc():
             # If leaf, return what we have calculated.
             if len(children_tree_ix_lists) == 0:
                 
-                return self.module_tree_ix_2_flops_num[curr_tree_ix]
+                return tree_ix_2_resource_dict_to_populate[curr_tree_ix]
 
 
-            cur_flops = 0
+            running_sum = 0
             for child_tree_ix in children_tree_ix_lists:
-                cur_flops += recursively_populate_flops(child_tree_ix)
+                running_sum += recursively_calculate(tree_ix_2_resource_dict_to_populate, child_tree_ix)
 
-            self.module_tree_ix_2_flops_num[curr_tree_ix] = cur_flops
+            tree_ix_2_resource_dict_to_populate[curr_tree_ix] = running_sum
             
             
-            return cur_flops
+            return running_sum
 
 
-
-
-        
-        def recursively_populate_weights_nums(curr_tree_ix=(0,)):
-
-            # print(self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix])
-            children_tree_ix_lists = self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix]
-
-            # If leaf, return what we have calculated.
-            if len(children_tree_ix_lists) == 0:
-                
-                return self.module_tree_ix_2_weights_num[curr_tree_ix]
-
-
-            cur_weights_num = 0
-            for child_tree_ix in children_tree_ix_lists:
-                cur_weights_num += recursively_populate_weights_nums(child_tree_ix)
-
-            self.module_tree_ix_2_weights_num[curr_tree_ix] = cur_weights_num
-            
-            
-            return cur_weights_num
             
 
 
@@ -289,12 +273,17 @@ class ConvResourceCalc():
         input_example = input_example.to(self.wrapper_model.device)
         y = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
-        # print(self.module_tree_ix_2_name)
-        # print(self.module_tree_ix_2_flops_num)
-        recursively_populate_flops()
-        # print(self.module_tree_ix_2_flops_num)
-        # print(self.all_flops_num)
-        recursively_populate_weights_nums()
+        
+        recursively_calculate(self.resource_name_2_resource_dict["flops_num"])
+        recursively_calculate(self.resource_name_2_resource_dict["weights_num"])
+        recursively_calculate(self.resource_name_2_resource_dict["kernels_num"])
+
+
+
+
+
+    def get_resource_of_whole_model(self, resource_name):
+        return self.resource_name_2_resource_dict[resource_name][(0,)]
 
 
 

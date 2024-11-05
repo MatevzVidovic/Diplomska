@@ -7,7 +7,6 @@ MY_LOGGER = logging.getLogger("prototip")
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
-
 import torch
 import ConvResourceCalc
 
@@ -40,14 +39,14 @@ class pruner:
             # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
             # 0. dim is the number of kernels of this layer.
             # 0. dim also works for batchnorm, for which this is only needed for display of what kernels have been pruned.
-            kernel_num = initial_conv_resource_calc.module_tree_ix_2_weights_dimensions[tree_ix][0]
+            kernel_num = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix][0]
             self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix] = list(range(kernel_num))
 
 
         self.tree_ix_2_list_of_initial_input_slice_ixs = {}
         for tree_ix in conv_tree_ixs:
             # 1. dim is the number input size of this layer.
-            input_slice_num = initial_conv_resource_calc.module_tree_ix_2_weights_dimensions[tree_ix][1]
+            input_slice_num = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix][1]
             self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix] = list(range(input_slice_num))
 
         
@@ -245,7 +244,7 @@ class pruner:
         disallowed_directly = set()
         for tree_ix in self.FLOPS_min_resource_percentage_dict:
             try:
-                curr_flops_percentage = curr_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix] / self.initial_conv_resource_calc.module_tree_ix_2_flops_num[tree_ix]
+                curr_flops_percentage = curr_conv_resource_calc.resource_name_2_resource_dict["flops_num"][tree_ix] / self.initial_conv_resource_calc.resource_name_2_resource_dict["flops_num"][tree_ix]
             except ZeroDivisionError:
                 curr_flops_percentage = 0
 
@@ -256,7 +255,7 @@ class pruner:
 
         for tree_ix in self.weights_min_resource_percentage_dict:
             try:
-                curr_weights_percentage = curr_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix] / self.initial_conv_resource_calc.module_tree_ix_2_weights_num[tree_ix]
+                curr_weights_percentage = curr_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix] / self.initial_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix]
             except ZeroDivisionError:
                 curr_weights_percentage = 0
                 
@@ -295,12 +294,13 @@ class pruner:
             py_log.log_locals(passed_logger=MY_LOGGER)
             return
         
-        self.prune_one_layer(to_prune, curr_conv_resource_calc, wrapper_model)
+        self.prune_one_layer_recursive(to_prune, curr_conv_resource_calc, wrapper_model)
+
         
 
 
 
-    def prune_one_layer(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
+    def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
         
 
 
@@ -381,7 +381,7 @@ class pruner:
         print(10*"-")
         inextricable_following_to_prune = self.kernel_connection_fn(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)
         for tree_ix, kernel_ix in inextricable_following_to_prune:
-            self.prune_one_layer((tree_ix, kernel_ix), curr_conv_resource_calc, wrapper_model)
+            self.prune_one_layer_recursive((tree_ix, kernel_ix), curr_conv_resource_calc, wrapper_model)
 
 
 

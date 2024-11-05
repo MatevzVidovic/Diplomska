@@ -200,9 +200,7 @@ class ModelWrapper:
         self.wrap_model.epoch_pass(dataloader_name="train")
 
 
-    def prune(self, num_of_prunes: int = 1):
-
-        for _ in range(num_of_prunes):
+    def _prune_one(self):
 
             self.averaging_objects = {}
             self.set_averaging_objects_hooks(self.initial_averaging_object, self.averaging_function, self.averaging_objects, self.resource_calc, self.conv_tree_ixs)
@@ -220,7 +218,35 @@ class ModelWrapper:
             # This needs to be done so the gradient computation graph is updated.
             # Otherwise it expects gradients of the old shapes.
             self.initialize_optimizer()
+
+
+    def prune(self, prune_by_original_percent = False, num_of_prunes: int = 1, resource_name = "flops_num", original_percent_to_prune: float = 0.1):
+
+        if not prune_by_original_percent:
+            for _ in range(num_of_prunes):
+                self._prune_one()
+
+
+        else:
+            initial_resource_value = self.initial_resource_calc.get_resource_of_whole_model(resource_name)
+            value_to_prune = initial_resource_value * original_percent_to_prune
+            
+            starting_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
+            curr_resource_value = starting_resource_value
+
+            goal_resource_value = starting_resource_value - value_to_prune
+            print(f"Goal resource value: {goal_resource_value}")
+            
+            while curr_resource_value > goal_resource_value:
+                self._prune_one()
+                self.resource_calc.calculate_resources(self.input_example)
+                curr_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
+                print(f"Current resource value: {curr_resource_value}")
         
+        self.resource_calc.calculate_resources(self.input_example)
+        return self.resource_calc.get_copy_for_pickle()
+
+
 
 
     def validation(self):
