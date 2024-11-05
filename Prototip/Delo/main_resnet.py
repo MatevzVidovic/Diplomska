@@ -101,7 +101,7 @@ def get_data_loaders(**dataloading_args):
     # I'm not sure why we're dropping last, but okay.
 
     # Actually, no. Let's not drop last.
-    # it makes no sense. i think this might have been done because the IPAD lambda was done only on the last batch, and so that
+    # it makes no sense. i think this might have been done because the IPAD fn was done only on the last batch, and so that
     # batch needed to be big.
 
 
@@ -200,7 +200,7 @@ model_parameters = {
 
 
 """
-THIS HERE IS THE START OF BUILDING A CONNECTION LAMBDA
+THIS HERE IS THE START OF BUILDING A CONNECTION fn
 based on the _get_next_conv_id_list_recursive()
 It is very early stage.
 """
@@ -269,14 +269,14 @@ It is very early stage.
 #
 # - set diasslowed to FLOPs_min_res_percents (upsamplers and last regular flow layer in bottlenecks without upsamplers)
 #  
-# - inextricable-connection lambda:
+# - inextricable-connection fn:
 #       - add batchnorm
 #       - if right-before-regular-ending-bottleneck:
 #           - if no upsampler, prune last regular flow layer
 #       - if last regular flow layer is pruned (only allowed to be directly chosen when there is an upsampler):
 #             - if upsampler, prune upsampler
 # 
-# - connection lambda:
+# - connection fn:
 #      - if this is upsampler, return empty list
 #      - add next regular flow layer
 #     - if right-before-regular-ending-bottleneck:
@@ -371,7 +371,7 @@ def resnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_l
     # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
 
 
-    # - connection lambda:
+    # - connection fn:
     #      - if this is upsampler, return empty list
     #      - add next regular flow layer
     #     - if right-before-regular-ending-bottleneck:
@@ -427,8 +427,8 @@ def resnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
     # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
     # for layers which are inextricably linked with the convolutional layer.
 
-    # Inextricably linked are in direct connection with the conv's kernel_ix, so they don't need the more complex lambda.
-    # We could have treated them with the regular lambda, but this way is better,
+    # Inextricably linked are in direct connection with the conv's kernel_ix, so they don't need the more complex fn.
+    # We could have treated them with the regular fn, but this way is better,
     # because, in the pruner, we don't need to keep the output_slice_ix.
     # Also it's simpler and conceptually makes more sense.
 
@@ -439,7 +439,7 @@ def resnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
     bh = BH
 
 
-    # - inextricable-connection lambda:
+    # - inextricable-connection fn:
     #       - add batchnorm
     #       - if right-before-regular-ending-bottleneck:
     #           - if no upsampler, prune last regular flow layer
@@ -527,7 +527,7 @@ def resnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
 
 
 INITIAL_AVG_OBJECT = (0, None)
-def averaging_objects(module, input, output, prev_avg_object):
+def averaging_function(module, input, output, prev_avg_object):
     
     batch_size = output.shape[0]
     batch_mean = output.mean(dim=(0))
@@ -542,10 +542,10 @@ def averaging_objects(module, input, output, prev_avg_object):
     return new_avg_object 
 
 
-averaging_mechanism = {
-    "initial_averaging_object" : INITIAL_AVG_OBJECT,
-    "averaging_function" : averaging_objects
-}
+# averaging_mechanism = {
+#     "initial_averaging_object" : INITIAL_AVG_OBJECT,
+#     "averaging_function" : averaging_function
+# }
 
 
 
@@ -560,11 +560,11 @@ averaging_mechanism = {
 
 
 
-def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
+def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
     assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
     
     
-    def IPAD_kernel_importance_lambda(averaging_objects: dict, conv_tree_ixs):
+    def IPAD_kernel_importance_fn(averaging_objects: dict, conv_tree_ixs):
         # Returns dict tree_ix_2_list_of_kernel_importances
         # The ix-th importance is for the kernel currently on the ix-th place.
         # To convert this ix to the initial unpruned models kernel ix, use the pruner's
@@ -596,17 +596,72 @@ def IPAD_kernel_importance_lambda_generator(L1_ADC_weight):
         return tree_ix_2_kernel_importances
         
     
-    return IPAD_kernel_importance_lambda
+    return IPAD_kernel_importance_fn
+
+
+
+IMPORTANCE_FN = IPAD_kernel_importance_fn_generator(0.5)
+
+
+
+def set_averaging_objects_hooks(model_wrapper, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc, tree_ixs: list):
         
+    
+    def get_activation(tree_ix):
+        
+        def hook(module, input, output):
+            
+            detached_output = output.detach()
+
+            if tree_ix not in averaging_objects:
+                averaging_objects[tree_ix] = initial_averaging_object
+
+            averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
+
+        return hook
+
+    tree_ix_2_hook_handle = {}
+    for tree_ix in tree_ixs:
+        module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
+        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+    
+    model_wrapper.tree_ix_2_hook_handle = tree_ix_2_hook_handle
+    
+
+
+
+def remove_hooks(model_wrapper):
+    
+    if model_wrapper.tree_ix_2_hook_handle is None:
+        raise ValueError("In remove_hooks: model_wrapper.tree_ix_2_hook_handle is already None")
+    
+    for hook_handle in model_wrapper.tree_ix_2_hook_handle.values():
+        hook_handle.remove()
+    
+    model_wrapper.tree_ix_2_hook_handle = None
+
+
+def get_importance_dict(model_wrapper: ModelWrapper):
+
+    model_wrapper.averaging_objects = {}
+    set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
+
+    model_wrapper.epoch_pass()
+
+    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+    model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
+
+    importance_dict = IMPORTANCE_FN(model_wrapper.averaging_objects, model_wrapper.conv_tree_ixs)
+    remove_hooks(model_wrapper)
+    model_wrapper.averaging_objects = {}
+
+    return importance_dict
+
 
 
 
 
 if __name__ == "__main__":
-
-    importance_lambda = IPAD_kernel_importance_lambda_generator(0.5)
-
-
 
 
 
@@ -642,14 +697,14 @@ if __name__ == "__main__":
     #
     # - set diasslowed to FLOPs_min_res_percents (upsamplers and last regular flow layer in bottlenecks without upsamplers)
     #  
-    # - inextricable-connection lambda:
+    # - inextricable-connection fn:
     #       - add batchnorm
     #       - if right-before-regular-ending-bottleneck:
     #           - if no upsampler, prune last regular flow layer
     #       - if last regular flow layer is pruned (only allowed to be directly chosen when there is an upsampler):
     #             - if upsampler, prune upsampler
     # 
-    # - connection lambda:
+    # - connection fn:
     #      - if this is upsampler, return empty list
     #      - add next regular flow layer
     #     - if right-before-regular-ending-bottleneck:
@@ -667,7 +722,7 @@ if __name__ == "__main__":
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    model_wrapper.initialize_pruning(importance_lambda, averaging_mechanism, resnet_input_slice_connection_fn, resnet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
+    model_wrapper.initialize_pruning(get_importance_dict, resnet_input_slice_connection_fn, resnet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
 
 
 

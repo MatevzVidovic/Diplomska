@@ -117,7 +117,7 @@ class ModelWrapper:
 
 
 
-    def initialize_pruning(self, importance_fn, averaging_mechanism: dict, input_slice_connection_fn, kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
+    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
 
         self.FLOPS_min_res_percents = FLOPS_min_res_percents
         self.weights_min_res_percents = weights_min_res_percents
@@ -136,11 +136,7 @@ class ModelWrapper:
         else:
             self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
 
-
-        self.initial_averaging_object = averaging_mechanism["initial_averaging_object"]
-        self.averaging_function = averaging_mechanism["averaging_function"]
-        self.importance_fn = importance_fn
-
+        self.get_importance_dict_fn = get_importance_dict_fn
 
 
 
@@ -159,41 +155,7 @@ class ModelWrapper:
 
 
     
-    def set_averaging_objects_hooks(self, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc: ConvResourceCalc, tree_ixs: list):
-            
-        
-        def get_activation(tree_ix):
-            
-            def hook(module, input, output):
-                
-                detached_output = output.detach()
-
-                if tree_ix not in averaging_objects:
-                    averaging_objects[tree_ix] = initial_averaging_object
-
-                averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
-
-            return hook
-
-        tree_ix_2_hook_handle = {}
-        for tree_ix in tree_ixs:
-            module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-            tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
-        
-        self.tree_ix_2_hook_handle = tree_ix_2_hook_handle
-        
-
     
-
-    def remove_hooks(self):
-        
-        if self.tree_ix_2_hook_handle is None:
-            raise ValueError("In remove_hooks: self.tree_ix_2_hook_handle is already None")
-        
-        for hook_handle in self.tree_ix_2_hook_handle.values():
-            hook_handle.remove()
-        
-        self.tree_ix_2_hook_handle = None
 
 
 
@@ -203,22 +165,13 @@ class ModelWrapper:
 
     def _prune_one(self):
 
-            self.averaging_objects = {}
-            self.set_averaging_objects_hooks(self.initial_averaging_object, self.averaging_function, self.averaging_objects, self.resource_calc, self.conv_tree_ixs)
+        importance_dict = self.get_importance_dict_fn(self)
 
-            self.epoch_pass()
+        self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
 
-            # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
-            self.resource_calc.calculate_resources(self.input_example)
-            importance_dict = self.importance_fn(self.averaging_objects, self.conv_tree_ixs)
-            self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
-
-            self.remove_hooks()
-            self.averaging_objects = {}
-
-            # This needs to be done so the gradient computation graph is updated.
-            # Otherwise it expects gradients of the old shapes.
-            self.initialize_optimizer()
+        # This needs to be done so the gradient computation graph is updated.
+        # Otherwise it expects gradients of the old shapes.
+        self.initialize_optimizer()
 
 
     def prune(self, prune_by_original_percent = False, num_of_prunes: int = 1, resource_name = "flops_num", original_percent_to_prune: float = 0.1):

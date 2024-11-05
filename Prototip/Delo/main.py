@@ -397,7 +397,7 @@ def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_mo
 
 
 INITIAL_AVG_OBJECT = (0, None)
-def averaging_objects(module, input, output, prev_avg_object):
+def averaging_function(module, input, output, prev_avg_object):
     
     batch_size = output.shape[0]
     batch_mean = output.mean(dim=(0))
@@ -412,10 +412,10 @@ def averaging_objects(module, input, output, prev_avg_object):
     return new_avg_object 
 
 
-averaging_mechanism = {
-    "initial_averaging_object" : INITIAL_AVG_OBJECT,
-    "averaging_function" : averaging_objects
-}
+# averaging_mechanism = {
+#     "initial_averaging_object" : INITIAL_AVG_OBJECT,
+#     "averaging_function" : averaging_function
+# }
 
 
 
@@ -469,17 +469,69 @@ def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
     return IPAD_kernel_importance_fn
         
 
+IMPORTANCE_FN = IPAD_kernel_importance_fn_generator(0.5)
+
+
+
+def set_averaging_objects_hooks(model_wrapper, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc, tree_ixs: list):
+        
+    
+    def get_activation(tree_ix):
+        
+        def hook(module, input, output):
+            
+            detached_output = output.detach()
+
+            if tree_ix not in averaging_objects:
+                averaging_objects[tree_ix] = initial_averaging_object
+
+            averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
+
+        return hook
+
+    tree_ix_2_hook_handle = {}
+    for tree_ix in tree_ixs:
+        module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
+        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
+    
+    model_wrapper.tree_ix_2_hook_handle = tree_ix_2_hook_handle
+    
+
+
+
+def remove_hooks(model_wrapper):
+    
+    if model_wrapper.tree_ix_2_hook_handle is None:
+        raise ValueError("In remove_hooks: model_wrapper.tree_ix_2_hook_handle is already None")
+    
+    for hook_handle in model_wrapper.tree_ix_2_hook_handle.values():
+        hook_handle.remove()
+    
+    model_wrapper.tree_ix_2_hook_handle = None
+
+
+def get_importance_dict(model_wrapper: ModelWrapper):
+
+    model_wrapper.averaging_objects = {}
+    set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
+
+    model_wrapper.epoch_pass()
+
+    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+    model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
+
+    importance_dict = IMPORTANCE_FN(model_wrapper.averaging_objects, model_wrapper.conv_tree_ixs)
+    remove_hooks(model_wrapper)
+    model_wrapper.averaging_objects = {}
+
+    return importance_dict
+
 
 
 
 if __name__ == "__main__":
 
-    importance_fn = IPAD_kernel_importance_fn_generator(0.5)
-
-
-
-
-
+    
     input_example = torch.randn(1, 1, 128, 128)
 
     model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example, save_path)
@@ -508,7 +560,7 @@ if __name__ == "__main__":
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    model_wrapper.initialize_pruning(importance_fn, averaging_mechanism, unet_input_slice_connection_fn, unet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
+    model_wrapper.initialize_pruning(get_importance_dict, unet_input_slice_connection_fn, unet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
 
 
 
