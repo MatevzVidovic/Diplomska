@@ -83,13 +83,13 @@ class ModelWrapper:
             "loss_fn": learning_dict["loss_fn"],
         }
 
-        self.wrap_model = TrainingWrapper(self.model, dataloader_dict, new_learning_dict)
+        self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict)
 
         self.initialize_optimizer()
 
 
 
-        self.resource_calc = ConvResourceCalc(self.wrap_model)
+        self.resource_calc = ConvResourceCalc(self.training_wrapper)
 
         self.input_example = input_example
         self.resource_calc.calculate_resources(self.input_example)
@@ -112,7 +112,7 @@ class ModelWrapper:
 
 
     def initialize_optimizer(self):
-        self.wrap_model.initialize_optimizer(self.optimizer_class, self.learning_rate)
+        self.training_wrapper.initialize_optimizer(self.optimizer_class, self.learning_rate)
 
 
 
@@ -147,7 +147,7 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def train(self, epochs=1):
         for _ in range(epochs):
-            self.wrap_model.train()
+            self.training_wrapper.train()
 
 
 
@@ -160,14 +160,14 @@ class ModelWrapper:
 
 
     def epoch_pass(self):
-        self.wrap_model.epoch_pass(dataloader_name="train")
+        self.training_wrapper.epoch_pass(dataloader_name="train")
 
 
     def _prune_one(self):
 
         importance_dict = self.get_importance_dict_fn(self)
 
-        self.pruner_instance.prune(importance_dict, self.resource_calc, self.wrap_model)
+        self.pruner_instance.prune(importance_dict, self.resource_calc, self.training_wrapper)
 
         # This needs to be done so the gradient computation graph is updated.
         # Otherwise it expects gradients of the old shapes.
@@ -204,12 +204,12 @@ class ModelWrapper:
 
 
     def validation(self):
-        val_results = self.wrap_model.validation()
+        val_results = self.training_wrapper.validation()
         return val_results
 
 
     def test(self):
-        test_result = self.wrap_model.test()
+        test_result = self.training_wrapper.test()
         return test_result
     
 

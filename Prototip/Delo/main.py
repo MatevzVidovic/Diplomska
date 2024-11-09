@@ -22,7 +22,9 @@ from torch.utils.data import DataLoader
 import argparse
 
 from unet import UNet
-from dataset import IrisDataset, transform
+
+# from dataset import IrisDataset, transform
+from my_dataset import IrisDataset, transform
 
 from min_resource_percentage import min_resource_percentage
 from ModelWrapper import ModelWrapper
@@ -66,7 +68,7 @@ dataloading_args = {
     #  since val and test use torch.no_grad() and therefore use less memory. 
     "batch_size" : 16,
     "shuffle" : False, # TODO shuffle??
-    "num_workers" : 4,
+    "num_workers" : 1,
 }
 
 
@@ -120,12 +122,13 @@ dataloader_dict = {
 
 model_parameters = {
     # layer sizes
-    "n_channels" : 1,
+    "n_channels" : 3,
     "n_classes" : 2,
     "bilinear" : True,
     "pretrained" : False,
   }
 
+INPUT_EXAMPLE = torch.randn(1, 3, 128, 128)
 
 
 
@@ -532,9 +535,7 @@ def get_importance_dict(model_wrapper: ModelWrapper):
 if __name__ == "__main__":
 
     
-    input_example = torch.randn(1, 1, 128, 128)
-
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, input_example, save_path)
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path)
 
 
 
@@ -564,6 +565,8 @@ if __name__ == "__main__":
 
 
 
+    model_wrapper.training_wrapper.test_showcase()
+
 
 
 
@@ -580,6 +583,8 @@ if __name__ == "__main__":
         if len(val_errors) < 3:
             return False
         
+        if len(val_errors) >= 25:
+            return True
         
         returner = val_errors[-1] > val_errors[-2] and val_errors[-1] > val_errors[-3]
 
@@ -597,11 +602,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process an optional positional argument.")
 
     # Add the optional positional arguments
-    parser.add_argument('validation_phase', nargs='?', type=bool, default=False,
-                        help='Boolean flag for validation phase')
     parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
                         help='An optional positional argument with a default value of 1e9')
     
+    # These store True if the flag is present and False otherwise.
+    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
+    # So --pbop False would still give True to the pbop field.
+    # This is why they are implemented this way now.
+    parser.add_argument('-v', '--validation_phase', action='store_true',
+                        help='If present, enables validation (automatic pruning) phase')
+    parser.add_argument('--pbop', action='store_true',
+                        help='Prune by original percent, otherwise by number of filters')
+    
+
     # Add the optional arguments
     # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
     parser.add_argument('--e_ix', type=int, default=3,
@@ -610,9 +623,6 @@ if __name__ == "__main__":
     parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
     parser.add_argument('--nept', type=int, default=1,
                         help='Number of epochs per training iteration')
-    
-    parser.add_argument('--pbop', type=bool, default=False,
-                        help='Prune by original percent, otherwise by number of filters')
     parser.add_argument('--nftp', type=int, default=1,
                         help='Number of filters to prune in one pruning')
     parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
@@ -622,6 +632,7 @@ if __name__ == "__main__":
 
     is_val_ph = args.validation_phase
     iter_possible_stop = args.iter_possible_stop
+
     err_ix = args.e_ix
     max_train_iters = args.mti
     max_auto_prunings = args.map
@@ -639,7 +650,8 @@ if __name__ == "__main__":
         "original_percent_to_prune": percent_to_prune
     }
 
-    
+    print(f"Validation phase: {is_val_ph}")
+    print(args)
     
     train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, validation_phase=is_val_ph, error_ix=err_ix,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)

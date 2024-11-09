@@ -442,3 +442,93 @@ class TrainingWrapper:
     
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # this is my own function for my own specific use case
+    # It is not necessary if you are implementing your own TrainingWrapper
+
+    def test_showcase(self, dataloader_name="test"):
+
+        dataloader = self.dataloaders_dict[dataloader_name]
+
+        self.model.eval()
+        test_loss, IoU, F1 = 0, 0, 0
+        IoU_as_avg_on_matrixes = 0
+        with torch.no_grad():
+            for X, y in dataloader:
+                    X, y = X.to(self.device), y.to(self.device)
+                    pred = self.model(X)
+
+
+                    # loss_fn computes the mean loss for the entire batch.
+                    # We cold also get the loss for each image, but we don't need to.
+                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
+
+                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
+                    test_loss += self.loss_fn(pred, y).item()
+
+
+
+                    pred_binary = pred[:, 1] > pred[:, 0]
+
+                    F1 += get_F1_from_predictions(pred_binary, y)
+                    IoU += get_IoU_from_predictions(pred_binary, y)
+
+
+                    # X and y are tensors of a batch, so we have to go over them all
+                    for i in range(X.shape[0]):
+
+                        pred_binary = pred[i][1] > pred[i][0]
+
+
+                        curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
+                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
+                        IoU_as_avg_on_matrixes += curr_IoU
+
+
+                        
+                        pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+
+                        pred_grayscale_mask = pred[i][1].cpu().numpy() - pred[i][0].cpu().numpy()
+                        pred_grayscale_mask_min_max_normed = (pred_grayscale_mask - pred_grayscale_mask.min()) / (pred_grayscale_mask.max() - pred_grayscale_mask.min())
+
+                        # matplotlib expects (height, width, channels), but pytorch has (channels, height, width)
+                        image_tensor = X[i].cpu()
+                        image_np = image_tensor.permute(1, 2, 0).numpy()
+
+                        plt.subplot(2, 2, 1)
+                        plt.gca().set_title('Original image')
+                        plt.imshow(image_np)
+                        plt.subplot(2, 2, 2)
+                        plt.gca().set_title('Ground truth')
+                        plt.imshow(y[i].cpu().numpy())
+                        plt.subplot(2, 2, 3)
+                        plt.gca().set_title('Binary predictions (sclera > bg)')
+                        plt.imshow(pred_binary_cpu_np, cmap='gray')
+                        plt.subplot(2, 2, 4)
+                        plt.gca().set_title('Sclera - bg, min-max normed')
+                        plt.imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
+                        plt.show(block=False)
+
+                        inp = input("Enter anything to stop. Press Enter to continue...")
+                        if inp:
+                            return
+
+
+
+
+
+    
