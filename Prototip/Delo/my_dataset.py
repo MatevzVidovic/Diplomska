@@ -30,6 +30,7 @@ MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same strin
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
+
 from albumentations import Compose, ShiftScaleRotate
 
 
@@ -47,6 +48,16 @@ import os.path as osp
 # from utils import one_hot2dist
 
 np.random.seed(7)
+
+
+
+
+transform = transforms.Compose(
+    [
+     transforms.Normalize([0.5], [0.5])
+    ])
+
+
 
 
 
@@ -166,6 +177,13 @@ def show_image(passed_img, title="", close_all_limit=1e9):
 
 
 
+
+
+
+
+# Block of fns for conversions of image types and representations:
+
+
 def to_type(given_img, goal_type_name):
     # type name can be 'ndarray', 'tensor', 'Image'
 
@@ -209,9 +227,6 @@ def to_type(given_img, goal_type_name):
         
 
     raise ValueError("goal_type_name must be 'ndarray', 'tensor', or 'Image', and img must be np.ndarray, Image.Image, or torch.Tensor")
-
-
-
 
 def to_img_repr(given_img, goal_img_repr):
     # The two img reprs are [0, 255] (uint8) and [0, 1] (float32)
@@ -268,7 +283,6 @@ def to_img_repr(given_img, goal_img_repr):
 
     raise ValueError("goal_img_repr must be 'uint8' or 'float32', and img must be np.ndarray, Image.Image, or torch.Tensor")
 
-
 def to_type_and_then_img_repr(img, goal_type_name, goal_img_repr):
     return to_img_repr(to_type(img, goal_type_name), goal_img_repr)
 
@@ -300,11 +314,13 @@ def smart_conversion(img, goal_type_name, goal_img_repr):
     elif goal_img_repr == 'float32':
         return to_type_and_then_img_repr(img, goal_type_name, goal_img_repr)
 
-transform = transforms.Compose(
-    [
-     transforms.Normalize([0.5], [0.5])
-    ])
 
+
+
+
+
+
+# Horizontal flip and gaussian blur funtions:
 
 def random_horizontal_flip(img, mask, prob=0.5):
     # Takes PIL img as input, returns PIL img.
@@ -345,6 +361,11 @@ def gaussian_blur(img, possible_sigma_vals_list=range(2, 7), ker_size=7, prob=0.
 
 
 
+
+
+
+
+# Random rotation block of functions:
 
 
 def maxHist(row):
@@ -416,10 +437,6 @@ def maxHist(row):
             right_index = i - 1
 
     return max_area, left_index, right_index, height_of_max_area
-
-
-
-
 
 
 
@@ -733,6 +750,10 @@ def random_rotation(img, mask, max_angle=15, rotate_type="shrink", prob=0.2):
 
 
 
+
+# Translation block of functions:
+
+
 def shift_horiz(img, shift):
     dims_num = len(img.shape)
     if dims_num == 2:
@@ -914,13 +935,28 @@ def scale(img, mask, max_scale_percent=0.2, scale_type="only_zoom", prob=0.2):
         raise ValueError("scale_type must be 'only_zoom' or 'zoom_and_shrink'")
     
 
+    a = np.array([1, 2, 3])
+    b = a[0:-1]
+    
+    py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
     if scale_percent >= 0:
         halved_scale_percent = scale_percent / 2
         vert_pix_num = int(img.shape[0] * halved_scale_percent)
         horiz_pix_num = int(img.shape[1] * halved_scale_percent)
 
+        # We have to crop by at leas 1.
+        # Otherwise, e.g. img[0:0, 3:-1, :] can happen and this is empty.
+        # So wasy fix is to ensure that we crop by at least 1.
+        if vert_pix_num == 0:
+            vert_pix_num = 1
+        if horiz_pix_num == 0:
+            horiz_pix_num = 1
+            
+
         aug_img = img[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
         aug_mask = mask[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
+
+        py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
     else:
         
@@ -1217,10 +1253,11 @@ class IrisDataset(Dataset):
 
                 img, mask = random_rotation(img, mask, max_angle=15, prob=0.2)
 
-                # Should be at the end, because if trans or rot happened, they introduced black pixels at edges.
-                # So if we scale in the zooming direction, we will redce the number of those black pixels.
+                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+
                 img, mask = scale(img, mask, max_scale_percent=0.1, prob=0.2)
 
+                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
 
 
@@ -1233,10 +1270,11 @@ class IrisDataset(Dataset):
 
 
 
-
             # Converting img and mask to correct dimensions, binarization, types, ans removing unnecessary dimension
             img = smart_conversion(img, 'ndarray', 'uint8')
             mask = smart_conversion(mask, 'ndarray', 'uint8')
+
+            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
             # performing the necessary resizing
             img = cv2.resize(img, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
