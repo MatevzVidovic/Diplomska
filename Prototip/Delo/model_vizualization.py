@@ -4,7 +4,7 @@
 
 
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)

@@ -3,7 +3,7 @@
 
 
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
@@ -294,6 +294,8 @@ class TrainingWrapper:
             else "cpu"
         )
 
+        # self.device = "cpu" # for debugging purposes
+
         print(f"Device: {self.device}")
 
 
@@ -319,46 +321,54 @@ class TrainingWrapper:
 
     
     def train(self):
+        
+        try:
+            train_times = []
 
-        train_times = []
+            dataloader = self.dataloaders_dict["train"]
+        
+            size = len(dataloader.dataset)
+            self.model.train()
 
-        dataloader = self.dataloaders_dict["train"]
-    
-        size = len(dataloader.dataset)
-        self.model.train()
-
-        start = timer()
-
-        # print_cuda_memory()
-
-        for batch, (X, y) in enumerate(dataloader):
-            X, y = X.to(self.device), y.to(self.device)
-
-            # Compute prediction error
-            pred = self.model(X)
-            loss = self.loss_fn(pred, y)
-
-            # Backpropagation
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
-
-            if batch % 1 == 0:
-                end = timer()
-                train_times.append(end - start)
-                start = timer()
-                loss, current = loss.item(), (batch + 1) * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-            
-            # print_cuda_memory()
-
-            # del X, y, pred, loss
-            # torch.cuda.empty_cache()
+            start = timer()
 
             # print_cuda_memory()
 
-        return train_times
+            for batch, (X, y) in enumerate(dataloader):
+                X, y = X.to(self.device), y.to(self.device)
 
+
+
+                # Compute prediction error
+                pred = self.model(X)
+                loss = self.loss_fn(pred, y)
+
+
+                # Backpropagation
+                loss.backward()
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+                if batch % 1 == 0:
+                    end = timer()
+                    train_times.append(end - start)
+                    start = timer()
+                    loss = loss.item()
+                    current = (batch + 1) * len(X)
+                    print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                
+                # print_cuda_memory()
+
+                # del X, y, pred, loss
+                # torch.cuda.empty_cache()
+
+                # print_cuda_memory()
+
+            return train_times
+
+        except Exception as e:
+            py_log.log_stack(MY_LOGGER)
+            raise e
 
     def epoch_pass(self, dataloader_name="train"):
 

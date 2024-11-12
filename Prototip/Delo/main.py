@@ -2,7 +2,7 @@
 
 import os
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
@@ -34,8 +34,42 @@ from training_support import *
 
 
 
+
+# main changable parameters between trainings:
+SAVE_DIR = "UNet"
+IS_TEST_RUN = True
+PATH_TO_DATA = "./vein_sclera_data"
+NUM_OF_DATALOADER_WORKERS = 1
+BATCH_SIZE = 4
+
+
+# program args that could be hardcoded here:
+
+# IS_PRUNING_PH = True
+# MAX_TRAIN_ITERS = 100 # change this to 10e9 when doing the pruning phase
+# MAX_AUTO_PRUNINGS = 70 # to get to 70 percent of the starting flops
+
+# # IS_PRUNING_PH to PROPORTION_TO_PRUNE are actually args you can pass.
+# # But they are hardcoded here for the sake of the experiment. Just makes it less room for error.
+
+# # Main parameeters you don't change after training.
+
+# PRUNE_BY_ORIGINAL_PERCENT = True
+# ERR_IX = 3
+# RESOURCE_NAME = "flops_num"
+# PRUNE_N_KERNELS_AT_ONCE = 20
+# PROPORTION_TO_PRUNE = 0.01
+
+
+
+
+
+
+
+
+
 # save_path = os.path.join(os.path.dirname(__file__), "UNet")
-save_path = os.path.join(".", "UNet")
+save_path = os.path.join(".", SAVE_DIR)
 
 main_save_path = os.path.join(save_path, "saved_main")
 
@@ -48,27 +82,46 @@ learning_parameters = {
     "optimizer_class" : torch.optim.SGD
 }
 
+
+# In our UNet implementation the dims can be whatever you want.
+# You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
+INPUT_DIMS = {
+    "width" : 256,
+    "height" : 256,
+    "channels" : 3
+}
+
+# In our UNet he output width and height have to be the same as the input width and height. 
+OUTPUT_DIMS = {
+    "width" : INPUT_DIMS["width"],
+    "height" : INPUT_DIMS["height"],
+    "channels" : 2
+}
+
+
 dataloading_args = {
 
 
-    "testrun" : True,
+    "testrun" : IS_TEST_RUN,
+    "testrun_size" : 30,
    
 
-    # Image resize setting - don't know what it should be.
-    "width" : 128,
-    "height" : 128,
+    "input_width" : INPUT_DIMS["width"],
+    "input_height" : INPUT_DIMS["height"],
+    "output_width" : OUTPUT_DIMS["width"],
+    "output_height" : OUTPUT_DIMS["height"],
     
     # iris dataset params
-    "path_to_sclera_data" : "./sclera_data",
+    "path_to_sclera_data" : PATH_TO_DATA,
     "transform" : transform,
-    "n_classes" : 2,
+    "n_classes" : OUTPUT_DIMS["channels"],
 
     # DataLoader params
     # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
     #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : 16,
+    "batch_size" : BATCH_SIZE,
     "shuffle" : False, # TODO shuffle??
-    "num_workers" : 1,
+    "num_workers" : NUM_OF_DATALOADER_WORKERS,
 }
 
 
@@ -122,13 +175,13 @@ dataloader_dict = {
 
 model_parameters = {
     # layer sizes
-    "n_channels" : 3,
-    "n_classes" : 2,
+    "n_channels" : INPUT_DIMS["channels"],
+    "n_classes" : OUTPUT_DIMS["channels"],
     "bilinear" : True,
     "pretrained" : False,
   }
 
-INPUT_EXAMPLE = torch.randn(1, 3, 128, 128)
+INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
 
 
 
@@ -288,6 +341,7 @@ def unet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_lev
         goal_input_slice_ix = kernel_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_conv_ix], conv_tree_ixs)
         conn_destinations.append((conv_tree_ixs[goal_conv_ix], goal_input_slice_ix))
 
+    # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
     # outc has no next convolution
     if conv_ix == 18:
         conn_destinations = []
@@ -353,7 +407,8 @@ def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_mo
     conv_ix = None
     if tree_ix in conv_tree_ixs:
         conv_ix = conv_tree_ixs.index(tree_ix)
-    
+
+        # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
         # out.conv doesn't have a batchnorm after it.
         if conv_ix < 18:
             conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
@@ -518,7 +573,9 @@ def get_importance_dict(model_wrapper: ModelWrapper):
     model_wrapper.averaging_objects = {}
     set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
 
-    model_wrapper.epoch_pass()
+    model_wrapper.epoch_pass(dataloader_name="train")
+    # maybe doing this on val, because it is faster and it kind of makes more sense
+    # model_wrapper.epoch_pass(dataloader_name="validation")
 
     # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
     model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
@@ -550,12 +607,27 @@ if __name__ == "__main__":
     # the new onew will be used. So you can have an effect on your training by doing this.
 
     FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
-    FLOPS_min_res_percents.set_by_name("Conv2d", 0.5)
+    FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
 
     tree_ix_2_percentage_dict = {
-        (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped at 0.5. It is simply to show an example.
+        (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
     }
     FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+
+
+
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
+    # Because otherwise your num of classes of the output (pred) will change.
+    # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    disallowed_dict = {
+        model_wrapper.conv_tree_ixs[18] : 1.1
+    }
+    FLOPS_min_res_percents.set_by_tree_ix_dict(disallowed_dict)
+
+
 
 
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
@@ -565,7 +637,7 @@ if __name__ == "__main__":
 
 
 
-    model_wrapper.training_wrapper.test_showcase()
+    # model_wrapper.training_wrapper.test_showcase()
 
 
 
@@ -574,12 +646,42 @@ if __name__ == "__main__":
 
 
 
-    def validation_stop(val_errors):
+    def validation_stop(training_logs: TrainingLogs, pruning_logs: PrunigLogs, curr_train_iter, initial_train_iter):
         # returns True when you should stop
 
-        if len(val_errors) >= 2:
+        # initial_train_iter is the train_iter when we ran the program this time around
+        # - so if you perhaps wanted at least 3 train iters every time you run the program, you would do:
+        # if curr_train_iter - initial_train_iter < 3:
+        #    return False
+
+
+        # val_errors = [item[0] for item in training_logs.errors]
+
+        # If there have been no prunings, prune.
+        if len(pruning_logs.pruning_logs) == 0:
+            return True
+
+        last_pruning_train_iter = pruning_logs.pruning_logs[-1][0]
+
+
+
+        # This only makes sense for how we are designing our experiment. This is the only way we can compare methods for pruning kernel-selection.
+        # Our idea is: you train the model, then you want it to have 25% the amount of flops.
+        # But how do you choose which 75% of filters to prune?
+        # Well, you prune 1%, then retrain, then prune 1%, then retrain, and so on until you get to 75%.
+        # How you choose the 1% is the question. We are comparing different methods of choosing the 1%.
+        
+        # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
+
+        if (curr_train_iter - last_pruning_train_iter) >= 10:
             return True
         
+        return False
+
+
+
+        # Older idea of dynamic decision of when to prune:
+        """
         if len(val_errors) < 3:
             return False
         
@@ -595,7 +697,7 @@ if __name__ == "__main__":
             returner = val_errors[-1] > val_errors[-4] or val_errors[-1] > val_errors[-5]
             
         return returner
-
+        """
 
 
 
@@ -609,8 +711,8 @@ if __name__ == "__main__":
     # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
     # So --pbop False would still give True to the pbop field.
     # This is why they are implemented this way now.
-    parser.add_argument('-v', '--validation_phase', action='store_true',
-                        help='If present, enables validation (automatic pruning) phase')
+    parser.add_argument('-p', '--pruning_phase', action='store_true',
+                        help='If present, enables pruning phase (automatic pruning)')
     parser.add_argument('--pbop', action='store_true',
                         help='Prune by original percent, otherwise by number of filters')
     
@@ -623,14 +725,44 @@ if __name__ == "__main__":
     parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
     parser.add_argument('--nept', type=int, default=1,
                         help='Number of epochs per training iteration')
+    parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
+                        1. calculate the importance of all kernels
+                        2. prune n kernels based on these importances
+                        3. calculate the importances based on the new pruned model
+                        4. prune n kernels based on these new importances
+                        5. ...
+                        Repeat until we have pruned the desired amount of kernels.
+
+                        Then we go back to training the model until it is time for another pruning iteration.
+
+
+                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
+                        However, this is very slow. And also it doesn't make that much of a difference in quality.
+                        (would be better to do an actual retraining between the prunings then, 
+                        since we are doing so many epoch passes it is basically computationally worse than retraining).
+
+                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
+
+                        If you are not using --pbop, then you can set --pnkao to 1e9.
+                        Because the number of kernels we actually prune is capped by --nftp.
+                        It will look like this:
+                        1. calculate the importance of all kernels
+                        2. prune --nftp kernels based on these importances
+                        Done.
+
+                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
+                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
+                        So if you set it to 1e9, it will simply prune the whole model in one go.
+
+                        """)
     parser.add_argument('--nftp', type=int, default=1,
                         help='Number of filters to prune in one pruning')
     parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    parser.add_argument('--ptp', type=float, default=0.1, help='Percent to prune.')
+    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
 
     args = parser.parse_args()
 
-    is_val_ph = args.validation_phase
+    is_pruning_ph = args.pruning_phase
     iter_possible_stop = args.iter_possible_stop
 
     err_ix = args.e_ix
@@ -639,21 +771,49 @@ if __name__ == "__main__":
     num_ep_per_iter = args.nept
 
     prune_by_original_percent = args.pbop
+    prune_n_kernels_at_once = args.pnkao
     num_to_prune = args.nftp
     resource_name = args.rn
-    percent_to_prune = args.ptp
+    proportion_to_prune = args.ptp
+
+
+
+
+
+    # print("Currently disregarding the args. They are hardcoded in the script.")
+
+    # is_pruning_ph = IS_PRUNING_PH
+    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
+    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
+    # max_train_iters = MAX_TRAIN_ITERS
+    # max_auto_prunings = MAX_AUTO_PRUNINGS
+    # err_ix = ERR_IX
+    # resource_name = RESOURCE_NAME
+    # proportion_to_prune = PROPORTION_TO_PRUNE
+
+
+
+
 
     pruning_kwargs = {
+        "prune_n_kernels_at_once": prune_n_kernels_at_once,
         "prune_by_original_percent": prune_by_original_percent,
         "num_of_prunes": num_to_prune,
         "resource_name": resource_name,
-        "original_percent_to_prune": percent_to_prune
+        "original_proportion_to_prune": proportion_to_prune
     }
 
-    print(f"Validation phase: {is_val_ph}")
+    print(f"Validation phase: {is_pruning_ph}")
     print(args)
+
+
+
+
+
+
+
     
-    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, validation_phase=is_val_ph, error_ix=err_ix,
+    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, error_ix=err_ix,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 

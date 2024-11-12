@@ -9,7 +9,7 @@
 
 import os
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
@@ -82,8 +82,8 @@ class TrainingLogs:
         # of the form (val_error, test_error, train_iter, model_path)
         self.errors = []
 
-    def add_error(self, val_error, test_error, train_iter, model_path):
-        self.errors.append((val_error, test_error, train_iter, model_path))
+    def add_error(self, val_error, test_error, train_iter, model_path, unique_id, is_just_after_pruning):
+        self.errors.append((val_error, test_error, train_iter, model_path, unique_id, is_just_after_pruning))
         self.last_train_iter = train_iter
 
     """
@@ -105,7 +105,6 @@ class TrainingLogs:
 
     @py_log.log(passed_logger=MY_LOGGER)
     def pickle_training_logs(self):
-        py_log.log_locals(passed_logger=MY_LOGGER)
         new_training_logs_path = os.path.join(self.tl_main_save_path, self.pickle_fileaname)
         with open(new_training_logs_path, "wb") as f:
             pickle.dump(self, f)
@@ -244,12 +243,39 @@ class PrunigLogs:
 
 
 
+def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PrunigLogs, main_save_path, val_error, test_error, train_iter, unique_id, is_just_after_pruning, curr_training_phase_serial_num):
+
+    new_model_path, _ = model_wrapper.save(unique_id)
+    pruning_logs.confirm_last_pruning_train_iter()
+
+    training_logs.add_error(val_error, test_error, train_iter, new_model_path, unique_id, is_just_after_pruning)
+
+    # This has to be done before saving the training logs.
+    # Otherwise we wil load a training_logs that will still have something in its errors that it has actually deleted.
+    # e.g. Errors: [(0.6350785493850708, 0.6345304846763611, 0, 6), (0.6335894465446472, 0.6331750154495239, 1, 7), (0.6319190859794617, 0.6316145658493042, 2, 8), (0.630038321018219, 0.6299036741256714, 3, 9)]
+    # But model 6 has actually been already deleted: [(0.6350785493850708, 0.6345304846763611, 0, 6)]
+    
+    # The conceptual lifetime of training logs is created/loaded -> added to -> model_deletion -> saved
+    # And then the process can repeat. Deletion can't be after saved, it makes no sense. Just think of doing just one iteration of it.
+    training_logs = delete_all_but_best_k_models(3, training_logs, model_wrapper)
+
+    training_logs.pickle_training_logs()
+    pruning_logs.pickle_pruning_logs()
+    
+    new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num]})
+    new_df.to_csv(os.path.join(main_save_path, "previous_training_phase_details.csv"))
+
+    return training_logs, pruning_logs
 
 
 
 
 
-def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training_iters=1e9, max_auto_prunings=1e9, train_iter_possible_stop=5, validation_phase=False, error_ix=1, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
+
+
+
+
+def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn, max_training_iters=1e9, max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, error_ix=1, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
 
 
@@ -279,7 +305,10 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
     training_logs = TrainingLogs.load_or_create_training_logs(main_save_path, num_of_epochs_per_training)
 
     pruning_logs = PrunigLogs.load_or_create_pruning_logs(main_save_path)
-    pruning_logs.clean_up_pruning_train_iters()
+    
+    # We now save pruning every time we prune, so we don't need to clean up the pruning logs.
+    # (The confirming flags will still exist, but who cares.)
+    # pruning_logs.clean_up_pruning_train_iters()
         
 
 
@@ -295,13 +324,10 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
     
     if train_iter is None:
         train_iter = 0
-    else:
-        train_iter += 1 # because we are starting a new training phase
+    
 
     initial_train_iter = train_iter
 
-
-    validation_errors = []
 
     num_of_auto_prunings = 0
 
@@ -312,51 +338,20 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
         val_error = model_wrapper.validation()[error_ix]
-
-        if error_ix in [1, 2, 3]:
-            val_error = 1 - val_error
-
-        validation_errors.append(val_error)
-
-        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
-
-
-
         test_error = model_wrapper.test()[error_ix]
 
         if error_ix in [1, 2, 3]:
+            val_error = 1 - val_error
             test_error = 1 - test_error
 
-        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
-        # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
-
-        # print(model_wrapper)
+        train_iter += 1 # this reflects how many trainings we have done
 
 
 
 
-
-
-        new_model_path, _ = model_wrapper.save(str(train_iter))
-        pruning_logs.confirm_last_pruning_train_iter()
-
-        training_logs.add_error(val_error, test_error, train_iter, new_model_path)
-
-        # This has to be done before saving the training logs.
-        # Otherwise we wil load a training_logs that will still have something in its errors that it has actually deleted.
-        # e.g. Errors: [(0.6350785493850708, 0.6345304846763611, 0, 6), (0.6335894465446472, 0.6331750154495239, 1, 7), (0.6319190859794617, 0.6316145658493042, 2, 8), (0.630038321018219, 0.6299036741256714, 3, 9)]
-        # But model 6 has actually been already deleted: [(0.6350785493850708, 0.6345304846763611, 0, 6)]
+        training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, str(train_iter), False, curr_training_phase_serial_num)
         
-        # The conceptual lifetime of training logs is created/loaded -> added to -> model_deletion -> saved
-        # And then the process can repeat. Deletion can't be after saved, it makes no sense. Just think of doing just one iteration of it.
-        training_logs = delete_all_but_best_k_models(3, training_logs, model_wrapper)
-
-        training_logs.pickle_training_logs()
-        pruning_logs.pickle_pruning_logs()
-        
-        new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num]})
-        new_df.to_csv(os.path.join(main_save_path, "previous_training_phase_details.csv"))
 
 
 
@@ -366,9 +361,6 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
 
 
 
-
-
-        train_iter += 1
 
         # Implement the stopping by hand. We need this for debugging.
         
@@ -413,12 +405,14 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
 
             if inp == "p":
                 
-                curr_pickleable_conv_res_calc = model_wrapper.prune(**pruning_kwargs_dict)
+                curr_pickleable_conv_res_calc, _ = model_wrapper.prune(**pruning_kwargs_dict)
 
                 # This will ensure I have the best k models from every pruning phase.
-                model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
+                model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
+
                 pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
-                validation_errors = []
+        
+                training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, f"{train_iter}_just_pruned", True, curr_training_phase_serial_num)
 
                 inp = input("""Enter g to show the graph of the model and re-ask for input.
                         Press Enter to continue training.
@@ -434,15 +428,21 @@ def train_automatically(model_wrapper, main_save_path, val_stop_fn, max_training
 
 
         
-        if validation_phase and val_stop_fn(validation_errors):
-            curr_pickleable_conv_res_calc = model_wrapper.prune(**pruning_kwargs_dict)
+        if pruning_phase and val_stop_fn(training_logs, pruning_logs, train_iter, initial_train_iter):
+            
+            curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
 
             num_of_auto_prunings += 1
 
             # This will ensure I have the best k models from every pruning phase.
-            model_wrapper.create_safety_copy_of_existing_models(str(train_iter))
+            model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
             pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
-            validation_errors = []
+
+            training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, f"{train_iter}_just_pruned", True, curr_training_phase_serial_num)
+
+            if not are_there_more_to_prune_in_the_future:
+                print("There are no more kernels that could be pruned in the future.")
+                break
         
         if (train_iter - initial_train_iter) >= max_training_iters:
             break
@@ -468,6 +468,7 @@ def show_results(main_save_path):
         training_logs = pickle.load(open(os.path.join(main_save_path, "training_logs.pkl"), "rb"))
 
         model_errors = training_logs.errors + training_logs.deleted_models_errors
+        model_errors = [error for error in model_errors if error[5]]
         model_errors.sort(key = lambda x: x[2])
 
         val_errors = [error[0] for error in model_errors]
@@ -510,7 +511,7 @@ def show_results(main_save_path):
         # handles.append(extra)
         # labels.append("Green line: 10 filters pruned")
         handles.append(extra)
-        labels.append("Blue line: 1 filter pruned")
+        labels.append("Blue line: 1 pruning")
 
         # Update the legend with the new entries
         plt.legend(handles=handles, labels=labels)

@@ -23,7 +23,7 @@ Train Image Augmentation Procedure Followed
 
 import os
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
@@ -152,7 +152,7 @@ def show_image(passed_img, title="", close_all_limit=1e9):
                 # this clones the image anyway
                 img = smart_conversion(curr_img, 'ndarray', 'uint8')
             except Exception as e:
-                # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
                 raise e
 
             ax.imshow(img, cmap='gray')
@@ -934,11 +934,8 @@ def scale(img, mask, max_scale_percent=0.2, scale_type="only_zoom", prob=0.2):
     elif scale_type != "zoom_and_shrink":
         raise ValueError("scale_type must be 'only_zoom' or 'zoom_and_shrink'")
     
-
-    a = np.array([1, 2, 3])
-    b = a[0:-1]
     
-    py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+    # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
     if scale_percent >= 0:
         halved_scale_percent = scale_percent / 2
         vert_pix_num = int(img.shape[0] * halved_scale_percent)
@@ -956,7 +953,7 @@ def scale(img, mask, max_scale_percent=0.2, scale_type="only_zoom", prob=0.2):
         aug_img = img[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
         aug_mask = mask[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
 
-        py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+        # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
     else:
         
@@ -983,8 +980,12 @@ class IrisDataset(Dataset):
         self.transform = transform
         self.filepath= osp.join(filepath, split)
         
-        self.width = kwargs['width']
-        self.height = kwargs['height']
+        self.input_width = kwargs['input_width']
+        self.input_height = kwargs['input_height']
+        self.output_width = kwargs['output_width']
+        self.output_height = kwargs['output_height']
+
+        self.testrun_length = kwargs['testrun_size']
         
         self.split = split
         self.classes = n_classes
@@ -1021,9 +1022,10 @@ class IrisDataset(Dataset):
 
 
     def __len__(self):
+        real_size = len(self.list_files)
         if self.testrun:
-            return 30
-        return len(self.list_files)
+            return min(self.testrun_length, real_size)
+        return real_size
     
     def mask_exists(self, mask_folder_path, file_name_no_suffix):
         mask_filename = osp.join(mask_folder_path, file_name_no_suffix + '.png')
@@ -1253,11 +1255,11 @@ class IrisDataset(Dataset):
 
                 img, mask = random_rotation(img, mask, max_angle=15, prob=0.2)
 
-                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+                # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
                 img, mask = scale(img, mask, max_scale_percent=0.1, prob=0.2)
 
-                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+                # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
 
 
@@ -1274,11 +1276,11 @@ class IrisDataset(Dataset):
             img = smart_conversion(img, 'ndarray', 'uint8')
             mask = smart_conversion(mask, 'ndarray', 'uint8')
 
-            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
             # performing the necessary resizing
-            img = cv2.resize(img, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
-            mask = cv2.resize(mask, (self.width, self.height), interpolation=cv2.INTER_NEAREST)
+            img = cv2.resize(img, (self.input_width, self.input_height), interpolation=cv2.INTER_LINEAR)
+            mask = cv2.resize(mask, (self.output_width, self.output_height), interpolation=cv2.INTER_NEAREST)
             
             # Making the mask binary, as it is meant to be.
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)

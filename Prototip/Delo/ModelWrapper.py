@@ -3,7 +3,7 @@
 
 
 import logging
-import python_logger.log_helper as py_log
+import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip")
 MY_LOGGER.setLevel(logging.DEBUG)
@@ -94,6 +94,11 @@ class ModelWrapper:
         self.input_example = input_example
         self.resource_calc.calculate_resources(self.input_example)
 
+        self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+        self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
+        self.batch_norm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
+
+
         initial_resource_calc_path = os.path.join(self.save_path, "initial_conv_resource_calc.pkl")
         if os.path.exists(os.path.join(initial_resource_calc_path)):
             with open(initial_resource_calc_path, "rb") as f:
@@ -122,11 +127,6 @@ class ModelWrapper:
         self.FLOPS_min_res_percents = FLOPS_min_res_percents
         self.weights_min_res_percents = weights_min_res_percents
 
-
-        self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-        self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
-        self.batch_norm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
-
         if self.prev_pruner_path is not None:
             with open(self.prev_pruner_path, "rb") as f:
                 self.pruner_instance = pickle.load(f)
@@ -134,7 +134,7 @@ class ModelWrapper:
                 self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents.min_resource_percentage_dict
                 self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents.min_resource_percentage_dict
         else:
-            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules)
+            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
 
         self.get_importance_dict_fn = get_importance_dict_fn
 
@@ -159,31 +159,43 @@ class ModelWrapper:
 
 
 
-    def epoch_pass(self):
-        self.training_wrapper.epoch_pass(dataloader_name="train")
+    def epoch_pass(self, dataloader_name="train"):
+        self.training_wrapper.epoch_pass(dataloader_name=dataloader_name)
 
 
-    def _prune_one(self):
+    
+    def _prune_n_kernels(self, n):
 
         importance_dict = self.get_importance_dict_fn(self)
 
-        self.pruner_instance.prune(importance_dict, self.resource_calc, self.training_wrapper)
+        # this already does resource_calc.calculate_resources(self.input_example)
+        are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper)
 
         # This needs to be done so the gradient computation graph is updated.
         # Otherwise it expects gradients of the old shapes.
         self.initialize_optimizer()
 
+        return are_there_more_to_prune_in_the_future
 
-    def prune(self, prune_by_original_percent = False, num_of_prunes: int = 1, resource_name = "flops_num", original_percent_to_prune: float = 0.1):
+
+    def prune(self, prune_n_kernels_at_once=1, prune_by_original_percent = False, num_of_prunes: int = 1, resource_name = "flops_num", original_proportion_to_prune: float = 0.1):
+
+        # making sure it is correct
+        self.resource_calc.calculate_resources(self.input_example)
 
         if not prune_by_original_percent:
-            for _ in range(num_of_prunes):
-                self._prune_one()
+            num_pruned = 0
+            while num_pruned < num_of_prunes:
+                num_to_prune = min(num_of_prunes - num_pruned, prune_n_kernels_at_once)
+                are_there_more_to_prune_in_the_future = self._prune_n_kernels(num_to_prune)
+                num_pruned += num_to_prune
+                if not are_there_more_to_prune_in_the_future:
+                    break
 
 
         else:
             initial_resource_value = self.initial_resource_calc.get_resource_of_whole_model(resource_name)
-            value_to_prune = initial_resource_value * original_percent_to_prune
+            value_to_prune = initial_resource_value * original_proportion_to_prune
             
             starting_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
             curr_resource_value = starting_resource_value
@@ -192,13 +204,14 @@ class ModelWrapper:
             print(f"Goal resource value: {goal_resource_value}")
             
             while curr_resource_value > goal_resource_value:
-                self._prune_one()
-                self.resource_calc.calculate_resources(self.input_example)
+                are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once) # this already does resource_calc.calculate_resources(self.input_example) 
                 curr_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
                 print(f"Current resource value: {curr_resource_value}")
+                if not are_there_more_to_prune_in_the_future:
+                    break
         
-        self.resource_calc.calculate_resources(self.input_example)
-        return self.resource_calc.get_copy_for_pickle()
+        self.resource_calc.calculate_resources(self.input_example) # just in case - but should have been done in the prune function already
+        return self.resource_calc.get_copy_for_pickle(), are_there_more_to_prune_in_the_future
 
 
 
@@ -260,24 +273,39 @@ class ModelWrapper:
         safety_path = os.path.join(parent_dir_path, "safety_copies")
         os.makedirs(safety_path, exist_ok=True)
 
-        safety_copy_dir = os.path.join(safety_path, f"saved_safety_copies_{str_identifier}")
+        safety_copy_dir = os.path.join(safety_path, f"actual_safety_copies")
 
         try:
             # Create the safety copy directory if it doesn't exist
             os.makedirs(safety_copy_dir, exist_ok=True)
+
+            curr_safety_copy_paths = []
 
             # Iterate through all files in self.save_path
             for filename in os.listdir(self.save_path):
                 if filename.startswith(model_name):
                     src_file = os.path.join(self.save_path, filename)
                     dst_file = os.path.join(safety_copy_dir, filename)
+
+                    curr_safety_copy_paths.append(dst_file)
                     
-                    # Copy the file
-                    shutil.copy2(src_file, dst_file)
-                    print(f"Copied {filename} to {safety_copy_dir}")
+                    if os.path.exists(dst_file):
+                        print(f"File {filename} already exists in safety copies, skipping.")
+                    else:
+                        shutil.copy2(src_file, dst_file)
+                        print(f"Copied {filename} to {safety_copy_dir}")
+            
+            csv_file_path = os.path.join(safety_path, f"safety_copies_{str_identifier}.csv")
+            try:
+                new_df = pd.DataFrame({"safety_copy_model_paths": curr_safety_copy_paths})
+                new_df.to_csv(csv_file_path, mode="x") # mode x raises an error if the file already exists
+            except FileExistsError:
+                print(f"CSV file {csv_file_path} already exists. Please choose a different name or handle the existing file.")
+            
 
         except OSError as e:
             print(f"Error creating safety copies: {e}")
+
 
 
 
