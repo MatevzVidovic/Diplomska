@@ -1,0 +1,35 @@
+Validation phase: True
+Namespace(ips=999999, bs=4, nodw=10, ntibp=2, sd='SegNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.05, tp=True, ifn=(0.5, 0.5, 0.5))
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+Goal resource value: 38048838451.2
+disallowed_directly: {((0,), 58)}
+disallowed_tree_ixs: {((0,), 58)}
+----------
+sortable_list[:5]: [(((0,), 14), 194, 0.00645060557872057), (((0,), 39), 336, 0.006601191125810146), (((0,), 46), 172, 0.006674588657915592), (((0,), 19), 401, 0.006724425591528416), (((0,), 17), 261, 0.00695608789101243)]
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/segnet_main.py", line 951, in <module>
+    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, error_ix=err_ix,
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 459, in train_automatically
+    curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 203, in prune
+    are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once) # this already does resource_calc.calculate_resources(self.input_example) 
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 168, in _prune_n_kernels
+    are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 388, in prune
+    to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix in sortable_list]
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 388, in <listcomp>
+    to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix in sortable_list]
+ValueError: too many values to unpack (expected 2)

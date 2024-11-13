@@ -71,20 +71,27 @@ class TrainingLogs:
 
     pickle_fileaname = "training_logs.pkl"
 
-    def __init__(self, tl_main_save_path, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]) -> None:
+    def __init__(self, tl_main_save_path, number_of_epochs_per_training, last_error=None, deleted_models_errors=[]) -> None:
         
         self.tl_main_save_path = tl_main_save_path
-
         self.number_of_epochs_per_training = number_of_epochs_per_training
-        self.last_train_iter = last_train_iter
+        self.last_error = last_error
         self.deleted_models_errors = deleted_models_errors
 
         # of the form (val_error, test_error, train_iter, model_path)
         self.errors = []
 
-    def add_error(self, val_error, test_error, train_iter, model_path, unique_id, is_just_after_pruning):
-        self.errors.append((val_error, test_error, train_iter, model_path, unique_id, is_just_after_pruning))
-        self.last_train_iter = train_iter
+    def add_error(self, error):
+        if error is None:
+            return
+        # (val_error, test_error, train_iter, model_path, unique_id, is_not_automatic)
+        curr_error = error
+        self.last_error = curr_error
+        self.errors.append(curr_error)
+    
+    def delete_error(self, error):
+        self.errors.remove(error)
+        self.deleted_models_errors.append(error)
 
     """
     The picking and loading is done in such a way, because if we change where we are running the proram (like go onto another computer)
@@ -94,14 +101,14 @@ class TrainingLogs:
     """
 
     @staticmethod
-    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, last_train_iter=None, deleted_models_errors=[]):
+    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, last_error=None, deleted_models_errors=[]):
         os.makedirs(tl_main_save_path, exist_ok=True)
         training_logs_path = os.path.join(tl_main_save_path, TrainingLogs.pickle_fileaname)
         if os.path.exists(training_logs_path):
             new_tl = pickle.load(open(training_logs_path, "rb"))
             new_tl.tl_main_save_path = tl_main_save_path
             return new_tl
-        return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, last_train_iter, deleted_models_errors)
+        return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, last_error, deleted_models_errors)
 
     @py_log.log(passed_logger=MY_LOGGER)
     def pickle_training_logs(self):
@@ -113,7 +120,7 @@ class TrainingLogs:
     def __str__(self):
         returner = ""
         returner += f"Number of epochs per training: {self.number_of_epochs_per_training}\n"
-        returner += f"Last train iteration: {self.last_train_iter}\n"
+        returner += f"Last train iteration: {self.last_error}\n"
         returner += f"Errors: {self.errors}\n"
         returner += f"Deleted models errors: {self.deleted_models_errors}\n"
         return returner
@@ -124,40 +131,38 @@ class TrainingLogs:
         return f"<{self.__class__.__name__}({', '.join(items)})>"
 
 
-# with the exception of keeping (k+1) models when one of the worse models is the last model we have 
-# (we have to keep it to continue training)
-def delete_all_but_best_k_models(k: int, training_logs: TrainingLogs, model_wrapper: ModelWrapper):
 
-    # sort by validation error
-    sorted_errors = sorted(training_logs.errors, key = lambda x: x[0], reverse=True)
 
-    to_delete = []
+    # with the exception of keeping (k+1) models when one of the worse models is the last model we have 
+    # (we have to keep it to continue training)
+    def delete_all_but_best_k_models(self, k: int, model_wrapper: ModelWrapper):
 
-    while len(sorted_errors) > 0 and (len(training_logs.errors) - len(to_delete)) > k:
 
-        error = sorted_errors.pop(0)
-        model_path = error[3]
+        # sort by validation error
+        sorted_errors = sorted(self.errors, key = lambda x: x[0])
 
-        if is_previous_model(model_path, model_wrapper):
-            continue
+        to_delete = []
 
-        to_delete.append(error)
+        while len(sorted_errors) > 0 and (len(self.errors) - len(to_delete)) > k:
+
+            error = sorted_errors.pop() # pops last element
+            
+            model_path = error[3]
+            if is_previous_model(model_path, model_wrapper):
+                continue
+
+            to_delete.append(error)
+
+
+        for error in to_delete:
+            model_path = error[3]
+            self.delete_error(error)
+            os.remove(model_path)
+
+
+
+
     
-
-
-    for error in to_delete:
-        model_path = error[3]
-        os.remove(model_path)
-    
-
-    to_keep = [error for error in training_logs.errors if error not in to_delete]
-    new_training_logs = TrainingLogs(training_logs.tl_main_save_path, training_logs.number_of_epochs_per_training, training_logs.last_train_iter, training_logs.deleted_models_errors)
-    for error in to_keep:
-        new_training_logs.add_error(*error)
-
-    new_training_logs.deleted_models_errors.extend(to_delete)
-    
-    return new_training_logs
 
  
 
@@ -239,16 +244,44 @@ class PrunigLogs:
         return f"<{self.__class__.__name__}({', '.join(items)})>"
 
 
-        
 
 
 
-def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PrunigLogs, main_save_path, val_error, test_error, train_iter, unique_id, is_just_after_pruning, curr_training_phase_serial_num):
+def perform_simple_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PrunigLogs, main_save_path, unique_id, curr_training_phase_serial_num):
 
     new_model_path, _ = model_wrapper.save(unique_id)
     pruning_logs.confirm_last_pruning_train_iter()
 
-    training_logs.add_error(val_error, test_error, train_iter, new_model_path, unique_id, is_just_after_pruning)
+    new_error = None
+    # this only happens if we do a manual save before any training even took place
+    # or maybe if we prune before any training took place
+    if training_logs.last_error is not None:
+        v = training_logs.last_error[0]
+        t = training_logs.last_error[1]
+        ti = training_logs.last_error[2]
+        new_error = (v, t, ti, new_model_path, unique_id, True)
+
+    training_logs.add_error(new_error)
+
+    training_logs.delete_all_but_best_k_models(3, model_wrapper)
+
+    training_logs.pickle_training_logs()
+    pruning_logs.pickle_pruning_logs()
+    
+    new_df = pd.DataFrame({"previous_serial_num": [curr_training_phase_serial_num]})
+    new_df.to_csv(os.path.join(main_save_path, "previous_training_phase_details.csv"))
+
+    return training_logs, pruning_logs
+
+
+
+
+def perform_auto_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PrunigLogs, main_save_path, val_error, test_error, train_iter, curr_training_phase_serial_num):
+
+    new_model_path, _ = model_wrapper.save(str(train_iter))
+    pruning_logs.confirm_last_pruning_train_iter()
+
+    training_logs.add_error((val_error, test_error, train_iter, new_model_path, str(train_iter), False))
 
     # This has to be done before saving the training logs.
     # Otherwise we wil load a training_logs that will still have something in its errors that it has actually deleted.
@@ -257,7 +290,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
     
     # The conceptual lifetime of training logs is created/loaded -> added to -> model_deletion -> saved
     # And then the process can repeat. Deletion can't be after saved, it makes no sense. Just think of doing just one iteration of it.
-    training_logs = delete_all_but_best_k_models(3, training_logs, model_wrapper)
+    training_logs.delete_all_but_best_k_models(3, model_wrapper)
 
     training_logs.pickle_training_logs()
     pruning_logs.pickle_pruning_logs()
@@ -320,9 +353,9 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
 
-    train_iter = training_logs.last_train_iter
-    
-    if train_iter is None:
+    if training_logs.last_error is not None:
+        train_iter = training_logs.last_error[2]
+    else:
         train_iter = 0
     
 
@@ -332,6 +365,125 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
     num_of_auto_prunings = 0
 
     while True:
+
+
+
+        # Implement the stopping by hand. We need this for debugging.
+        
+        if train_iter_possible_stop == 0 or ( (train_iter - initial_train_iter) >= train_iter_possible_stop and  (train_iter - initial_train_iter) % train_iter_possible_stop == 0 ):
+            
+            inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
+                        Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            if inp == "s":
+                # saving model and reasking for input
+                model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_special_save")
+                training_logs, pruning_logs = perform_simple_save(model_wrapper, training_logs, pruning_logs, main_save_path, f"{train_iter}_special_save", curr_training_phase_serial_num)
+                inp = input(f"""
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            if inp == "r":
+                show_results(main_save_path)
+                inp = input("""
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            
+            try:
+                train_iter_possible_stop = int(inp)
+                print(f"New trainings before stopping: {train_iter_possible_stop}")
+                inp = input("""
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            except ValueError:
+                pass
+
+
+            if inp == "p":
+                
+                curr_pickleable_conv_res_calc, _ = model_wrapper.prune(**pruning_kwargs_dict)
+
+                # This will ensure I have the best k models from every pruning phase.
+                model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
+
+                pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
+        
+                training_logs, pruning_logs = perform_simple_save(model_wrapper, training_logs, pruning_logs, main_save_path, f"{train_iter}_just_pruned", curr_training_phase_serial_num)
+
+                inp = input("""
+                        Enter g to show the graph of the model and re-ask for input.
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+
+            if inp == "g":
+                model_wrapper.model_graph()
+                inp = input("""
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+
+            if inp != "":
+                break
+
+
+
+        # The pruning mechanism
+
+        if pruning_phase and val_stop_fn(training_logs, pruning_logs, train_iter, initial_train_iter):
+            
+            curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
+
+            num_of_auto_prunings += 1
+
+            # This will ensure I have the best k models from every pruning phase.
+            model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
+            pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
+
+            training_logs, pruning_logs = perform_simple_save(model_wrapper, training_logs, pruning_logs, main_save_path, f"{train_iter}_just_pruned", curr_training_phase_serial_num)
+
+            if not are_there_more_to_prune_in_the_future:
+                print("There are no more kernels that could be pruned in the future.")
+                break
+        
+        if (train_iter - initial_train_iter) >= max_training_iters:
+            break
+
+        if num_of_auto_prunings >= max_auto_prunings:
+            break
+
+
+
+
+
+
+
+
+
         
         model_wrapper.train(num_of_epochs_per_training)
 
@@ -350,105 +502,14 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
 
-        training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, str(train_iter), False, curr_training_phase_serial_num)
+        training_logs, pruning_logs = perform_auto_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, curr_training_phase_serial_num)
         
 
 
 
 
-
-
-
-
-
-
-        # Implement the stopping by hand. We need this for debugging.
         
-        if (train_iter - initial_train_iter) % train_iter_possible_stop == 0:
-            
-            inp = input(f"""{train_iter_possible_stop} trainings have been done error stopping.
-                        Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
-                        
-                        Enter g to show the graph of the model and re-ask for input.
-                        Enter r to trigger show_results() and re-ask for input.
-                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
-                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-            
-            
-            if inp == "g":
-                model_wrapper.model_graph()
-                inp = input("""Enter r to trigger show_results() and re-ask for input.
-                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
-                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-            
-            if inp == "r":
-                show_results(main_save_path)
-                inp = input("""Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
-                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-            
-            
-            try:
-                train_iter_possible_stop = int(inp)
-                print(f"New trainings before stopping: {train_iter_possible_stop}")
-                inp = input("""Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-            except ValueError:
-                pass
 
-
-            if inp == "p":
-                
-                curr_pickleable_conv_res_calc, _ = model_wrapper.prune(**pruning_kwargs_dict)
-
-                # This will ensure I have the best k models from every pruning phase.
-                model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
-
-                pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
-        
-                training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, f"{train_iter}_just_pruned", True, curr_training_phase_serial_num)
-
-                inp = input("""Enter g to show the graph of the model and re-ask for input.
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-
-            if inp == "g":
-                model_wrapper.model_graph()
-                inp = input("""Press Enter to continue training.
-                        Enter any other key to stop.\n""")
-
-            if inp != "":
-                break
-
-
-        
-        if pruning_phase and val_stop_fn(training_logs, pruning_logs, train_iter, initial_train_iter):
-            
-            curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
-
-            num_of_auto_prunings += 1
-
-            # This will ensure I have the best k models from every pruning phase.
-            model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_just_pruned")
-            pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
-
-            training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, f"{train_iter}_just_pruned", True, curr_training_phase_serial_num)
-
-            if not are_there_more_to_prune_in_the_future:
-                print("There are no more kernels that could be pruned in the future.")
-                break
-        
-        if (train_iter - initial_train_iter) >= max_training_iters:
-            break
-
-        if num_of_auto_prunings >= max_auto_prunings:
-            break
 
 
 
@@ -467,8 +528,12 @@ def show_results(main_save_path):
 
         training_logs = pickle.load(open(os.path.join(main_save_path, "training_logs.pkl"), "rb"))
 
+        print(training_logs)
+        print(pruning_logs)
+
         model_errors = training_logs.errors + training_logs.deleted_models_errors
-        model_errors = [error for error in model_errors if error[5]]
+        model_errors = [error for error in model_errors if error is not None]
+        model_errors = [error for error in model_errors if not error[5]]
         model_errors.sort(key = lambda x: x[2])
 
         val_errors = [error[0] for error in model_errors]

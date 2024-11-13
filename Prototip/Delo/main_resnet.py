@@ -33,12 +33,146 @@ from training_support import *
 
 
 
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Process an optional positional argument.")
+
+    # Add the optional positional arguments
+    
+    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
+                        help='An optional positional argument with a default value of 1e9')
+
+    parser.add_argument("BATCH_SIZE", nargs='?', type=int, default=1)
+    parser.add_argument("NUM_OF_DATALOADER_WORKERS", nargs='?', type=int, default=1)
+    parser.add_argument("NUM_TRAIN_ITERS_BETWEEN_PRUNINGS", nargs='?', type=int, default=10)
+    parser.add_argument("SAVE_DIR", nargs='?', type=str, default="ResNet")
+    parser.add_argument("PATH_TO_DATA", nargs='?', type=str, default="./vein_sclera_data")
+    
+    # These store True if the flag is present and False otherwise.
+    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
+    # So --pbop False would still give True to the pbop field.
+    # This is why they are implemented this way now.
+    parser.add_argument("-t", "--is_test_run", action='store_true',
+                        help='If present, enables test run')
+    parser.add_argument('-p', '--pruning_phase', action='store_true',
+                        help='If present, enables pruning phase (automatic pruning)')
+    parser.add_argument('--pbop', action='store_true',
+                        help='Prune by original percent, otherwise by number of filters')
+    
+
+    # Add the optional arguments
+    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+    parser.add_argument('--e_ix', type=int, default=3,
+                        help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
+    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
+    parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
+    parser.add_argument('--nept', type=int, default=1,
+                        help='Number of epochs per training iteration')
+    parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
+                        1. calculate the importance of all kernels
+                        2. prune n kernels based on these importances
+                        3. calculate the importances based on the new pruned model
+                        4. prune n kernels based on these new importances
+                        5. ...
+                        Repeat until we have pruned the desired amount of kernels.
+
+                        Then we go back to training the model until it is time for another pruning iteration.
+
+
+                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
+                        However, this is very slow. And also it doesn't make that much of a difference in quality.
+                        (would be better to do an actual retraining between the prunings then, 
+                        since we are doing so many epoch passes it is basically computationally worse than retraining).
+
+                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
+
+                        If you are not using --pbop, then you can set --pnkao to 1e9.
+                        Because the number of kernels we actually prune is capped by --nftp.
+                        It will look like this:
+                        1. calculate the importance of all kernels
+                        2. prune --nftp kernels based on these importances
+                        Done.
+
+                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
+                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
+                        So if you set it to 1e9, it will simply prune the whole model in one go.
+
+                        """)
+    parser.add_argument('--nftp', type=int, default=1,
+                        help='Number of filters to prune in one pruning')
+    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
+    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
+
+
+    args = parser.parse_args()
+
+
+    iter_possible_stop = args.iter_possible_stop
+
+    NUM_OF_DATALOADER_WORKERS = args.NUM_OF_DATALOADER_WORKERS
+    BATCH_SIZE = args.BATCH_SIZE
+    NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.NUM_TRAIN_ITERS_BETWEEN_PRUNINGS
+    SAVE_DIR = args.SAVE_DIR
+    PATH_TO_DATA = args.PATH_TO_DATA
+
+    IS_TEST_RUN = args.is_test_run
+    is_pruning_ph = args.pruning_phase
+    prune_by_original_percent = args.pbop
+
+    err_ix = args.e_ix
+    max_train_iters = args.mti
+    max_auto_prunings = args.map
+    num_ep_per_iter = args.nept
+
+    prune_n_kernels_at_once = args.pnkao
+    num_to_prune = args.nftp
+    resource_name = args.rn
+    proportion_to_prune = args.ptp
+
+
+
+
+
+    # print("Currently disregarding the args. They are hardcoded in the script.")
+
+    # is_pruning_ph = IS_PRUNING_PH
+    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
+    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
+    # max_train_iters = MAX_TRAIN_ITERS
+    # max_auto_prunings = MAX_AUTO_PRUNINGS
+    # err_ix = ERR_IX
+    # resource_name = RESOURCE_NAME
+    # proportion_to_prune = PROPORTION_TO_PRUNE
+
+
+
+
+
+    pruning_kwargs = {
+        "prune_by_original_percent": prune_by_original_percent,
+        "prune_n_kernels_at_once": prune_n_kernels_at_once,
+        "num_of_prunes": num_to_prune,
+        "resource_name": resource_name,
+        "original_proportion_to_prune": proportion_to_prune
+    }
+
+    print(f"Validation phase: {is_pruning_ph}")
+    print(args)
+
+
+
+
+
+
 # main changable parameters between trainings:
-SAVE_DIR = "ResNet"
-IS_TEST_RUN = True
-PATH_TO_DATA = "./vein_sclera_data"
-NUM_OF_DATALOADER_WORKERS = 1
-BATCH_SIZE = 1
+# SAVE_DIR = "ResNet"
+# IS_TEST_RUN = True
+# PATH_TO_DATA = "./vein_sclera_data"
+# NUM_OF_DATALOADER_WORKERS = 1
+# BATCH_SIZE = 1
+
 
 
 # program args that could be hardcoded here:
@@ -770,6 +904,13 @@ if __name__ == "__main__":
     for tree_ix in DISALLOWED_CONV_IXS:
         disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
     FLOPS_min_res_percents.set_by_tree_ix_dict(disallowed_dict)
+
+
+    raise ValueError("""This code is wront here!!! This means these can never be pruned. But that's not the point. They mustn't be the first choice in pruning.
+                     They can still be pruned as a result of pruning the layer somewhere before them.
+                     IDK enough rn, I'm working on SegNet and dunno about ResNet.
+                     This could also be wrong. Mb resnet actually should fully disallow it.
+                     But either way, we have this new mecahnism for disallowment in SegNet that you should use.""")
     
 
 
@@ -822,7 +963,7 @@ if __name__ == "__main__":
         
         # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
 
-        if (curr_train_iter - last_pruning_train_iter) >= 10:
+        if (curr_train_iter - last_pruning_train_iter) >= NUM_TRAIN_ITERS_BETWEEN_PRUNINGS:
             return True
         
         return False
@@ -849,111 +990,6 @@ if __name__ == "__main__":
         """
 
 
-
-    parser = argparse.ArgumentParser(description="Process an optional positional argument.")
-
-    # Add the optional positional arguments
-    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
-                        help='An optional positional argument with a default value of 1e9')
-    
-    # These store True if the flag is present and False otherwise.
-    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
-    # So --pbop False would still give True to the pbop field.
-    # This is why they are implemented this way now.
-    parser.add_argument('-p', '--pruning_phase', action='store_true',
-                        help='If present, enables pruning phase (automatic pruning)')
-    parser.add_argument('--pbop', action='store_true',
-                        help='Prune by original percent, otherwise by number of filters')
-    
-
-    # Add the optional arguments
-    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
-    parser.add_argument('--e_ix', type=int, default=3,
-                        help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
-    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
-    parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
-    parser.add_argument('--nept', type=int, default=1,
-                        help='Number of epochs per training iteration')
-    parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
-                        1. calculate the importance of all kernels
-                        2. prune n kernels based on these importances
-                        3. calculate the importances based on the new pruned model
-                        4. prune n kernels based on these new importances
-                        5. ...
-                        Repeat until we have pruned the desired amount of kernels.
-
-                        Then we go back to training the model until it is time for another pruning iteration.
-
-
-                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
-                        However, this is very slow. And also it doesn't make that much of a difference in quality.
-                        (would be better to do an actual retraining between the prunings then, 
-                        since we are doing so many epoch passes it is basically computationally worse than retraining).
-
-                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
-
-                        If you are not using --pbop, then you can set --pnkao to 1e9.
-                        Because the number of kernels we actually prune is capped by --nftp.
-                        It will look like this:
-                        1. calculate the importance of all kernels
-                        2. prune --nftp kernels based on these importances
-                        Done.
-
-                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
-                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
-                        So if you set it to 1e9, it will simply prune the whole model in one go.
-
-                        """)
-    parser.add_argument('--nftp', type=int, default=1,
-                        help='Number of filters to prune in one pruning')
-    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
-
-    args = parser.parse_args()
-
-    is_pruning_ph = args.pruning_phase
-    iter_possible_stop = args.iter_possible_stop
-
-    err_ix = args.e_ix
-    max_train_iters = args.mti
-    max_auto_prunings = args.map
-    num_ep_per_iter = args.nept
-
-    prune_by_original_percent = args.pbop
-    prune_n_kernels_at_once = args.pnkao
-    num_to_prune = args.nftp
-    resource_name = args.rn
-    proportion_to_prune = args.ptp
-
-
-
-
-
-    print("Currently disregarding the args. They are hardcoded in the script.")
-
-    # is_pruning_ph = IS_PRUNING_PH
-    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
-    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
-    # max_train_iters = MAX_TRAIN_ITERS
-    # max_auto_prunings = MAX_AUTO_PRUNINGS
-    # err_ix = ERR_IX
-    # resource_name = RESOURCE_NAME
-    # proportion_to_prune = PROPORTION_TO_PRUNE
-
-
-
-
-
-    pruning_kwargs = {
-        "prune_by_original_percent": prune_by_original_percent,
-        "prune_n_kernels_at_once": prune_n_kernels_at_once,
-        "num_of_prunes": num_to_prune,
-        "resource_name": resource_name,
-        "original_proportion_to_prune": proportion_to_prune
-    }
-
-    print(f"Validation phase: {is_pruning_ph}")
-    print(args)
 
 
 

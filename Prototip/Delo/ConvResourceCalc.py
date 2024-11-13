@@ -35,6 +35,8 @@ class ConvResourceCalc():
         self.module_tree_ix_2_all_parents_to_root_tree_ix_list = {}
         self.module_tree_ix_2_name = {}
         self.module_tree_ix_2_module_itself = {}
+
+        self.calculate_layer_tree_ix_set_bug_prevention = set()
     
 
         self.resource_name_2_resource_dict = {
@@ -82,10 +84,26 @@ class ConvResourceCalc():
 
 
     
-    def calculate_layer(self, layer, x, tree_ix):
+    def calculate_layer(self, layer, tree_ix, x, *args, **kwargs):
 
 
-        y = layer.old_forward(x)
+        if tree_ix in self.calculate_layer_tree_ix_set_bug_prevention:
+            print("Tree_ix already in set.")
+            print(f"tree_ix: {tree_ix}")
+            print(f"layer: {layer}")
+            print(f"args: {args}")
+            print(f"kwargs: {kwargs}")
+            print(f"x: {x}")
+            print(f"self.module_tree_ix_2_name[tree_ix]: {self.module_tree_ix_2_name[tree_ix]}")
+            print(f"self.calculate_layer_tree_ix_set_bug_prevention: {self.calculate_layer_tree_ix_set_bug_prevention}")
+            
+            raise ValueError("Tree_ix already in set.")
+
+
+        self.calculate_layer_tree_ix_set_bug_prevention.add(tree_ix)
+
+
+        y = layer.old_forward(x, *args, **kwargs)
 
         if isinstance(layer, nn.Conv2d):
             
@@ -130,7 +148,7 @@ class ConvResourceCalc():
                 dict[tree_ix] = 0
 
             self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
-
+        
 
         else:
             for _, dict in self.resource_name_2_resource_dict.items():
@@ -176,9 +194,9 @@ class ConvResourceCalc():
                 
                 def new_forward(m):
                     
-                    def lambda_forward(x):
+                    def lambda_forward(x, *args, **kwargs):
                         
-                        return self.calculate_layer(m, x, curr_tree_ix)
+                        return self.calculate_layer(m, curr_tree_ix, x, *args, **kwargs)
                     
                     return lambda_forward
 
@@ -268,12 +286,18 @@ class ConvResourceCalc():
 
             
 
+        self.calculate_layer_tree_ix_set_bug_prevention = set() # empty it out
 
         modify_forward(self.wrapper_model.model)
         input_example = input_example.to(self.wrapper_model.device)
         y = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
-        
+
+
+        # print(f"self.module_tree_ix_2_name: {self.module_tree_ix_2_name}")
+        # print(self.resource_name_2_resource_dict["flops_num"])
+
+
         recursively_calculate(self.resource_name_2_resource_dict["flops_num"])
         recursively_calculate(self.resource_name_2_resource_dict["weights_num"])
         recursively_calculate(self.resource_name_2_resource_dict["kernels_num"])

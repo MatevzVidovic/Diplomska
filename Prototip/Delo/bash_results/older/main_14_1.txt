@@ -1,0 +1,81 @@
+Validation phase: True
+Namespace(ips=999999, bs=4, nodw=10, ntibp=2, sd='SegNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.05, tp=True, ifn=(0.5, 0.5, 0.5))
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+Goal resource value: 38048838451.2
+----------
+sortable_list[:5]: [(((0,), 21), 305, 0.00654028682038188), (((0,), 12), 106, 0.0065602026879787445), (((0,), 46), 92, 0.006638373248279095), (((0,), 17), 423, 0.006638490594923496), (((0,), 46), 25, 0.006638846360146999)]
+disallowed_directly: {((0,), 58)}
+disallowed_tree_ixs: {((0,), 58)}
+Pruned ((0,), 21), real_kernel_ix: 305, initial_kernel_ix: 305
+Pruned ((0,), 24), real_input_slice_ix: 305, initial_input_slice_ix: 305
+----------
+Pruned ((0,), 22), real kernel ix (in code real_input_slice_ix): 305, initial_input_slice_ix: 305
+----------
+Pruned ((0,), 34), real_kernel_ix: 305, initial_kernel_ix: 305
+Pruned ((0,), 37), real_input_slice_ix: 305, initial_input_slice_ix: 305
+----------
+Pruned ((0,), 35), real kernel ix (in code real_input_slice_ix): 305, initial_input_slice_ix: 305
+----------
+Pruned ((0,), 12), real_kernel_ix: 106, initial_kernel_ix: 106
+Pruned ((0,), 14), real_input_slice_ix: 106, initial_input_slice_ix: 106
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 106, initial_input_slice_ix: 106
+----------
+Pruned ((0,), 46), real_kernel_ix: 92, initial_kernel_ix: 92
+Pruned ((0,), 48), real_input_slice_ix: 92, initial_input_slice_ix: 92
+----------
+Pruned ((0,), 47), real kernel ix (in code real_input_slice_ix): 92, initial_input_slice_ix: 92
+----------
+Pruned ((0,), 17), real_kernel_ix: 423, initial_kernel_ix: 423
+Pruned ((0,), 19), real_input_slice_ix: 423, initial_input_slice_ix: 423
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 423, initial_input_slice_ix: 423
+----------
+Pruned ((0,), 53), real_kernel_ix: 21, initial_kernel_ix: 21
+Pruned ((0,), 56), real_input_slice_ix: 21, initial_input_slice_ix: 21
+----------
+Pruned ((0,), 54), real kernel ix (in code real_input_slice_ix): 21, initial_input_slice_ix: 21
+----------
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/segnet_main.py", line 895, in <module>
+    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, error_ix=err_ix,
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 459, in train_automatically
+    curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 207, in prune
+    are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once) # this already does resource_calc.calculate_resources(self.input_example) 
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 172, in _prune_n_kernels
+    are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 339, in prune
+    succeeded = self.prune_one_layer_recursive(curr_to_prune_elem, curr_conv_resource_calc, wrapper_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 487, in prune_one_layer_recursive
+    curr_conv_resource_calc.calculate_resources(self.input_example)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ConvResourceCalc.py", line 294, in calculate_resources
+    y = self.wrapper_model.model.forward(input_example)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/SegNet.py", line 175, in forward
+    x = self.MaxDe5(x, ind1, output_size=size_0)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ConvResourceCalc.py", line 200, in lambda_forward
+    return self.calculate_layer(m, curr_tree_ix, x, *args, **kwargs)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ConvResourceCalc.py", line 106, in calculate_layer
+    y = layer.old_forward(x, *args, **kwargs)
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/modules/pooling.py", line 409, in forward
+    return F.max_unpool2d(input, indices, self.kernel_size, self.stride,
+  File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/nn/functional.py", line 990, in max_unpool2d
+    return torch._C._nn.max_unpool2d(input, indices, output_size)
+RuntimeError: Expected shape of indices to be: [1, 63, 128, 128] but got: [1, 64, 128, 128]

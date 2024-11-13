@@ -1,0 +1,1091 @@
+Validation phase: True
+Namespace(iter_possible_stop=999999, BATCH_SIZE=4, NUM_OF_DATALOADER_WORKERS=10, NUM_TRAIN_ITERS_BETWEEN_PRUNINGS=1, SAVE_DIR='SegNet', PATH_TO_DATA='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.02)
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+loss: 0.346032  [    4/   30]
+loss: 0.347692  [    8/   30]
+loss: 0.344783  [   12/   30]
+loss: 0.344783  [   16/   30]
+loss: 0.341585  [   20/   30]
+loss: 0.343462  [   24/   30]
+loss: 0.342108  [   28/   30]
+loss: 0.342036  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.34220280 
+ IoU: 0.991738 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34291250 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.349744  [    4/   30]
+loss: 0.344175  [    8/   30]
+loss: 0.344445  [   12/   30]
+loss: 0.341671  [   16/   30]
+loss: 0.346006  [   20/   30]
+loss: 0.345834  [   24/   30]
+loss: 0.339953  [   28/   30]
+loss: 0.340866  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.34197421 
+ IoU: 0.991491 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34250852 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.340149  [    4/   30]
+loss: 0.344091  [    8/   30]
+loss: 0.345039  [   12/   30]
+loss: 0.345451  [   16/   30]
+loss: 0.344789  [   20/   30]
+loss: 0.344811  [   24/   30]
+loss: 0.340614  [   28/   30]
+loss: 0.340132  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.34072291 
+ IoU: 0.991682 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34124176 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.346497  [    4/   30]
+loss: 0.342997  [    8/   30]
+loss: 0.339775  [   12/   30]
+loss: 0.340440  [   16/   30]
+loss: 0.347683  [   20/   30]
+loss: 0.340332  [   24/   30]
+loss: 0.338780  [   28/   30]
+loss: 0.351785  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.34031957 
+ IoU: 0.991682 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34102250 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.340648  [    4/   30]
+loss: 0.337742  [    8/   30]
+loss: 0.344725  [   12/   30]
+loss: 0.354596  [   16/   30]
+loss: 0.345970  [   20/   30]
+loss: 0.337963  [   24/   30]
+loss: 0.338708  [   28/   30]
+loss: 0.343189  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33951688 
+ IoU: 0.991707 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34012403 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.345267  [    4/   30]
+loss: 0.339755  [    8/   30]
+loss: 0.341719  [   12/   30]
+loss: 0.343020  [   16/   30]
+loss: 0.344353  [   20/   30]
+loss: 0.337617  [   24/   30]
+loss: 0.342137  [   28/   30]
+loss: 0.340468  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33947888 
+ IoU: 0.991622 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34002127 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.338433  [    4/   30]
+loss: 0.339070  [    8/   30]
+loss: 0.345142  [   12/   30]
+loss: 0.338198  [   16/   30]
+loss: 0.349120  [   20/   30]
+loss: 0.341037  [   24/   30]
+loss: 0.341926  [   28/   30]
+loss: 0.337668  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33939030 
+ IoU: 0.991735 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.34013591 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.342828  [    4/   30]
+loss: 0.338458  [    8/   30]
+loss: 0.345880  [   12/   30]
+loss: 0.339552  [   16/   30]
+loss: 0.338527  [   20/   30]
+loss: 0.339155  [   24/   30]
+loss: 0.337986  [   28/   30]
+loss: 0.350891  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33809205 
+ IoU: 0.991662 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33853138 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.345379  [    4/   30]
+loss: 0.337574  [    8/   30]
+loss: 0.339628  [   12/   30]
+loss: 0.341978  [   16/   30]
+loss: 0.341118  [   20/   30]
+loss: 0.339963  [   24/   30]
+loss: 0.339121  [   28/   30]
+loss: 0.342804  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33923164 
+ IoU: 0.991741 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33982997 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.344217  [    4/   30]
+loss: 0.339518  [    8/   30]
+loss: 0.338877  [   12/   30]
+loss: 0.346713  [   16/   30]
+loss: 0.335693  [   20/   30]
+loss: 0.336817  [   24/   30]
+loss: 0.342104  [   28/   30]
+loss: 0.336029  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33714359 
+ IoU: 0.991765 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33788597 
+ IoU: 0.990904 
+ F1: nan 
+
+Goal resource value: 29850788782.08
+----------
+sortable_list[:5]: [(((0,), 12), 141, 0.034232594072818756), (((0,), 12), 65, 0.035363662987947464), (((0,), 14), 47, 0.035697273910045624), (((0,), 10), 17, 0.03667507693171501), (((0,), 10), 155, 0.03734128549695015)]
+disallowed_directly: {((0,), 58)}
+disallowed_tree_ixs: {((0,), 58)}
+Pruned ((0,), 12), real_kernel_ix: 141, initial_kernel_ix: 181
+Pruned ((0,), 14), real_input_slice_ix: 141, initial_input_slice_ix: 181
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 141, initial_input_slice_ix: 181
+----------
+Pruned ((0,), 12), real_kernel_ix: 65, initial_kernel_ix: 87
+Pruned ((0,), 14), real_input_slice_ix: 65, initial_input_slice_ix: 87
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 65, initial_input_slice_ix: 87
+----------
+Pruned ((0,), 14), real_kernel_ix: 47, initial_kernel_ix: 55
+Pruned ((0,), 17), real_input_slice_ix: 47, initial_input_slice_ix: 55
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 47, initial_input_slice_ix: 55
+----------
+Pruned ((0,), 41), real_kernel_ix: 47, initial_kernel_ix: 55
+Pruned ((0,), 44), real_input_slice_ix: 47, initial_input_slice_ix: 55
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 47, initial_input_slice_ix: 55
+----------
+Pruned ((0,), 10), real_kernel_ix: 17, initial_kernel_ix: 18
+Pruned ((0,), 12), real_input_slice_ix: 17, initial_input_slice_ix: 18
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 17, initial_input_slice_ix: 18
+----------
+Pruned ((0,), 10), real_kernel_ix: 154, initial_kernel_ix: 188
+Pruned ((0,), 12), real_input_slice_ix: 154, initial_input_slice_ix: 188
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 154, initial_input_slice_ix: 188
+----------
+Pruned ((0,), 12), real_kernel_ix: 193, initial_kernel_ix: 253
+Pruned ((0,), 14), real_input_slice_ix: 193, initial_input_slice_ix: 253
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 193, initial_input_slice_ix: 253
+----------
+Pruned ((0,), 12), real_kernel_ix: 19, initial_kernel_ix: 24
+Pruned ((0,), 14), real_input_slice_ix: 19, initial_input_slice_ix: 24
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 19, initial_input_slice_ix: 24
+----------
+Pruned ((0,), 12), real_kernel_ix: 83, initial_kernel_ix: 112
+Pruned ((0,), 14), real_input_slice_ix: 83, initial_input_slice_ix: 112
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 83, initial_input_slice_ix: 112
+----------
+Pruned ((0,), 10), real_kernel_ix: 65, initial_kernel_ix: 79
+Pruned ((0,), 12), real_input_slice_ix: 65, initial_input_slice_ix: 79
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 65, initial_input_slice_ix: 79
+----------
+Pruned ((0,), 19), real_kernel_ix: 155, initial_kernel_ix: 165
+Pruned ((0,), 21), real_input_slice_ix: 155, initial_input_slice_ix: 165
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 155, initial_input_slice_ix: 165
+----------
+Pruned ((0,), 10), real_kernel_ix: 23, initial_kernel_ix: 29
+Pruned ((0,), 12), real_input_slice_ix: 23, initial_input_slice_ix: 29
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 23, initial_input_slice_ix: 29
+----------
+Pruned ((0,), 14), real_kernel_ix: 83, initial_kernel_ix: 99
+Pruned ((0,), 17), real_input_slice_ix: 83, initial_input_slice_ix: 99
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 83, initial_input_slice_ix: 99
+----------
+Pruned ((0,), 41), real_kernel_ix: 83, initial_kernel_ix: 99
+Pruned ((0,), 44), real_input_slice_ix: 83, initial_input_slice_ix: 99
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 83, initial_input_slice_ix: 99
+----------
+Pruned ((0,), 17), real_kernel_ix: 462, initial_kernel_ix: 467
+Pruned ((0,), 19), real_input_slice_ix: 462, initial_input_slice_ix: 467
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 462, initial_input_slice_ix: 467
+----------
+Pruned ((0,), 12), real_kernel_ix: 145, initial_kernel_ix: 191
+Pruned ((0,), 14), real_input_slice_ix: 145, initial_input_slice_ix: 191
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 145, initial_input_slice_ix: 191
+----------
+Pruned ((0,), 14), real_kernel_ix: 145, initial_kernel_ix: 171
+Pruned ((0,), 17), real_input_slice_ix: 145, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 145, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 41), real_kernel_ix: 145, initial_kernel_ix: 171
+Pruned ((0,), 44), real_input_slice_ix: 145, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 145, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 10), real_kernel_ix: 173, initial_kernel_ix: 217
+Pruned ((0,), 12), real_input_slice_ix: 173, initial_input_slice_ix: 217
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 173, initial_input_slice_ix: 217
+----------
+Pruned ((0,), 14), real_kernel_ix: 188, initial_kernel_ix: 224
+Pruned ((0,), 17), real_input_slice_ix: 188, initial_input_slice_ix: 224
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 188, initial_input_slice_ix: 224
+----------
+Pruned ((0,), 41), real_kernel_ix: 188, initial_kernel_ix: 224
+Pruned ((0,), 44), real_input_slice_ix: 188, initial_input_slice_ix: 224
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 188, initial_input_slice_ix: 224
+----------
+Pruned ((0,), 10), real_kernel_ix: 138, initial_kernel_ix: 173
+Pruned ((0,), 12), real_input_slice_ix: 138, initial_input_slice_ix: 173
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 138, initial_input_slice_ix: 173
+----------
+Pruned ((0,), 21), real_kernel_ix: 376, initial_kernel_ix: 381
+Pruned ((0,), 24), real_input_slice_ix: 376, initial_input_slice_ix: 381
+----------
+Pruned ((0,), 22), real kernel ix (in code real_input_slice_ix): 376, initial_input_slice_ix: 381
+----------
+Pruned ((0,), 34), real_kernel_ix: 376, initial_kernel_ix: 381
+Pruned ((0,), 37), real_input_slice_ix: 376, initial_input_slice_ix: 381
+----------
+Pruned ((0,), 35), real kernel ix (in code real_input_slice_ix): 376, initial_input_slice_ix: 381
+----------
+Pruned ((0,), 12), real_kernel_ix: 29, initial_kernel_ix: 37
+Pruned ((0,), 14), real_input_slice_ix: 29, initial_input_slice_ix: 37
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 29, initial_input_slice_ix: 37
+----------
+Pruned ((0,), 12), real_kernel_ix: 23, initial_kernel_ix: 30
+Pruned ((0,), 14), real_input_slice_ix: 23, initial_input_slice_ix: 30
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 23, initial_input_slice_ix: 30
+----------
+Pruned ((0,), 19), real_kernel_ix: 346, initial_kernel_ix: 366
+Pruned ((0,), 21), real_input_slice_ix: 346, initial_input_slice_ix: 366
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 346, initial_input_slice_ix: 366
+----------
+Pruned ((0,), 10), real_kernel_ix: 51, initial_kernel_ix: 63
+Pruned ((0,), 12), real_input_slice_ix: 51, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 51, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 14), real_kernel_ix: 79, initial_kernel_ix: 95
+Pruned ((0,), 17), real_input_slice_ix: 79, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 79, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 41), real_kernel_ix: 79, initial_kernel_ix: 95
+Pruned ((0,), 44), real_input_slice_ix: 79, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 79, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 14), real_kernel_ix: 125, initial_kernel_ix: 150
+Pruned ((0,), 17), real_input_slice_ix: 125, initial_input_slice_ix: 150
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 125, initial_input_slice_ix: 150
+----------
+Pruned ((0,), 41), real_kernel_ix: 125, initial_kernel_ix: 150
+Pruned ((0,), 44), real_input_slice_ix: 125, initial_input_slice_ix: 150
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 125, initial_input_slice_ix: 150
+----------
+Pruned ((0,), 12), real_kernel_ix: 181, initial_kernel_ix: 245
+Pruned ((0,), 14), real_input_slice_ix: 181, initial_input_slice_ix: 245
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 181, initial_input_slice_ix: 245
+----------
+Pruned ((0,), 21), real_kernel_ix: 487, initial_kernel_ix: 493
+Pruned ((0,), 24), real_input_slice_ix: 487, initial_input_slice_ix: 493
+----------
+Pruned ((0,), 22), real kernel ix (in code real_input_slice_ix): 487, initial_input_slice_ix: 493
+----------
+Pruned ((0,), 34), real_kernel_ix: 487, initial_kernel_ix: 493
+Pruned ((0,), 37), real_input_slice_ix: 487, initial_input_slice_ix: 493
+----------
+Pruned ((0,), 35), real kernel ix (in code real_input_slice_ix): 487, initial_input_slice_ix: 493
+----------
+Pruned ((0,), 17), real_kernel_ix: 498, initial_kernel_ix: 505
+Pruned ((0,), 19), real_input_slice_ix: 498, initial_input_slice_ix: 505
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 498, initial_input_slice_ix: 505
+----------
+Pruned ((0,), 14), real_kernel_ix: 62, initial_kernel_ix: 73
+Pruned ((0,), 17), real_input_slice_ix: 62, initial_input_slice_ix: 73
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 62, initial_input_slice_ix: 73
+----------
+Pruned ((0,), 41), real_kernel_ix: 62, initial_kernel_ix: 73
+Pruned ((0,), 44), real_input_slice_ix: 62, initial_input_slice_ix: 73
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 62, initial_input_slice_ix: 73
+----------
+Pruned ((0,), 14), real_kernel_ix: 108, initial_kernel_ix: 131
+Pruned ((0,), 17), real_input_slice_ix: 108, initial_input_slice_ix: 131
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 108, initial_input_slice_ix: 131
+----------
+Pruned ((0,), 41), real_kernel_ix: 108, initial_kernel_ix: 131
+Pruned ((0,), 44), real_input_slice_ix: 108, initial_input_slice_ix: 131
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 108, initial_input_slice_ix: 131
+----------
+Pruned ((0,), 12), real_kernel_ix: 126, initial_kernel_ix: 171
+Pruned ((0,), 14), real_input_slice_ix: 126, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 126, initial_input_slice_ix: 171
+----------
+Pruned ((0,), 14), real_kernel_ix: 152, initial_kernel_ix: 186
+Pruned ((0,), 17), real_input_slice_ix: 152, initial_input_slice_ix: 186
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 152, initial_input_slice_ix: 186
+----------
+Pruned ((0,), 41), real_kernel_ix: 152, initial_kernel_ix: 186
+Pruned ((0,), 44), real_input_slice_ix: 152, initial_input_slice_ix: 186
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 152, initial_input_slice_ix: 186
+----------
+Pruned ((0,), 10), real_kernel_ix: 125, initial_kernel_ix: 159
+Pruned ((0,), 12), real_input_slice_ix: 125, initial_input_slice_ix: 159
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 125, initial_input_slice_ix: 159
+----------
+Pruned ((0,), 7), real_kernel_ix: 41, initial_kernel_ix: 63
+Pruned ((0,), 10), real_input_slice_ix: 41, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 41, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 48), real_kernel_ix: 41, initial_kernel_ix: 63
+Pruned ((0,), 51), real_input_slice_ix: 41, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 41, initial_input_slice_ix: 63
+----------
+Pruned ((0,), 7), real_kernel_ix: 41, initial_kernel_ix: 64
+Pruned ((0,), 10), real_input_slice_ix: 41, initial_input_slice_ix: 64
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 41, initial_input_slice_ix: 64
+----------
+Pruned ((0,), 48), real_kernel_ix: 41, initial_kernel_ix: 64
+Pruned ((0,), 51), real_input_slice_ix: 41, initial_input_slice_ix: 64
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 41, initial_input_slice_ix: 64
+----------
+Pruned ((0,), 14), real_kernel_ix: 120, initial_kernel_ix: 147
+Pruned ((0,), 17), real_input_slice_ix: 120, initial_input_slice_ix: 147
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 120, initial_input_slice_ix: 147
+----------
+Pruned ((0,), 41), real_kernel_ix: 120, initial_kernel_ix: 147
+Pruned ((0,), 44), real_input_slice_ix: 120, initial_input_slice_ix: 147
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 120, initial_input_slice_ix: 147
+----------
+Pruned ((0,), 12), real_kernel_ix: 64, initial_kernel_ix: 90
+Pruned ((0,), 14), real_input_slice_ix: 64, initial_input_slice_ix: 90
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 64, initial_input_slice_ix: 90
+----------
+Pruned ((0,), 12), real_kernel_ix: 1, initial_kernel_ix: 1
+Pruned ((0,), 14), real_input_slice_ix: 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 5), real_kernel_ix: 16, initial_kernel_ix: 28
+Pruned ((0,), 7), real_input_slice_ix: 16, initial_input_slice_ix: 28
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 16, initial_input_slice_ix: 28
+----------
+Pruned ((0,), 12), real_kernel_ix: 104, initial_kernel_ix: 148
+Pruned ((0,), 14), real_input_slice_ix: 104, initial_input_slice_ix: 148
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 104, initial_input_slice_ix: 148
+----------
+Pruned ((0,), 10), real_kernel_ix: 85, initial_kernel_ix: 106
+Pruned ((0,), 12), real_input_slice_ix: 85, initial_input_slice_ix: 106
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 85, initial_input_slice_ix: 106
+----------
+Pruned ((0,), 5), real_kernel_ix: 52, initial_kernel_ix: 80
+Pruned ((0,), 7), real_input_slice_ix: 52, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 52, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 10), real_kernel_ix: 23, initial_kernel_ix: 31
+Pruned ((0,), 12), real_input_slice_ix: 23, initial_input_slice_ix: 31
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 23, initial_input_slice_ix: 31
+----------
+Pruned ((0,), 5), real_kernel_ix: 59, initial_kernel_ix: 95
+Pruned ((0,), 7), real_input_slice_ix: 59, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 59, initial_input_slice_ix: 95
+----------
+Pruned ((0,), 14), real_kernel_ix: 59, initial_kernel_ix: 70
+Pruned ((0,), 17), real_input_slice_ix: 59, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 59, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 41), real_kernel_ix: 59, initial_kernel_ix: 70
+Pruned ((0,), 44), real_input_slice_ix: 59, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 59, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 5), real_kernel_ix: 63, initial_kernel_ix: 101
+Pruned ((0,), 7), real_input_slice_ix: 63, initial_input_slice_ix: 101
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 63, initial_input_slice_ix: 101
+----------
+Pruned ((0,), 10), real_kernel_ix: 104, initial_kernel_ix: 133
+Pruned ((0,), 12), real_input_slice_ix: 104, initial_input_slice_ix: 133
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 104, initial_input_slice_ix: 133
+----------
+Pruned ((0,), 17), real_kernel_ix: 390, initial_kernel_ix: 393
+Pruned ((0,), 19), real_input_slice_ix: 390, initial_input_slice_ix: 393
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 390, initial_input_slice_ix: 393
+----------
+Pruned ((0,), 19), real_kernel_ix: 117, initial_kernel_ix: 124
+Pruned ((0,), 21), real_input_slice_ix: 117, initial_input_slice_ix: 124
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 117, initial_input_slice_ix: 124
+----------
+Pruned ((0,), 17), real_kernel_ix: 269, initial_kernel_ix: 271
+Pruned ((0,), 19), real_input_slice_ix: 269, initial_input_slice_ix: 271
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 269, initial_input_slice_ix: 271
+----------
+Current resource value: 29809317888
+File SegNet_0_0_special_save.pth already exists in safety copies, skipping.
+File SegNet_7_33.pth already exists in safety copies, skipping.
+Copied SegNet_9_62.pth to ./SegNet/safety_copies/actual_safety_copies
+File SegNet_7_34.pth already exists in safety copies, skipping.
+loss: 0.342587  [    4/   30]
+loss: 0.340861  [    8/   30]
+loss: 0.337886  [   12/   30]
+loss: 0.341197  [   16/   30]
+loss: 0.336562  [   20/   30]
+loss: 0.340800  [   24/   30]
+loss: 0.339011  [   28/   30]
+loss: 0.344348  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33668490 
+ IoU: 0.991744 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33748709 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.336080  [    4/   30]
+loss: 0.344058  [    8/   30]
+loss: 0.339282  [   12/   30]
+loss: 0.340730  [   16/   30]
+loss: 0.342208  [   20/   30]
+loss: 0.337876  [   24/   30]
+loss: 0.336844  [   28/   30]
+loss: 0.344769  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33559395 
+ IoU: 0.991462 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33603482 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.337675  [    4/   30]
+loss: 0.345797  [    8/   30]
+loss: 0.339269  [   12/   30]
+loss: 0.339871  [   16/   30]
+loss: 0.336600  [   20/   30]
+loss: 0.335794  [   24/   30]
+loss: 0.335169  [   28/   30]
+loss: 0.347253  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33759391 
+ IoU: 0.991785 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33854763 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.340512  [    4/   30]
+loss: 0.335187  [    8/   30]
+loss: 0.336715  [   12/   30]
+loss: 0.342564  [   16/   30]
+loss: 0.341277  [   20/   30]
+loss: 0.335778  [   24/   30]
+loss: 0.337967  [   28/   30]
+loss: 0.345974  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33609735 
+ IoU: 0.991694 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33670495 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.341570  [    4/   30]
+loss: 0.341738  [    8/   30]
+loss: 0.337102  [   12/   30]
+loss: 0.338521  [   16/   30]
+loss: 0.341714  [   20/   30]
+loss: 0.334768  [   24/   30]
+loss: 0.339276  [   28/   30]
+loss: 0.336807  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33663246 
+ IoU: 0.991650 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33733455 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.337309  [    4/   30]
+loss: 0.336565  [    8/   30]
+loss: 0.334424  [   12/   30]
+loss: 0.338204  [   16/   30]
+loss: 0.339640  [   20/   30]
+loss: 0.341674  [   24/   30]
+loss: 0.340671  [   28/   30]
+loss: 0.335433  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33683993 
+ IoU: 0.991462 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33736399 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.341457  [    4/   30]
+loss: 0.341438  [    8/   30]
+loss: 0.335789  [   12/   30]
+loss: 0.338734  [   16/   30]
+loss: 0.334865  [   20/   30]
+loss: 0.337999  [   24/   30]
+loss: 0.335972  [   28/   30]
+loss: 0.334683  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33527567 
+ IoU: 0.991693 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33589137 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.343637  [    4/   30]
+loss: 0.339304  [    8/   30]
+loss: 0.335002  [   12/   30]
+loss: 0.339707  [   16/   30]
+loss: 0.334650  [   20/   30]
+loss: 0.334961  [   24/   30]
+loss: 0.338367  [   28/   30]
+loss: 0.332492  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33643754 
+ IoU: 0.991705 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33708079 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.339854  [    4/   30]
+loss: 0.335928  [    8/   30]
+loss: 0.338457  [   12/   30]
+loss: 0.337456  [   16/   30]
+loss: 0.337180  [   20/   30]
+loss: 0.336689  [   24/   30]
+loss: 0.332782  [   28/   30]
+loss: 0.347251  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33534482 
+ IoU: 0.991812 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33627368 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.338853  [    4/   30]
+loss: 0.338603  [    8/   30]
+loss: 0.336597  [   12/   30]
+loss: 0.338438  [   16/   30]
+loss: 0.340475  [   20/   30]
+loss: 0.334241  [   24/   30]
+loss: 0.336835  [   28/   30]
+loss: 0.333248  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33499949 
+ IoU: 0.991593 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33568931 
+ IoU: 0.990904 
+ F1: nan 
+
+Goal resource value: 29008289710.08
+----------
+sortable_list[:5]: [(((0,), 10), 20, 0.03409368917346001), (((0,), 10), 89, 0.03688405454158783), (((0,), 10), 100, 0.03826349228620529), (((0,), 12), 30, 0.03858837112784386), (((0,), 7), 70, 0.038803715258836746)]
+disallowed_directly: {((0,), 58)}
+disallowed_tree_ixs: {((0,), 58)}
+Pruned ((0,), 10), real_kernel_ix: 20, initial_kernel_ix: 25
+Pruned ((0,), 12), real_input_slice_ix: 20, initial_input_slice_ix: 25
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 20, initial_input_slice_ix: 25
+----------
+Pruned ((0,), 10), real_kernel_ix: 88, initial_kernel_ix: 112
+Pruned ((0,), 12), real_input_slice_ix: 88, initial_input_slice_ix: 112
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 88, initial_input_slice_ix: 112
+----------
+Pruned ((0,), 10), real_kernel_ix: 98, initial_kernel_ix: 127
+Pruned ((0,), 12), real_input_slice_ix: 98, initial_input_slice_ix: 127
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 98, initial_input_slice_ix: 127
+----------
+Pruned ((0,), 12), real_kernel_ix: 30, initial_kernel_ix: 44
+Pruned ((0,), 14), real_input_slice_ix: 30, initial_input_slice_ix: 44
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 30, initial_input_slice_ix: 44
+----------
+Pruned ((0,), 7), real_kernel_ix: 70, initial_kernel_ix: 113
+Pruned ((0,), 10), real_input_slice_ix: 70, initial_input_slice_ix: 113
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 70, initial_input_slice_ix: 113
+----------
+Pruned ((0,), 48), real_kernel_ix: 70, initial_kernel_ix: 113
+Pruned ((0,), 51), real_input_slice_ix: 70, initial_input_slice_ix: 113
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 70, initial_input_slice_ix: 113
+----------
+Pruned ((0,), 10), real_kernel_ix: 23, initial_kernel_ix: 33
+Pruned ((0,), 12), real_input_slice_ix: 23, initial_input_slice_ix: 33
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 23, initial_input_slice_ix: 33
+----------
+Pruned ((0,), 12), real_kernel_ix: 176, initial_kernel_ix: 246
+Pruned ((0,), 14), real_input_slice_ix: 176, initial_input_slice_ix: 246
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 176, initial_input_slice_ix: 246
+----------
+Pruned ((0,), 12), real_kernel_ix: 40, initial_kernel_ix: 60
+Pruned ((0,), 14), real_input_slice_ix: 40, initial_input_slice_ix: 60
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 40, initial_input_slice_ix: 60
+----------
+Pruned ((0,), 14), real_kernel_ix: 112, initial_kernel_ix: 139
+Pruned ((0,), 17), real_input_slice_ix: 112, initial_input_slice_ix: 139
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 112, initial_input_slice_ix: 139
+----------
+Pruned ((0,), 41), real_kernel_ix: 112, initial_kernel_ix: 139
+Pruned ((0,), 44), real_input_slice_ix: 112, initial_input_slice_ix: 139
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 112, initial_input_slice_ix: 139
+----------
+Pruned ((0,), 19), real_kernel_ix: 289, initial_kernel_ix: 309
+Pruned ((0,), 21), real_input_slice_ix: 289, initial_input_slice_ix: 309
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 289, initial_input_slice_ix: 309
+----------
+Pruned ((0,), 12), real_kernel_ix: 118, initial_kernel_ix: 168
+Pruned ((0,), 14), real_input_slice_ix: 118, initial_input_slice_ix: 168
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 118, initial_input_slice_ix: 168
+----------
+Pruned ((0,), 10), real_kernel_ix: 126, initial_kernel_ix: 169
+Pruned ((0,), 12), real_input_slice_ix: 126, initial_input_slice_ix: 169
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 126, initial_input_slice_ix: 169
+----------
+Pruned ((0,), 19), real_kernel_ix: 243, initial_kernel_ix: 260
+Pruned ((0,), 21), real_input_slice_ix: 243, initial_input_slice_ix: 260
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 243, initial_input_slice_ix: 260
+----------
+Pruned ((0,), 14), real_kernel_ix: 65, initial_kernel_ix: 80
+Pruned ((0,), 17), real_input_slice_ix: 65, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 65, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 41), real_kernel_ix: 65, initial_kernel_ix: 80
+Pruned ((0,), 44), real_input_slice_ix: 65, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 65, initial_input_slice_ix: 80
+----------
+Pruned ((0,), 10), real_kernel_ix: 155, initial_kernel_ix: 207
+Pruned ((0,), 12), real_input_slice_ix: 155, initial_input_slice_ix: 207
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 155, initial_input_slice_ix: 207
+----------
+Pruned ((0,), 17), real_kernel_ix: 181, initial_kernel_ix: 183
+Pruned ((0,), 19), real_input_slice_ix: 181, initial_input_slice_ix: 183
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 181, initial_input_slice_ix: 183
+----------
+Pruned ((0,), 12), real_kernel_ix: 142, initial_kernel_ix: 202
+Pruned ((0,), 14), real_input_slice_ix: 142, initial_input_slice_ix: 202
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 142, initial_input_slice_ix: 202
+----------
+Pruned ((0,), 14), real_kernel_ix: 78, initial_kernel_ix: 98
+Pruned ((0,), 17), real_input_slice_ix: 78, initial_input_slice_ix: 98
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 78, initial_input_slice_ix: 98
+----------
+Pruned ((0,), 41), real_kernel_ix: 78, initial_kernel_ix: 98
+Pruned ((0,), 44), real_input_slice_ix: 78, initial_input_slice_ix: 98
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 78, initial_input_slice_ix: 98
+----------
+Pruned ((0,), 19), real_kernel_ix: 348, initial_kernel_ix: 372
+Pruned ((0,), 21), real_input_slice_ix: 348, initial_input_slice_ix: 372
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 348, initial_input_slice_ix: 372
+----------
+Pruned ((0,), 19), real_kernel_ix: 219, initial_kernel_ix: 235
+Pruned ((0,), 21), real_input_slice_ix: 219, initial_input_slice_ix: 235
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 219, initial_input_slice_ix: 235
+----------
+Pruned ((0,), 10), real_kernel_ix: 171, initial_kernel_ix: 228
+Pruned ((0,), 12), real_input_slice_ix: 171, initial_input_slice_ix: 228
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 171, initial_input_slice_ix: 228
+----------
+Pruned ((0,), 14), real_kernel_ix: 90, initial_kernel_ix: 114
+Pruned ((0,), 17), real_input_slice_ix: 90, initial_input_slice_ix: 114
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 90, initial_input_slice_ix: 114
+----------
+Pruned ((0,), 41), real_kernel_ix: 90, initial_kernel_ix: 114
+Pruned ((0,), 44), real_input_slice_ix: 90, initial_input_slice_ix: 114
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 90, initial_input_slice_ix: 114
+----------
+Pruned ((0,), 12), real_kernel_ix: 134, initial_kernel_ix: 188
+Pruned ((0,), 14), real_input_slice_ix: 134, initial_input_slice_ix: 188
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 134, initial_input_slice_ix: 188
+----------
+Pruned ((0,), 12), real_kernel_ix: 57, initial_kernel_ix: 84
+Pruned ((0,), 14), real_input_slice_ix: 57, initial_input_slice_ix: 84
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 57, initial_input_slice_ix: 84
+----------
+Pruned ((0,), 12), real_kernel_ix: 171, initial_kernel_ix: 248
+Pruned ((0,), 14), real_input_slice_ix: 171, initial_input_slice_ix: 248
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 171, initial_input_slice_ix: 248
+----------
+Pruned ((0,), 14), real_kernel_ix: 141, initial_kernel_ix: 180
+Pruned ((0,), 17), real_input_slice_ix: 141, initial_input_slice_ix: 180
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 141, initial_input_slice_ix: 180
+----------
+Pruned ((0,), 41), real_kernel_ix: 141, initial_kernel_ix: 180
+Pruned ((0,), 44), real_input_slice_ix: 141, initial_input_slice_ix: 180
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 141, initial_input_slice_ix: 180
+----------
+Pruned ((0,), 14), real_kernel_ix: 78, initial_kernel_ix: 100
+Pruned ((0,), 17), real_input_slice_ix: 78, initial_input_slice_ix: 100
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 78, initial_input_slice_ix: 100
+----------
+Pruned ((0,), 41), real_kernel_ix: 78, initial_kernel_ix: 100
+Pruned ((0,), 44), real_input_slice_ix: 78, initial_input_slice_ix: 100
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 78, initial_input_slice_ix: 100
+----------
+Pruned ((0,), 12), real_kernel_ix: 55, initial_kernel_ix: 82
+Pruned ((0,), 14), real_input_slice_ix: 55, initial_input_slice_ix: 82
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 55, initial_input_slice_ix: 82
+----------
+Pruned ((0,), 7), real_kernel_ix: 27, initial_kernel_ix: 46
+Pruned ((0,), 10), real_input_slice_ix: 27, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 27, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 48), real_kernel_ix: 27, initial_kernel_ix: 46
+Pruned ((0,), 51), real_input_slice_ix: 27, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 27, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 12), real_kernel_ix: 173, initial_kernel_ix: 252
+Pruned ((0,), 14), real_input_slice_ix: 173, initial_input_slice_ix: 252
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 173, initial_input_slice_ix: 252
+----------
+Pruned ((0,), 14), real_kernel_ix: 196, initial_kernel_ix: 249
+Pruned ((0,), 17), real_input_slice_ix: 196, initial_input_slice_ix: 249
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 196, initial_input_slice_ix: 249
+----------
+Pruned ((0,), 41), real_kernel_ix: 196, initial_kernel_ix: 249
+Pruned ((0,), 44), real_input_slice_ix: 196, initial_input_slice_ix: 249
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 196, initial_input_slice_ix: 249
+----------
+Pruned ((0,), 17), real_kernel_ix: 113, initial_kernel_ix: 115
+Pruned ((0,), 19), real_input_slice_ix: 113, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 18), real kernel ix (in code real_input_slice_ix): 113, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 19), real_kernel_ix: 122, initial_kernel_ix: 130
+Pruned ((0,), 21), real_input_slice_ix: 122, initial_input_slice_ix: 130
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 122, initial_input_slice_ix: 130
+----------
+Pruned ((0,), 21), real_kernel_ix: 345, initial_kernel_ix: 350
+Pruned ((0,), 24), real_input_slice_ix: 345, initial_input_slice_ix: 350
+----------
+Pruned ((0,), 22), real kernel ix (in code real_input_slice_ix): 345, initial_input_slice_ix: 350
+----------
+Pruned ((0,), 34), real_kernel_ix: 345, initial_kernel_ix: 350
+Pruned ((0,), 37), real_input_slice_ix: 345, initial_input_slice_ix: 350
+----------
+Pruned ((0,), 35), real kernel ix (in code real_input_slice_ix): 345, initial_input_slice_ix: 350
+----------
+Pruned ((0,), 5), real_kernel_ix: 79, initial_kernel_ix: 123
+Pruned ((0,), 7), real_input_slice_ix: 79, initial_input_slice_ix: 123
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 79, initial_input_slice_ix: 123
+----------
+Pruned ((0,), 7), real_kernel_ix: 7, initial_kernel_ix: 15
+Pruned ((0,), 10), real_input_slice_ix: 7, initial_input_slice_ix: 15
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 7, initial_input_slice_ix: 15
+----------
+Pruned ((0,), 48), real_kernel_ix: 7, initial_kernel_ix: 15
+Pruned ((0,), 51), real_input_slice_ix: 7, initial_input_slice_ix: 15
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 7, initial_input_slice_ix: 15
+----------
+Pruned ((0,), 14), real_kernel_ix: 113, initial_kernel_ix: 146
+Pruned ((0,), 17), real_input_slice_ix: 113, initial_input_slice_ix: 146
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 113, initial_input_slice_ix: 146
+----------
+Pruned ((0,), 41), real_kernel_ix: 113, initial_kernel_ix: 146
+Pruned ((0,), 44), real_input_slice_ix: 113, initial_input_slice_ix: 146
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 113, initial_input_slice_ix: 146
+----------
+Pruned ((0,), 19), real_kernel_ix: 87, initial_kernel_ix: 93
+Pruned ((0,), 21), real_input_slice_ix: 87, initial_input_slice_ix: 93
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 87, initial_input_slice_ix: 93
+----------
+Pruned ((0,), 10), real_kernel_ix: 172, initial_kernel_ix: 230
+Pruned ((0,), 12), real_input_slice_ix: 172, initial_input_slice_ix: 230
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 172, initial_input_slice_ix: 230
+----------
+Pruned ((0,), 10), real_kernel_ix: 188, initial_kernel_ix: 250
+Pruned ((0,), 12), real_input_slice_ix: 188, initial_input_slice_ix: 250
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 188, initial_input_slice_ix: 250
+----------
+Pruned ((0,), 7), real_kernel_ix: 69, initial_kernel_ix: 115
+Pruned ((0,), 10), real_input_slice_ix: 69, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 8), real kernel ix (in code real_input_slice_ix): 69, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 48), real_kernel_ix: 69, initial_kernel_ix: 115
+Pruned ((0,), 51), real_input_slice_ix: 69, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 49), real kernel ix (in code real_input_slice_ix): 69, initial_input_slice_ix: 115
+----------
+Pruned ((0,), 14), real_kernel_ix: 86, initial_kernel_ix: 110
+Pruned ((0,), 17), real_input_slice_ix: 86, initial_input_slice_ix: 110
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 86, initial_input_slice_ix: 110
+----------
+Pruned ((0,), 41), real_kernel_ix: 86, initial_kernel_ix: 110
+Pruned ((0,), 44), real_input_slice_ix: 86, initial_input_slice_ix: 110
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 86, initial_input_slice_ix: 110
+----------
+Pruned ((0,), 19), real_kernel_ix: 410, initial_kernel_ix: 440
+Pruned ((0,), 21), real_input_slice_ix: 410, initial_input_slice_ix: 440
+----------
+Pruned ((0,), 20), real kernel ix (in code real_input_slice_ix): 410, initial_input_slice_ix: 440
+----------
+Pruned ((0,), 10), real_kernel_ix: 52, initial_kernel_ix: 70
+Pruned ((0,), 12), real_input_slice_ix: 52, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 52, initial_input_slice_ix: 70
+----------
+Pruned ((0,), 10), real_kernel_ix: 135, initial_kernel_ix: 183
+Pruned ((0,), 12), real_input_slice_ix: 135, initial_input_slice_ix: 183
+----------
+Pruned ((0,), 11), real kernel ix (in code real_input_slice_ix): 135, initial_input_slice_ix: 183
+----------
+Pruned ((0,), 14), real_kernel_ix: 118, initial_kernel_ix: 155
+Pruned ((0,), 17), real_input_slice_ix: 118, initial_input_slice_ix: 155
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 118, initial_input_slice_ix: 155
+----------
+Pruned ((0,), 41), real_kernel_ix: 118, initial_kernel_ix: 155
+Pruned ((0,), 44), real_input_slice_ix: 118, initial_input_slice_ix: 155
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 118, initial_input_slice_ix: 155
+----------
+Pruned ((0,), 14), real_kernel_ix: 1, initial_kernel_ix: 1
+Pruned ((0,), 17), real_input_slice_ix: 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 15), real kernel ix (in code real_input_slice_ix): 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 41), real_kernel_ix: 1, initial_kernel_ix: 1
+Pruned ((0,), 44), real_input_slice_ix: 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 42), real kernel ix (in code real_input_slice_ix): 1, initial_input_slice_ix: 1
+----------
+Pruned ((0,), 5), real_kernel_ix: 17, initial_kernel_ix: 32
+Pruned ((0,), 7), real_input_slice_ix: 17, initial_input_slice_ix: 32
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 17, initial_input_slice_ix: 32
+----------
+Pruned ((0,), 5), real_kernel_ix: 25, initial_kernel_ix: 46
+Pruned ((0,), 7), real_input_slice_ix: 25, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 6), real kernel ix (in code real_input_slice_ix): 25, initial_input_slice_ix: 46
+----------
+Pruned ((0,), 12), real_kernel_ix: 25, initial_kernel_ix: 34
+Pruned ((0,), 14), real_input_slice_ix: 25, initial_input_slice_ix: 34
+----------
+Pruned ((0,), 13), real kernel ix (in code real_input_slice_ix): 25, initial_input_slice_ix: 34
+----------
+Current resource value: 28931825664
+File SegNet_0_0_special_save.pth already exists in safety copies, skipping.
+File SegNet_7_33.pth already exists in safety copies, skipping.
+Copied SegNet_9_72.pth to ./SegNet/safety_copies/actual_safety_copies
+File SegNet_7_34.pth already exists in safety copies, skipping.

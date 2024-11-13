@@ -1,0 +1,52 @@
+Validation phase: False
+Namespace(iter_possible_stop=999999, BATCH_SIZE=4, NUM_OF_DATALOADER_WORKERS=10, NUM_TRAIN_ITERS_BETWEEN_PRUNINGS=1, SAVE_DIR='SegNet', PATH_TO_DATA='./sclera_data', is_test_run=True, pruning_phase=False, pbop=False, e_ix=3, mti=2, map=1000000000.0, nept=1, pnkao=20, nftp=1, rn='flops_num', ptp=0.01)
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 30
+val dataset len: 30
+test dataset len: 30
+train dataloader num of batches: 8
+val dataloader num of batches: 8
+test dataloader num of batches: 8
+Device: cuda
+loss: 0.708608  [    4/   30]
+loss: 0.703777  [    8/   30]
+loss: 0.700354  [   12/   30]
+loss: 0.697020  [   16/   30]
+loss: 0.694710  [   20/   30]
+loss: 0.689425  [   24/   30]
+loss: 0.683368  [   28/   30]
+loss: 0.680495  [   16/   30]
+validation Error: 
+ Avg loss: 0.68147456 
+ IoU: 0.548615 
+ F1: 0.187523 
+
+test Error: 
+ Avg loss: 0.68148502 
+ IoU: 0.548865 
+ F1: 0.181894 
+
+loss: 0.677092  [    4/   30]
+loss: 0.680054  [    8/   30]
+loss: 0.669405  [   12/   30]
+loss: 0.668445  [   16/   30]
+loss: 0.671561  [   20/   30]
+loss: 0.658782  [   24/   30]
+loss: 0.660437  [   28/   30]
+loss: 0.655071  [   16/   30]
+validation Error: 
+ Avg loss: 0.63363310 
+ IoU: 0.688411 
+ F1: 0.154700 
+
+test Error: 
+ Avg loss: 0.62739228 
+ IoU: 0.695327 
+ F1: 0.146888 
+

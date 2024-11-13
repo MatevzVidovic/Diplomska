@@ -1,0 +1,59 @@
+Validation phase: False
+Namespace(iter_possible_stop=999999, BATCH_SIZE=4, NUM_OF_DATALOADER_WORKERS=10, NUM_TRAIN_ITERS_BETWEEN_PRUNINGS=1, SAVE_DIR='UNet', PATH_TO_DATA='./vein_sclera_data', is_test_run=False, pruning_phase=False, pbop=False, e_ix=3, mti=50, map=1000000000.0, nept=1, pnkao=20, nftp=1, rn='flops_num', ptp=0.01)
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 89
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 23
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+loss: 0.444895  [    4/   89]
+loss: 0.429904  [    8/   89]
+loss: 0.483148  [   12/   89]
+loss: 0.443764  [   16/   89]
+loss: 0.430125  [   20/   89]
+loss: 0.466941  [   24/   89]
+loss: 0.404222  [   28/   89]
+loss: 0.402542  [   32/   89]
+loss: 0.451147  [   36/   89]
+loss: 0.422780  [   40/   89]
+loss: 0.405019  [   44/   89]
+loss: 0.418644  [   48/   89]
+loss: 0.344503  [   52/   89]
+loss: 0.346801  [   56/   89]
+loss: 0.427971  [   60/   89]
+loss: 0.382671  [   64/   89]
+loss: 0.388133  [   68/   89]
+loss: 0.414788  [   72/   89]
+loss: 0.363682  [   76/   89]
+loss: 0.403070  [   80/   89]
+loss: 0.359905  [   84/   89]
+loss: 0.392072  [   88/   89]
+loss: 0.335913  [   23/   89]
+validation Error: 
+ Avg loss: 0.14477708 
+ IoU: 0.959114 
+ F1: 0.097452 
+
+test Error: 
+ Avg loss: 0.16573872 
+ IoU: 0.949686 
+ F1: 0.108458 
+
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/main.py", line 933, in <module>
+    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, error_ix=err_ix,
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 515, in train_automatically
+    training_logs, pruning_logs = perform_auto_save(model_wrapper, training_logs, pruning_logs, main_save_path, val_error, test_error, train_iter, curr_training_phase_serial_num)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 303, in perform_auto_save
+    training_logs.delete_all_but_best_k_models(3, model_wrapper)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 169, in delete_all_but_best_k_models
+    model_path = error[3]
+TypeError: 'NoneType' object is not subscriptable

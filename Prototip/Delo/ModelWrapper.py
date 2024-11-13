@@ -122,19 +122,15 @@ class ModelWrapper:
 
 
 
-    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents):
-
-        self.FLOPS_min_res_percents = FLOPS_min_res_percents
-        self.weights_min_res_percents = weights_min_res_percents
+    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments):
 
         if self.prev_pruner_path is not None:
             with open(self.prev_pruner_path, "rb") as f:
                 self.pruner_instance = pickle.load(f)
                 # We need to load this, if the user changed it between the two runs.
-                self.pruner_instance.FLOPS_min_resource_percentage_dict = self.FLOPS_min_res_percents.min_resource_percentage_dict
-                self.pruner_instance.weights_min_resource_percentage_dict = self.weights_min_res_percents.min_resource_percentage_dict
+                self.pruner_instance.pruning_disallowments = pruning_disallowments
         else:
-            self.pruner_instance = pruner(self.FLOPS_min_res_percents, self.weights_min_res_percents, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
+            self.pruner_instance = pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
 
         self.get_importance_dict_fn = get_importance_dict_fn
 

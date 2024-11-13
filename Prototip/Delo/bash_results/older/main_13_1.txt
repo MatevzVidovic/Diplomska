@@ -1,0 +1,43 @@
+Validation phase: True
+Namespace(ips=999999, bs=4, nodw=10, ntibp=2, sd='SegNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.05, tp=True)
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+Goal resource value: 17092562227.2
+----------
+sortable_list[:5]: [(((0,), 7), 53, 0.02393299899995327), (((0,), 5), 45, 0.024746811017394066), (((0,), 7), 52, 0.0248248353600502), (((0,), 5), 33, 0.026048576459288597), (((0,), 5), 46, 0.026519155129790306)]
+disallowed_directly: {((0,), 44), ((0,), 53), ((0,), 56), ((0,), 7), ((0,), 10), ((0,), 19), ((0,), 28), ((0,), 34), ((0,), 37), ((0,), 0), ((0,), 58), ((0,), 12), ((0,), 21), ((0,), 24), ((0,), 30), ((0,), 48), ((0,), 51), ((0,), 2), ((0,), 5), ((0,), 14), ((0,), 17), ((0,), 26), ((0,), 41)}
+disallowed_tree_ixs: {((0,), 44), ((0,), 53), ((0,), 56), ((0,), 7), ((0,), 10), ((0,), 19), ((0,), 28), ((0,), 34), ((0,), 37), ((0,), 0), ((0,), 58), ((0,), 12), ((0,), 21), ((0,), 24), ((0,), 30), ((0,), 48), ((0,), 51), ((0,), 2), ((0,), 5), ((0,), 14), ((0,), 17), ((0,), 26), ((0,), 41)}
+Pruned ((0,), 32), real_kernel_ix: 316, initial_kernel_ix: 316
+Pruned ((0,), 34), real_input_slice_ix: 316, initial_input_slice_ix: 316
+----------
+Pruned ((0,), 33), real kernel ix (in code real_input_slice_ix): 316, initial_input_slice_ix: 316
+----------
+Pruned ((0,), 39), real_kernel_ix: 8, initial_kernel_ix: 8
+Pruned ((0,), 41), real_input_slice_ix: 8, initial_input_slice_ix: 8
+----------
+Pruned ((0,), 40), real kernel ix (in code real_input_slice_ix): 8, initial_input_slice_ix: 8
+----------
+Pruned ((0,), 46), real_kernel_ix: 126, initial_kernel_ix: 126
+Pruned ((0,), 48), real_input_slice_ix: 126, initial_input_slice_ix: 126
+----------
+Pruned ((0,), 47), real kernel ix (in code real_input_slice_ix): 126, initial_input_slice_ix: 126
+----------
+Pruned 3 layers. No more to prune.
+Current resource value: 19075696128
+File SegNet_0_0_special_save.pth already exists in safety copies, skipping.
+File SegNet_7_33.pth already exists in safety copies, skipping.
+Copied SegNet_26_92_special_save.pth to ./SegNet/safety_copies/actual_safety_copies
+File SegNet_7_34.pth already exists in safety copies, skipping.
+There are no more kernels that could be pruned in the future.

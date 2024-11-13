@@ -1,0 +1,65 @@
+Validation phase: True
+Namespace(ips=999999, bs=4, nodw=10, ntibp=2, sd='SegNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.05, tp=True, ifn=(0.5, 0.5, 0.5))
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+loss: 0.694059  [    4/   30]
+loss: 0.686159  [    8/   30]
+loss: 0.678777  [   12/   30]
+loss: 0.671465  [   16/   30]
+loss: 0.663359  [   20/   30]
+loss: 0.656879  [   24/   30]
+loss: 0.650071  [   28/   30]
+loss: 0.640372  [   16/   30]
+validation Error: 
+ Avg loss: 0.64388258 
+ IoU: 0.730353 
+ F1: 0.014190 
+
+test Error: 
+ Avg loss: 0.64451929 
+ IoU: 0.730348 
+ F1: 0.015433 
+
+loss: 0.632514  [    4/   30]
+loss: 0.628364  [    8/   30]
+loss: 0.620868  [   12/   30]
+loss: 0.613020  [   16/   30]
+loss: 0.605983  [   20/   30]
+loss: 0.601144  [   24/   30]
+loss: 0.597037  [   28/   30]
+loss: 0.585319  [   16/   30]
+validation Error: 
+ Avg loss: 0.55920503 
+ IoU: 0.888444 
+ F1: 0.012052 
+
+test Error: 
+ Avg loss: 0.56007200 
+ IoU: 0.887688 
+ F1: 0.013367 
+
+Goal resource value: 37812401971.2
+disallowed_directly: {((0,), 44), ((0,), 53), ((0,), 56), ((0,), 7), ((0,), 10), ((0,), 19), ((0,), 28), ((0,), 34), ((0,), 37), ((0,), 46), ((0,), 0), ((0,), 58), ((0,), 12), ((0,), 21), ((0,), 24), ((0,), 30), ((0,), 39), ((0,), 48), ((0,), 51), ((0,), 2), ((0,), 5), ((0,), 14), ((0,), 17), ((0,), 26), ((0,), 32), ((0,), 41)}
+disallowed_tree_ixs: {((0,), 44), ((0,), 53), ((0,), 56), ((0,), 7), ((0,), 10), ((0,), 19), ((0,), 28), ((0,), 34), ((0,), 37), ((0,), 46), ((0,), 0), ((0,), 58), ((0,), 12), ((0,), 21), ((0,), 24), ((0,), 30), ((0,), 39), ((0,), 48), ((0,), 51), ((0,), 2), ((0,), 5), ((0,), 14), ((0,), 17), ((0,), 26), ((0,), 32), ((0,), 41)}
+----------
+sortable_list[:5]: []
+No more to prune!!!
+Current resource value: 39814972416
+File SegNet_0_0_special_save.pth already exists in safety copies, skipping.
+Copied SegNet_3_1.pth to ./SegNet/safety_copies/actual_safety_copies
+Copied SegNet_2_0_special_save.pth to ./SegNet/safety_copies/actual_safety_copies
+Copied SegNet_3_2.pth to ./SegNet/safety_copies/actual_safety_copies
+File SegNet_1_0_just_pruned.pth already exists in safety copies, skipping.
+There are no more kernels that could be pruned in the future.

@@ -1,0 +1,1766 @@
+Validation phase: False
+Namespace(iter_possible_stop=999999, BATCH_SIZE=4, NUM_OF_DATALOADER_WORKERS=10, NUM_TRAIN_ITERS_BETWEEN_PRUNINGS=1, SAVE_DIR='UNet', PATH_TO_DATA='./vein_sclera_data', is_test_run=False, pruning_phase=False, pbop=False, e_ix=3, mti=50, map=1000000000.0, nept=1, pnkao=20, nftp=1, rn='flops_num', ptp=0.01)
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 89
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 23
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+loss: 0.059679  [    4/   89]
+loss: 0.059438  [    8/   89]
+loss: 0.060372  [   12/   89]
+loss: 0.058712  [   16/   89]
+loss: 0.051992  [   20/   89]
+loss: 0.048198  [   24/   89]
+loss: 0.059109  [   28/   89]
+loss: 0.063370  [   32/   89]
+loss: 0.057489  [   36/   89]
+loss: 0.042249  [   40/   89]
+loss: 0.064976  [   44/   89]
+loss: 0.062649  [   48/   89]
+loss: 0.062118  [   52/   89]
+loss: 0.068384  [   56/   89]
+loss: 0.059940  [   60/   89]
+loss: 0.043691  [   64/   89]
+loss: 0.068171  [   68/   89]
+loss: 0.048854  [   72/   89]
+loss: 0.055487  [   76/   89]
+loss: 0.054952  [   80/   89]
+loss: 0.051205  [   84/   89]
+loss: 0.044490  [   88/   89]
+loss: 0.038565  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05158271 
+ IoU: 0.991698 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05407272 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.064520  [    4/   89]
+loss: 0.054547  [    8/   89]
+loss: 0.062632  [   12/   89]
+loss: 0.047521  [   16/   89]
+loss: 0.056317  [   20/   89]
+loss: 0.060786  [   24/   89]
+loss: 0.045142  [   28/   89]
+loss: 0.054829  [   32/   89]
+loss: 0.058272  [   36/   89]
+loss: 0.045290  [   40/   89]
+loss: 0.057679  [   44/   89]
+loss: 0.046598  [   48/   89]
+loss: 0.055335  [   52/   89]
+loss: 0.071965  [   56/   89]
+loss: 0.064712  [   60/   89]
+loss: 0.050875  [   64/   89]
+loss: 0.059867  [   68/   89]
+loss: 0.057911  [   72/   89]
+loss: 0.050462  [   76/   89]
+loss: 0.058943  [   80/   89]
+loss: 0.048854  [   84/   89]
+loss: 0.058147  [   88/   89]
+loss: 0.053209  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05144825 
+ IoU: 0.991715 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05400425 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.062244  [    4/   89]
+loss: 0.046800  [    8/   89]
+loss: 0.052726  [   12/   89]
+loss: 0.053428  [   16/   89]
+loss: 0.051262  [   20/   89]
+loss: 0.054297  [   24/   89]
+loss: 0.067507  [   28/   89]
+loss: 0.059362  [   32/   89]
+loss: 0.073960  [   36/   89]
+loss: 0.041559  [   40/   89]
+loss: 0.049404  [   44/   89]
+loss: 0.048695  [   48/   89]
+loss: 0.047590  [   52/   89]
+loss: 0.050699  [   56/   89]
+loss: 0.044721  [   60/   89]
+loss: 0.075741  [   64/   89]
+loss: 0.052072  [   68/   89]
+loss: 0.049060  [   72/   89]
+loss: 0.051097  [   76/   89]
+loss: 0.069547  [   80/   89]
+loss: 0.065504  [   84/   89]
+loss: 0.054728  [   88/   89]
+loss: 0.047749  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05121813 
+ IoU: 0.991550 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05320531 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.069718  [    4/   89]
+loss: 0.063710  [    8/   89]
+loss: 0.051216  [   12/   89]
+loss: 0.051599  [   16/   89]
+loss: 0.056512  [   20/   89]
+loss: 0.051464  [   24/   89]
+loss: 0.049457  [   28/   89]
+loss: 0.046782  [   32/   89]
+loss: 0.063877  [   36/   89]
+loss: 0.054678  [   40/   89]
+loss: 0.042599  [   44/   89]
+loss: 0.063964  [   48/   89]
+loss: 0.058684  [   52/   89]
+loss: 0.060668  [   56/   89]
+loss: 0.047614  [   60/   89]
+loss: 0.050261  [   64/   89]
+loss: 0.046473  [   68/   89]
+loss: 0.055528  [   72/   89]
+loss: 0.054464  [   76/   89]
+loss: 0.061566  [   80/   89]
+loss: 0.054140  [   84/   89]
+loss: 0.045010  [   88/   89]
+loss: 0.048686  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05063542 
+ IoU: 0.991716 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05304977 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.056167  [    4/   89]
+loss: 0.069329  [    8/   89]
+loss: 0.047565  [   12/   89]
+loss: 0.058107  [   16/   89]
+loss: 0.058745  [   20/   89]
+loss: 0.050440  [   24/   89]
+loss: 0.054387  [   28/   89]
+loss: 0.044071  [   32/   89]
+loss: 0.056523  [   36/   89]
+loss: 0.067731  [   40/   89]
+loss: 0.052280  [   44/   89]
+loss: 0.053854  [   48/   89]
+loss: 0.050514  [   52/   89]
+loss: 0.058836  [   56/   89]
+loss: 0.053166  [   60/   89]
+loss: 0.063942  [   64/   89]
+loss: 0.051934  [   68/   89]
+loss: 0.063765  [   72/   89]
+loss: 0.059452  [   76/   89]
+loss: 0.046651  [   80/   89]
+loss: 0.046389  [   84/   89]
+loss: 0.046596  [   88/   89]
+loss: 0.045560  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05035518 
+ IoU: 0.991715 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05285005 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.056076  [    4/   89]
+loss: 0.063781  [    8/   89]
+loss: 0.049059  [   12/   89]
+loss: 0.049273  [   16/   89]
+loss: 0.044764  [   20/   89]
+loss: 0.036441  [   24/   89]
+loss: 0.040457  [   28/   89]
+loss: 0.063646  [   32/   89]
+loss: 0.062017  [   36/   89]
+loss: 0.050285  [   40/   89]
+loss: 0.057584  [   44/   89]
+loss: 0.059726  [   48/   89]
+loss: 0.052879  [   52/   89]
+loss: 0.064567  [   56/   89]
+loss: 0.040251  [   60/   89]
+loss: 0.057766  [   64/   89]
+loss: 0.057542  [   68/   89]
+loss: 0.054052  [   72/   89]
+loss: 0.061910  [   76/   89]
+loss: 0.059527  [   80/   89]
+loss: 0.052241  [   84/   89]
+loss: 0.054257  [   88/   89]
+loss: 0.078003  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05016590 
+ IoU: 0.991601 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05252393 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.047559  [    4/   89]
+loss: 0.052271  [    8/   89]
+loss: 0.051429  [   12/   89]
+loss: 0.039237  [   16/   89]
+loss: 0.039607  [   20/   89]
+loss: 0.078774  [   24/   89]
+loss: 0.052234  [   28/   89]
+loss: 0.046299  [   32/   89]
+loss: 0.043343  [   36/   89]
+loss: 0.054665  [   40/   89]
+loss: 0.052269  [   44/   89]
+loss: 0.047858  [   48/   89]
+loss: 0.072400  [   52/   89]
+loss: 0.050107  [   56/   89]
+loss: 0.045035  [   60/   89]
+loss: 0.068707  [   64/   89]
+loss: 0.049843  [   68/   89]
+loss: 0.054370  [   72/   89]
+loss: 0.057102  [   76/   89]
+loss: 0.060770  [   80/   89]
+loss: 0.062646  [   84/   89]
+loss: 0.061247  [   88/   89]
+loss: 0.083254  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.05028441 
+ IoU: 0.991396 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05205065 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.058117  [    4/   89]
+loss: 0.070092  [    8/   89]
+loss: 0.072442  [   12/   89]
+loss: 0.053489  [   16/   89]
+loss: 0.043125  [   20/   89]
+loss: 0.058636  [   24/   89]
+loss: 0.056725  [   28/   89]
+loss: 0.054913  [   32/   89]
+loss: 0.048484  [   36/   89]
+loss: 0.050084  [   40/   89]
+loss: 0.048439  [   44/   89]
+loss: 0.058148  [   48/   89]
+loss: 0.045773  [   52/   89]
+loss: 0.051880  [   56/   89]
+loss: 0.047963  [   60/   89]
+loss: 0.056827  [   64/   89]
+loss: 0.041068  [   68/   89]
+loss: 0.049857  [   72/   89]
+loss: 0.054675  [   76/   89]
+loss: 0.058508  [   80/   89]
+loss: 0.056077  [   84/   89]
+loss: 0.050717  [   88/   89]
+loss: 0.037146  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04975457 
+ IoU: 0.991686 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05210495 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.039861  [    4/   89]
+loss: 0.060090  [    8/   89]
+loss: 0.053025  [   12/   89]
+loss: 0.054107  [   16/   89]
+loss: 0.044133  [   20/   89]
+loss: 0.065757  [   24/   89]
+loss: 0.046420  [   28/   89]
+loss: 0.055129  [   32/   89]
+loss: 0.047887  [   36/   89]
+loss: 0.057215  [   40/   89]
+loss: 0.053334  [   44/   89]
+loss: 0.044770  [   48/   89]
+loss: 0.044923  [   52/   89]
+loss: 0.065592  [   56/   89]
+loss: 0.065789  [   60/   89]
+loss: 0.046384  [   64/   89]
+loss: 0.044502  [   68/   89]
+loss: 0.055706  [   72/   89]
+loss: 0.050432  [   76/   89]
+loss: 0.063273  [   80/   89]
+loss: 0.053385  [   84/   89]
+loss: 0.057469  [   88/   89]
+loss: 0.058251  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04871714 
+ IoU: 0.991753 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05144429 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.042442  [    4/   89]
+loss: 0.047063  [    8/   89]
+loss: 0.055610  [   12/   89]
+loss: 0.052325  [   16/   89]
+loss: 0.050039  [   20/   89]
+loss: 0.049962  [   24/   89]
+loss: 0.056148  [   28/   89]
+loss: 0.049338  [   32/   89]
+loss: 0.053648  [   36/   89]
+loss: 0.053482  [   40/   89]
+loss: 0.054979  [   44/   89]
+loss: 0.054647  [   48/   89]
+loss: 0.048752  [   52/   89]
+loss: 0.068165  [   56/   89]
+loss: 0.043605  [   60/   89]
+loss: 0.048637  [   64/   89]
+loss: 0.051727  [   68/   89]
+loss: 0.054328  [   72/   89]
+loss: 0.076481  [   76/   89]
+loss: 0.066464  [   80/   89]
+loss: 0.039167  [   84/   89]
+loss: 0.054533  [   88/   89]
+loss: 0.040566  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04895805 
+ IoU: 0.991675 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05130499 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.049078  [    4/   89]
+loss: 0.074625  [    8/   89]
+loss: 0.052990  [   12/   89]
+loss: 0.043666  [   16/   89]
+loss: 0.054226  [   20/   89]
+loss: 0.056890  [   24/   89]
+loss: 0.053672  [   28/   89]
+loss: 0.043140  [   32/   89]
+loss: 0.057764  [   36/   89]
+loss: 0.050745  [   40/   89]
+loss: 0.060483  [   44/   89]
+loss: 0.045668  [   48/   89]
+loss: 0.061260  [   52/   89]
+loss: 0.045598  [   56/   89]
+loss: 0.050559  [   60/   89]
+loss: 0.046027  [   64/   89]
+loss: 0.042600  [   68/   89]
+loss: 0.056965  [   72/   89]
+loss: 0.053009  [   76/   89]
+loss: 0.064138  [   80/   89]
+loss: 0.044400  [   84/   89]
+loss: 0.053283  [   88/   89]
+loss: 0.059446  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04905933 
+ IoU: 0.991596 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05117806 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.053339  [    4/   89]
+loss: 0.065878  [    8/   89]
+loss: 0.053887  [   12/   89]
+loss: 0.048710  [   16/   89]
+loss: 0.047537  [   20/   89]
+loss: 0.061153  [   24/   89]
+loss: 0.055153  [   28/   89]
+loss: 0.044838  [   32/   89]
+loss: 0.045433  [   36/   89]
+loss: 0.044507  [   40/   89]
+loss: 0.055011  [   44/   89]
+loss: 0.059889  [   48/   89]
+loss: 0.072129  [   52/   89]
+loss: 0.050939  [   56/   89]
+loss: 0.050804  [   60/   89]
+loss: 0.048070  [   64/   89]
+loss: 0.064470  [   68/   89]
+loss: 0.046955  [   72/   89]
+loss: 0.046062  [   76/   89]
+loss: 0.058625  [   80/   89]
+loss: 0.059815  [   84/   89]
+loss: 0.043881  [   88/   89]
+loss: 0.089619  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04851884 
+ IoU: 0.991616 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05082826 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.054138  [    4/   89]
+loss: 0.042473  [    8/   89]
+loss: 0.064401  [   12/   89]
+loss: 0.051351  [   16/   89]
+loss: 0.058288  [   20/   89]
+loss: 0.048661  [   24/   89]
+loss: 0.042029  [   28/   89]
+loss: 0.062842  [   32/   89]
+loss: 0.043845  [   36/   89]
+loss: 0.055133  [   40/   89]
+loss: 0.045832  [   44/   89]
+loss: 0.048404  [   48/   89]
+loss: 0.042956  [   52/   89]
+loss: 0.053348  [   56/   89]
+loss: 0.062781  [   60/   89]
+loss: 0.059448  [   64/   89]
+loss: 0.060394  [   68/   89]
+loss: 0.055159  [   72/   89]
+loss: 0.041138  [   76/   89]
+loss: 0.054087  [   80/   89]
+loss: 0.047033  [   84/   89]
+loss: 0.045842  [   88/   89]
+loss: 0.090401  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04846909 
+ IoU: 0.991611 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05064426 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.055028  [    4/   89]
+loss: 0.060502  [    8/   89]
+loss: 0.050852  [   12/   89]
+loss: 0.056484  [   16/   89]
+loss: 0.047733  [   20/   89]
+loss: 0.051401  [   24/   89]
+loss: 0.070134  [   28/   89]
+loss: 0.042913  [   32/   89]
+loss: 0.053614  [   36/   89]
+loss: 0.043815  [   40/   89]
+loss: 0.040123  [   44/   89]
+loss: 0.049049  [   48/   89]
+loss: 0.057617  [   52/   89]
+loss: 0.046992  [   56/   89]
+loss: 0.047016  [   60/   89]
+loss: 0.053518  [   64/   89]
+loss: 0.052616  [   68/   89]
+loss: 0.046015  [   72/   89]
+loss: 0.063204  [   76/   89]
+loss: 0.047189  [   80/   89]
+loss: 0.047683  [   84/   89]
+loss: 0.057900  [   88/   89]
+loss: 0.037914  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04813564 
+ IoU: 0.991789 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05079946 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.050027  [    4/   89]
+loss: 0.049724  [    8/   89]
+loss: 0.040998  [   12/   89]
+loss: 0.049598  [   16/   89]
+loss: 0.060085  [   20/   89]
+loss: 0.042206  [   24/   89]
+loss: 0.066840  [   28/   89]
+loss: 0.049396  [   32/   89]
+loss: 0.079978  [   36/   89]
+loss: 0.056849  [   40/   89]
+loss: 0.044212  [   44/   89]
+loss: 0.051102  [   48/   89]
+loss: 0.051464  [   52/   89]
+loss: 0.042580  [   56/   89]
+loss: 0.044002  [   60/   89]
+loss: 0.062498  [   64/   89]
+loss: 0.054672  [   68/   89]
+loss: 0.057792  [   72/   89]
+loss: 0.055774  [   76/   89]
+loss: 0.055159  [   80/   89]
+loss: 0.041724  [   84/   89]
+loss: 0.045196  [   88/   89]
+loss: 0.039512  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04768922 
+ IoU: 0.991734 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.05033221 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.051715  [    4/   89]
+loss: 0.039510  [    8/   89]
+loss: 0.046733  [   12/   89]
+loss: 0.043098  [   16/   89]
+loss: 0.047349  [   20/   89]
+loss: 0.052657  [   24/   89]
+loss: 0.038429  [   28/   89]
+loss: 0.051205  [   32/   89]
+loss: 0.051644  [   36/   89]
+loss: 0.046962  [   40/   89]
+loss: 0.054095  [   44/   89]
+loss: 0.050424  [   48/   89]
+loss: 0.050581  [   52/   89]
+loss: 0.056044  [   56/   89]
+loss: 0.069763  [   60/   89]
+loss: 0.057170  [   64/   89]
+loss: 0.049544  [   68/   89]
+loss: 0.052869  [   72/   89]
+loss: 0.057177  [   76/   89]
+loss: 0.056745  [   80/   89]
+loss: 0.042554  [   84/   89]
+loss: 0.060622  [   88/   89]
+loss: 0.043560  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04787090 
+ IoU: 0.991491 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04973017 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.058446  [    4/   89]
+loss: 0.062280  [    8/   89]
+loss: 0.040794  [   12/   89]
+loss: 0.057866  [   16/   89]
+loss: 0.043448  [   20/   89]
+loss: 0.044174  [   24/   89]
+loss: 0.042235  [   28/   89]
+loss: 0.083218  [   32/   89]
+loss: 0.062090  [   36/   89]
+loss: 0.050139  [   40/   89]
+loss: 0.068254  [   44/   89]
+loss: 0.042876  [   48/   89]
+loss: 0.047436  [   52/   89]
+loss: 0.050461  [   56/   89]
+loss: 0.042107  [   60/   89]
+loss: 0.050569  [   64/   89]
+loss: 0.050999  [   68/   89]
+loss: 0.036230  [   72/   89]
+loss: 0.046808  [   76/   89]
+loss: 0.037356  [   80/   89]
+loss: 0.048026  [   84/   89]
+loss: 0.061146  [   88/   89]
+loss: 0.037061  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04748913 
+ IoU: 0.991576 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04970436 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.049221  [    4/   89]
+loss: 0.066576  [    8/   89]
+loss: 0.052282  [   12/   89]
+loss: 0.049543  [   16/   89]
+loss: 0.068741  [   20/   89]
+loss: 0.057929  [   24/   89]
+loss: 0.041776  [   28/   89]
+loss: 0.050985  [   32/   89]
+loss: 0.053625  [   36/   89]
+loss: 0.046386  [   40/   89]
+loss: 0.071517  [   44/   89]
+loss: 0.037078  [   48/   89]
+loss: 0.045705  [   52/   89]
+loss: 0.044662  [   56/   89]
+loss: 0.042058  [   60/   89]
+loss: 0.046299  [   64/   89]
+loss: 0.044339  [   68/   89]
+loss: 0.044807  [   72/   89]
+loss: 0.051793  [   76/   89]
+loss: 0.041189  [   80/   89]
+loss: 0.049968  [   84/   89]
+loss: 0.056207  [   88/   89]
+loss: 0.097745  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04729274 
+ IoU: 0.991638 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04959926 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.060311  [    4/   89]
+loss: 0.055954  [    8/   89]
+loss: 0.043727  [   12/   89]
+loss: 0.047903  [   16/   89]
+loss: 0.057724  [   20/   89]
+loss: 0.056741  [   24/   89]
+loss: 0.057186  [   28/   89]
+loss: 0.042148  [   32/   89]
+loss: 0.044803  [   36/   89]
+loss: 0.047779  [   40/   89]
+loss: 0.049018  [   44/   89]
+loss: 0.038580  [   48/   89]
+loss: 0.058506  [   52/   89]
+loss: 0.044922  [   56/   89]
+loss: 0.047034  [   60/   89]
+loss: 0.056688  [   64/   89]
+loss: 0.045398  [   68/   89]
+loss: 0.053206  [   72/   89]
+loss: 0.053748  [   76/   89]
+loss: 0.060631  [   80/   89]
+loss: 0.052612  [   84/   89]
+loss: 0.046774  [   88/   89]
+loss: 0.055179  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04666587 
+ IoU: 0.991659 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04915869 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.043776  [    4/   89]
+loss: 0.041652  [    8/   89]
+loss: 0.051017  [   12/   89]
+loss: 0.040289  [   16/   89]
+loss: 0.060475  [   20/   89]
+loss: 0.059728  [   24/   89]
+loss: 0.059402  [   28/   89]
+loss: 0.053970  [   32/   89]
+loss: 0.048798  [   36/   89]
+loss: 0.043409  [   40/   89]
+loss: 0.057517  [   44/   89]
+loss: 0.053511  [   48/   89]
+loss: 0.036621  [   52/   89]
+loss: 0.040624  [   56/   89]
+loss: 0.065530  [   60/   89]
+loss: 0.045092  [   64/   89]
+loss: 0.043787  [   68/   89]
+loss: 0.057296  [   72/   89]
+loss: 0.063997  [   76/   89]
+loss: 0.041672  [   80/   89]
+loss: 0.045150  [   84/   89]
+loss: 0.045697  [   88/   89]
+loss: 0.052836  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04689516 
+ IoU: 0.991548 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04901128 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.056575  [    4/   89]
+loss: 0.046443  [    8/   89]
+loss: 0.052813  [   12/   89]
+loss: 0.047403  [   16/   89]
+loss: 0.050360  [   20/   89]
+loss: 0.050778  [   24/   89]
+loss: 0.055423  [   28/   89]
+loss: 0.045895  [   32/   89]
+loss: 0.047507  [   36/   89]
+loss: 0.040412  [   40/   89]
+loss: 0.059097  [   44/   89]
+loss: 0.054584  [   48/   89]
+loss: 0.049595  [   52/   89]
+loss: 0.052043  [   56/   89]
+loss: 0.044052  [   60/   89]
+loss: 0.039898  [   64/   89]
+loss: 0.068070  [   68/   89]
+loss: 0.048340  [   72/   89]
+loss: 0.057339  [   76/   89]
+loss: 0.059448  [   80/   89]
+loss: 0.041036  [   84/   89]
+loss: 0.041783  [   88/   89]
+loss: 0.051344  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04637245 
+ IoU: 0.991606 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04867186 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.062070  [    4/   89]
+loss: 0.050629  [    8/   89]
+loss: 0.039928  [   12/   89]
+loss: 0.060625  [   16/   89]
+loss: 0.070102  [   20/   89]
+loss: 0.041602  [   24/   89]
+loss: 0.048189  [   28/   89]
+loss: 0.057091  [   32/   89]
+loss: 0.042409  [   36/   89]
+loss: 0.055383  [   40/   89]
+loss: 0.043567  [   44/   89]
+loss: 0.053340  [   48/   89]
+loss: 0.050375  [   52/   89]
+loss: 0.044118  [   56/   89]
+loss: 0.052829  [   60/   89]
+loss: 0.038781  [   64/   89]
+loss: 0.046788  [   68/   89]
+loss: 0.053717  [   72/   89]
+loss: 0.057663  [   76/   89]
+loss: 0.046506  [   80/   89]
+loss: 0.059372  [   84/   89]
+loss: 0.045930  [   88/   89]
+loss: 0.056841  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04614357 
+ IoU: 0.991568 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04836072 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.053453  [    4/   89]
+loss: 0.058888  [    8/   89]
+loss: 0.047518  [   12/   89]
+loss: 0.039105  [   16/   89]
+loss: 0.074644  [   20/   89]
+loss: 0.047693  [   24/   89]
+loss: 0.063879  [   28/   89]
+loss: 0.035354  [   32/   89]
+loss: 0.039282  [   36/   89]
+loss: 0.081464  [   40/   89]
+loss: 0.061593  [   44/   89]
+loss: 0.046076  [   48/   89]
+loss: 0.044111  [   52/   89]
+loss: 0.053289  [   56/   89]
+loss: 0.036360  [   60/   89]
+loss: 0.057932  [   64/   89]
+loss: 0.042720  [   68/   89]
+loss: 0.055299  [   72/   89]
+loss: 0.044551  [   76/   89]
+loss: 0.048301  [   80/   89]
+loss: 0.043247  [   84/   89]
+loss: 0.053815  [   88/   89]
+loss: 0.080486  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04514128 
+ IoU: 0.991779 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04796715 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.056686  [    4/   89]
+loss: 0.045892  [    8/   89]
+loss: 0.063375  [   12/   89]
+loss: 0.048066  [   16/   89]
+loss: 0.057074  [   20/   89]
+loss: 0.051475  [   24/   89]
+loss: 0.059368  [   28/   89]
+loss: 0.044070  [   32/   89]
+loss: 0.036764  [   36/   89]
+loss: 0.039082  [   40/   89]
+loss: 0.038875  [   44/   89]
+loss: 0.052053  [   48/   89]
+loss: 0.043858  [   52/   89]
+loss: 0.043354  [   56/   89]
+loss: 0.060553  [   60/   89]
+loss: 0.058159  [   64/   89]
+loss: 0.062452  [   68/   89]
+loss: 0.055513  [   72/   89]
+loss: 0.055800  [   76/   89]
+loss: 0.042662  [   80/   89]
+loss: 0.054747  [   84/   89]
+loss: 0.044185  [   88/   89]
+loss: 0.050271  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04576164 
+ IoU: 0.991661 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04819134 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.040793  [    4/   89]
+loss: 0.056837  [    8/   89]
+loss: 0.060195  [   12/   89]
+loss: 0.053470  [   16/   89]
+loss: 0.057353  [   20/   89]
+loss: 0.051290  [   24/   89]
+loss: 0.053815  [   28/   89]
+loss: 0.043525  [   32/   89]
+loss: 0.057474  [   36/   89]
+loss: 0.050359  [   40/   89]
+loss: 0.053764  [   44/   89]
+loss: 0.045601  [   48/   89]
+loss: 0.048603  [   52/   89]
+loss: 0.038288  [   56/   89]
+loss: 0.041571  [   60/   89]
+loss: 0.046149  [   64/   89]
+loss: 0.052668  [   68/   89]
+loss: 0.054147  [   72/   89]
+loss: 0.035561  [   76/   89]
+loss: 0.048577  [   80/   89]
+loss: 0.060862  [   84/   89]
+loss: 0.047436  [   88/   89]
+loss: 0.045358  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04502874 
+ IoU: 0.991779 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04780697 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.045812  [    4/   89]
+loss: 0.055798  [    8/   89]
+loss: 0.052868  [   12/   89]
+loss: 0.043903  [   16/   89]
+loss: 0.046494  [   20/   89]
+loss: 0.066819  [   24/   89]
+loss: 0.072425  [   28/   89]
+loss: 0.050943  [   32/   89]
+loss: 0.057383  [   36/   89]
+loss: 0.042777  [   40/   89]
+loss: 0.048913  [   44/   89]
+loss: 0.053636  [   48/   89]
+loss: 0.058572  [   52/   89]
+loss: 0.056764  [   56/   89]
+loss: 0.041190  [   60/   89]
+loss: 0.046561  [   64/   89]
+loss: 0.037154  [   68/   89]
+loss: 0.039727  [   72/   89]
+loss: 0.060552  [   76/   89]
+loss: 0.046769  [   80/   89]
+loss: 0.042951  [   84/   89]
+loss: 0.046968  [   88/   89]
+loss: 0.068528  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04462731 
+ IoU: 0.991776 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04737571 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.060432  [    4/   89]
+loss: 0.065772  [    8/   89]
+loss: 0.034830  [   12/   89]
+loss: 0.054511  [   16/   89]
+loss: 0.053244  [   20/   89]
+loss: 0.033324  [   24/   89]
+loss: 0.036146  [   28/   89]
+loss: 0.049186  [   32/   89]
+loss: 0.051829  [   36/   89]
+loss: 0.045626  [   40/   89]
+loss: 0.042094  [   44/   89]
+loss: 0.048960  [   48/   89]
+loss: 0.045074  [   52/   89]
+loss: 0.051047  [   56/   89]
+loss: 0.044053  [   60/   89]
+loss: 0.045627  [   64/   89]
+loss: 0.048931  [   68/   89]
+loss: 0.050496  [   72/   89]
+loss: 0.052469  [   76/   89]
+loss: 0.063113  [   80/   89]
+loss: 0.041246  [   84/   89]
+loss: 0.046815  [   88/   89]
+loss: 0.046022  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04513949 
+ IoU: 0.991585 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04750767 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.057997  [    4/   89]
+loss: 0.055138  [    8/   89]
+loss: 0.063104  [   12/   89]
+loss: 0.058327  [   16/   89]
+loss: 0.052635  [   20/   89]
+loss: 0.051474  [   24/   89]
+loss: 0.045671  [   28/   89]
+loss: 0.038638  [   32/   89]
+loss: 0.039427  [   36/   89]
+loss: 0.052872  [   40/   89]
+loss: 0.042281  [   44/   89]
+loss: 0.052845  [   48/   89]
+loss: 0.041496  [   52/   89]
+loss: 0.038639  [   56/   89]
+loss: 0.045789  [   60/   89]
+loss: 0.055674  [   64/   89]
+loss: 0.055416  [   68/   89]
+loss: 0.062410  [   72/   89]
+loss: 0.059356  [   76/   89]
+loss: 0.041110  [   80/   89]
+loss: 0.031054  [   84/   89]
+loss: 0.052437  [   88/   89]
+loss: 0.035700  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04473751 
+ IoU: 0.991798 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04747639 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.065364  [    4/   89]
+loss: 0.052626  [    8/   89]
+loss: 0.043401  [   12/   89]
+loss: 0.064754  [   16/   89]
+loss: 0.066256  [   20/   89]
+loss: 0.045468  [   24/   89]
+loss: 0.050563  [   28/   89]
+loss: 0.045474  [   32/   89]
+loss: 0.046310  [   36/   89]
+loss: 0.038587  [   40/   89]
+loss: 0.066525  [   44/   89]
+loss: 0.032270  [   48/   89]
+loss: 0.039237  [   52/   89]
+loss: 0.040455  [   56/   89]
+loss: 0.048341  [   60/   89]
+loss: 0.042516  [   64/   89]
+loss: 0.040023  [   68/   89]
+loss: 0.056446  [   72/   89]
+loss: 0.057500  [   76/   89]
+loss: 0.050931  [   80/   89]
+loss: 0.045210  [   84/   89]
+loss: 0.042202  [   88/   89]
+loss: 0.038841  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04500237 
+ IoU: 0.991707 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04749709 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.035423  [    4/   89]
+loss: 0.057126  [    8/   89]
+loss: 0.039489  [   12/   89]
+loss: 0.055796  [   16/   89]
+loss: 0.066359  [   20/   89]
+loss: 0.053154  [   24/   89]
+loss: 0.047951  [   28/   89]
+loss: 0.050345  [   32/   89]
+loss: 0.057628  [   36/   89]
+loss: 0.061583  [   40/   89]
+loss: 0.041565  [   44/   89]
+loss: 0.044294  [   48/   89]
+loss: 0.042536  [   52/   89]
+loss: 0.057568  [   56/   89]
+loss: 0.049686  [   60/   89]
+loss: 0.050324  [   64/   89]
+loss: 0.043920  [   68/   89]
+loss: 0.037588  [   72/   89]
+loss: 0.042130  [   76/   89]
+loss: 0.043026  [   80/   89]
+loss: 0.052199  [   84/   89]
+loss: 0.047735  [   88/   89]
+loss: 0.045836  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04477246 
+ IoU: 0.991581 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04709797 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.051462  [    4/   89]
+loss: 0.054215  [    8/   89]
+loss: 0.049812  [   12/   89]
+loss: 0.047734  [   16/   89]
+loss: 0.033199  [   20/   89]
+loss: 0.038474  [   24/   89]
+loss: 0.052134  [   28/   89]
+loss: 0.054809  [   32/   89]
+loss: 0.078554  [   36/   89]
+loss: 0.047979  [   40/   89]
+loss: 0.038311  [   44/   89]
+loss: 0.040599  [   48/   89]
+loss: 0.051589  [   52/   89]
+loss: 0.038750  [   56/   89]
+loss: 0.068732  [   60/   89]
+loss: 0.049654  [   64/   89]
+loss: 0.048858  [   68/   89]
+loss: 0.055502  [   72/   89]
+loss: 0.040571  [   76/   89]
+loss: 0.036013  [   80/   89]
+loss: 0.037709  [   84/   89]
+loss: 0.046001  [   88/   89]
+loss: 0.039246  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04463244 
+ IoU: 0.991570 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04680835 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.044396  [    4/   89]
+loss: 0.068482  [    8/   89]
+loss: 0.057190  [   12/   89]
+loss: 0.042516  [   16/   89]
+loss: 0.040171  [   20/   89]
+loss: 0.050387  [   24/   89]
+loss: 0.038886  [   28/   89]
+loss: 0.048081  [   32/   89]
+loss: 0.052337  [   36/   89]
+loss: 0.048453  [   40/   89]
+loss: 0.049205  [   44/   89]
+loss: 0.052161  [   48/   89]
+loss: 0.047423  [   52/   89]
+loss: 0.066678  [   56/   89]
+loss: 0.047689  [   60/   89]
+loss: 0.036586  [   64/   89]
+loss: 0.049609  [   68/   89]
+loss: 0.036131  [   72/   89]
+loss: 0.046257  [   76/   89]
+loss: 0.035372  [   80/   89]
+loss: 0.041945  [   84/   89]
+loss: 0.048544  [   88/   89]
+loss: 0.083353  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04450559 
+ IoU: 0.991605 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04682274 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.055433  [    4/   89]
+loss: 0.064596  [    8/   89]
+loss: 0.070780  [   12/   89]
+loss: 0.046957  [   16/   89]
+loss: 0.042904  [   20/   89]
+loss: 0.040909  [   24/   89]
+loss: 0.034934  [   28/   89]
+loss: 0.039348  [   32/   89]
+loss: 0.064649  [   36/   89]
+loss: 0.040860  [   40/   89]
+loss: 0.056012  [   44/   89]
+loss: 0.043947  [   48/   89]
+loss: 0.057331  [   52/   89]
+loss: 0.041629  [   56/   89]
+loss: 0.050241  [   60/   89]
+loss: 0.046655  [   64/   89]
+loss: 0.050730  [   68/   89]
+loss: 0.042826  [   72/   89]
+loss: 0.037868  [   76/   89]
+loss: 0.046917  [   80/   89]
+loss: 0.046402  [   84/   89]
+loss: 0.041669  [   88/   89]
+loss: 0.058225  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04383851 
+ IoU: 0.991781 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04659050 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.037930  [    4/   89]
+loss: 0.038679  [    8/   89]
+loss: 0.046043  [   12/   89]
+loss: 0.050411  [   16/   89]
+loss: 0.040748  [   20/   89]
+loss: 0.061951  [   24/   89]
+loss: 0.039478  [   28/   89]
+loss: 0.045362  [   32/   89]
+loss: 0.046819  [   36/   89]
+loss: 0.048094  [   40/   89]
+loss: 0.033839  [   44/   89]
+loss: 0.040589  [   48/   89]
+loss: 0.043073  [   52/   89]
+loss: 0.066196  [   56/   89]
+loss: 0.049214  [   60/   89]
+loss: 0.051545  [   64/   89]
+loss: 0.054543  [   68/   89]
+loss: 0.054531  [   72/   89]
+loss: 0.054069  [   76/   89]
+loss: 0.040251  [   80/   89]
+loss: 0.062780  [   84/   89]
+loss: 0.050599  [   88/   89]
+loss: 0.064323  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04359704 
+ IoU: 0.991666 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04618089 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.037049  [    4/   89]
+loss: 0.040907  [    8/   89]
+loss: 0.056251  [   12/   89]
+loss: 0.046560  [   16/   89]
+loss: 0.062599  [   20/   89]
+loss: 0.040867  [   24/   89]
+loss: 0.047327  [   28/   89]
+loss: 0.057512  [   32/   89]
+loss: 0.051590  [   36/   89]
+loss: 0.049128  [   40/   89]
+loss: 0.057846  [   44/   89]
+loss: 0.054423  [   48/   89]
+loss: 0.032221  [   52/   89]
+loss: 0.047698  [   56/   89]
+loss: 0.039217  [   60/   89]
+loss: 0.048915  [   64/   89]
+loss: 0.060379  [   68/   89]
+loss: 0.037769  [   72/   89]
+loss: 0.043941  [   76/   89]
+loss: 0.039489  [   80/   89]
+loss: 0.044095  [   84/   89]
+loss: 0.047303  [   88/   89]
+loss: 0.058738  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04399746 
+ IoU: 0.991520 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04607774 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.040549  [    4/   89]
+loss: 0.051534  [    8/   89]
+loss: 0.054103  [   12/   89]
+loss: 0.047661  [   16/   89]
+loss: 0.045796  [   20/   89]
+loss: 0.040235  [   24/   89]
+loss: 0.055665  [   28/   89]
+loss: 0.056495  [   32/   89]
+loss: 0.042561  [   36/   89]
+loss: 0.044726  [   40/   89]
+loss: 0.041324  [   44/   89]
+loss: 0.038661  [   48/   89]
+loss: 0.050532  [   52/   89]
+loss: 0.047102  [   56/   89]
+loss: 0.050220  [   60/   89]
+loss: 0.052393  [   64/   89]
+loss: 0.058033  [   68/   89]
+loss: 0.055149  [   72/   89]
+loss: 0.040397  [   76/   89]
+loss: 0.039139  [   80/   89]
+loss: 0.048929  [   84/   89]
+loss: 0.045979  [   88/   89]
+loss: 0.060292  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04367044 
+ IoU: 0.991581 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04591881 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.068248  [    4/   89]
+loss: 0.058023  [    8/   89]
+loss: 0.058258  [   12/   89]
+loss: 0.049090  [   16/   89]
+loss: 0.058101  [   20/   89]
+loss: 0.065091  [   24/   89]
+loss: 0.036995  [   28/   89]
+loss: 0.054511  [   32/   89]
+loss: 0.041305  [   36/   89]
+loss: 0.035536  [   40/   89]
+loss: 0.039216  [   44/   89]
+loss: 0.042103  [   48/   89]
+loss: 0.048936  [   52/   89]
+loss: 0.053033  [   56/   89]
+loss: 0.046761  [   60/   89]
+loss: 0.046297  [   64/   89]
+loss: 0.039465  [   68/   89]
+loss: 0.068695  [   72/   89]
+loss: 0.043775  [   76/   89]
+loss: 0.035214  [   80/   89]
+loss: 0.038420  [   84/   89]
+loss: 0.038082  [   88/   89]
+loss: 0.048323  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04415829 
+ IoU: 0.991444 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04601593 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.042018  [    4/   89]
+loss: 0.063616  [    8/   89]
+loss: 0.038136  [   12/   89]
+loss: 0.043538  [   16/   89]
+loss: 0.040132  [   20/   89]
+loss: 0.073827  [   24/   89]
+loss: 0.047121  [   28/   89]
+loss: 0.033682  [   32/   89]
+loss: 0.055293  [   36/   89]
+loss: 0.044134  [   40/   89]
+loss: 0.046846  [   44/   89]
+loss: 0.061108  [   48/   89]
+loss: 0.056131  [   52/   89]
+loss: 0.054404  [   56/   89]
+loss: 0.032299  [   60/   89]
+loss: 0.049097  [   64/   89]
+loss: 0.053730  [   68/   89]
+loss: 0.048447  [   72/   89]
+loss: 0.038553  [   76/   89]
+loss: 0.043650  [   80/   89]
+loss: 0.043217  [   84/   89]
+loss: 0.042007  [   88/   89]
+loss: 0.045680  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04334367 
+ IoU: 0.991679 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04589488 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.042465  [    4/   89]
+loss: 0.051987  [    8/   89]
+loss: 0.062778  [   12/   89]
+loss: 0.041458  [   16/   89]
+loss: 0.041633  [   20/   89]
+loss: 0.040813  [   24/   89]
+loss: 0.047097  [   28/   89]
+loss: 0.045984  [   32/   89]
+loss: 0.037465  [   36/   89]
+loss: 0.041353  [   40/   89]
+loss: 0.057913  [   44/   89]
+loss: 0.047645  [   48/   89]
+loss: 0.045987  [   52/   89]
+loss: 0.071777  [   56/   89]
+loss: 0.054227  [   60/   89]
+loss: 0.045106  [   64/   89]
+loss: 0.045649  [   68/   89]
+loss: 0.042805  [   72/   89]
+loss: 0.043649  [   76/   89]
+loss: 0.044407  [   80/   89]
+loss: 0.046821  [   84/   89]
+loss: 0.053653  [   88/   89]
+loss: 0.029672  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04302756 
+ IoU: 0.991699 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04559705 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.050616  [    4/   89]
+loss: 0.043232  [    8/   89]
+loss: 0.050868  [   12/   89]
+loss: 0.049423  [   16/   89]
+loss: 0.034684  [   20/   89]
+loss: 0.067673  [   24/   89]
+loss: 0.044313  [   28/   89]
+loss: 0.043348  [   32/   89]
+loss: 0.043259  [   36/   89]
+loss: 0.049176  [   40/   89]
+loss: 0.033277  [   44/   89]
+loss: 0.049498  [   48/   89]
+loss: 0.049004  [   52/   89]
+loss: 0.041366  [   56/   89]
+loss: 0.053825  [   60/   89]
+loss: 0.043298  [   64/   89]
+loss: 0.043147  [   68/   89]
+loss: 0.052268  [   72/   89]
+loss: 0.041606  [   76/   89]
+loss: 0.043198  [   80/   89]
+loss: 0.058995  [   84/   89]
+loss: 0.043850  [   88/   89]
+loss: 0.046125  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04332975 
+ IoU: 0.991542 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04548814 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.048998  [    4/   89]
+loss: 0.051895  [    8/   89]
+loss: 0.052410  [   12/   89]
+loss: 0.061669  [   16/   89]
+loss: 0.043967  [   20/   89]
+loss: 0.043214  [   24/   89]
+loss: 0.042804  [   28/   89]
+loss: 0.047713  [   32/   89]
+loss: 0.055766  [   36/   89]
+loss: 0.033798  [   40/   89]
+loss: 0.036804  [   44/   89]
+loss: 0.056884  [   48/   89]
+loss: 0.035495  [   52/   89]
+loss: 0.046309  [   56/   89]
+loss: 0.048713  [   60/   89]
+loss: 0.045880  [   64/   89]
+loss: 0.037029  [   68/   89]
+loss: 0.058062  [   72/   89]
+loss: 0.050435  [   76/   89]
+loss: 0.051181  [   80/   89]
+loss: 0.040883  [   84/   89]
+loss: 0.042279  [   88/   89]
+loss: 0.046713  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04243789 
+ IoU: 0.991810 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04536534 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.046357  [    4/   89]
+loss: 0.031590  [    8/   89]
+loss: 0.051899  [   12/   89]
+loss: 0.040462  [   16/   89]
+loss: 0.047020  [   20/   89]
+loss: 0.034656  [   24/   89]
+loss: 0.058898  [   28/   89]
+loss: 0.045343  [   32/   89]
+loss: 0.047896  [   36/   89]
+loss: 0.049573  [   40/   89]
+loss: 0.052381  [   44/   89]
+loss: 0.040269  [   48/   89]
+loss: 0.047609  [   52/   89]
+loss: 0.051280  [   56/   89]
+loss: 0.049057  [   60/   89]
+loss: 0.055589  [   64/   89]
+loss: 0.058331  [   68/   89]
+loss: 0.039561  [   72/   89]
+loss: 0.035105  [   76/   89]
+loss: 0.040627  [   80/   89]
+loss: 0.052592  [   84/   89]
+loss: 0.055907  [   88/   89]
+loss: 0.032502  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04230870 
+ IoU: 0.991766 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04521932 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.043652  [    4/   89]
+loss: 0.076551  [    8/   89]
+loss: 0.043515  [   12/   89]
+loss: 0.040132  [   16/   89]
+loss: 0.062583  [   20/   89]
+loss: 0.035164  [   24/   89]
+loss: 0.062824  [   28/   89]
+loss: 0.035633  [   32/   89]
+loss: 0.051054  [   36/   89]
+loss: 0.053681  [   40/   89]
+loss: 0.046232  [   44/   89]
+loss: 0.065254  [   48/   89]
+loss: 0.037175  [   52/   89]
+loss: 0.056990  [   56/   89]
+loss: 0.044818  [   60/   89]
+loss: 0.038966  [   64/   89]
+loss: 0.040747  [   68/   89]
+loss: 0.038161  [   72/   89]
+loss: 0.047373  [   76/   89]
+loss: 0.039396  [   80/   89]
+loss: 0.054585  [   84/   89]
+loss: 0.045396  [   88/   89]
+loss: 0.028033  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04266852 
+ IoU: 0.991715 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04524762 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.039598  [    4/   89]
+loss: 0.060632  [    8/   89]
+loss: 0.047432  [   12/   89]
+loss: 0.052538  [   16/   89]
+loss: 0.044092  [   20/   89]
+loss: 0.041101  [   24/   89]
+loss: 0.042310  [   28/   89]
+loss: 0.041862  [   32/   89]
+loss: 0.049445  [   36/   89]
+loss: 0.050632  [   40/   89]
+loss: 0.052873  [   44/   89]
+loss: 0.034133  [   48/   89]
+loss: 0.037599  [   52/   89]
+loss: 0.059679  [   56/   89]
+loss: 0.054039  [   60/   89]
+loss: 0.040553  [   64/   89]
+loss: 0.040348  [   68/   89]
+loss: 0.063478  [   72/   89]
+loss: 0.048281  [   76/   89]
+loss: 0.038063  [   80/   89]
+loss: 0.043839  [   84/   89]
+loss: 0.056155  [   88/   89]
+loss: 0.037934  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04214170 
+ IoU: 0.991728 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04487273 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.033728  [    4/   89]
+loss: 0.043447  [    8/   89]
+loss: 0.054272  [   12/   89]
+loss: 0.049876  [   16/   89]
+loss: 0.048352  [   20/   89]
+loss: 0.043613  [   24/   89]
+loss: 0.055615  [   28/   89]
+loss: 0.040966  [   32/   89]
+loss: 0.054064  [   36/   89]
+loss: 0.036990  [   40/   89]
+loss: 0.037238  [   44/   89]
+loss: 0.037194  [   48/   89]
+loss: 0.046452  [   52/   89]
+loss: 0.039916  [   56/   89]
+loss: 0.039254  [   60/   89]
+loss: 0.056664  [   64/   89]
+loss: 0.045304  [   68/   89]
+loss: 0.050530  [   72/   89]
+loss: 0.047404  [   76/   89]
+loss: 0.075264  [   80/   89]
+loss: 0.053932  [   84/   89]
+loss: 0.038307  [   88/   89]
+loss: 0.042149  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04193449 
+ IoU: 0.991696 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04455256 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.048999  [    4/   89]
+loss: 0.040453  [    8/   89]
+loss: 0.036597  [   12/   89]
+loss: 0.040366  [   16/   89]
+loss: 0.058648  [   20/   89]
+loss: 0.049465  [   24/   89]
+loss: 0.052964  [   28/   89]
+loss: 0.046198  [   32/   89]
+loss: 0.042044  [   36/   89]
+loss: 0.053735  [   40/   89]
+loss: 0.054468  [   44/   89]
+loss: 0.041736  [   48/   89]
+loss: 0.047710  [   52/   89]
+loss: 0.047651  [   56/   89]
+loss: 0.034165  [   60/   89]
+loss: 0.036174  [   64/   89]
+loss: 0.041321  [   68/   89]
+loss: 0.047707  [   72/   89]
+loss: 0.042589  [   76/   89]
+loss: 0.043277  [   80/   89]
+loss: 0.047741  [   84/   89]
+loss: 0.057982  [   88/   89]
+loss: 0.035837  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04255746 
+ IoU: 0.991540 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04471923 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.049111  [    4/   89]
+loss: 0.036610  [    8/   89]
+loss: 0.031233  [   12/   89]
+loss: 0.043762  [   16/   89]
+loss: 0.036690  [   20/   89]
+loss: 0.046261  [   24/   89]
+loss: 0.035185  [   28/   89]
+loss: 0.053103  [   32/   89]
+loss: 0.040955  [   36/   89]
+loss: 0.052753  [   40/   89]
+loss: 0.044578  [   44/   89]
+loss: 0.064267  [   48/   89]
+loss: 0.040611  [   52/   89]
+loss: 0.058666  [   56/   89]
+loss: 0.053119  [   60/   89]
+loss: 0.042603  [   64/   89]
+loss: 0.037708  [   68/   89]
+loss: 0.048001  [   72/   89]
+loss: 0.040226  [   76/   89]
+loss: 0.056622  [   80/   89]
+loss: 0.052711  [   84/   89]
+loss: 0.048543  [   88/   89]
+loss: 0.055655  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04214259 
+ IoU: 0.991592 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04449787 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.039872  [    4/   89]
+loss: 0.050879  [    8/   89]
+loss: 0.047508  [   12/   89]
+loss: 0.050699  [   16/   89]
+loss: 0.039688  [   20/   89]
+loss: 0.046060  [   24/   89]
+loss: 0.047808  [   28/   89]
+loss: 0.045438  [   32/   89]
+loss: 0.040018  [   36/   89]
+loss: 0.063787  [   40/   89]
+loss: 0.050676  [   44/   89]
+loss: 0.048404  [   48/   89]
+loss: 0.035917  [   52/   89]
+loss: 0.040853  [   56/   89]
+loss: 0.048722  [   60/   89]
+loss: 0.058755  [   64/   89]
+loss: 0.046269  [   68/   89]
+loss: 0.040360  [   72/   89]
+loss: 0.035783  [   76/   89]
+loss: 0.030390  [   80/   89]
+loss: 0.046371  [   84/   89]
+loss: 0.039883  [   88/   89]
+loss: 0.049152  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04170327 
+ IoU: 0.991737 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04453932 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.053889  [    4/   89]
+loss: 0.037146  [    8/   89]
+loss: 0.040937  [   12/   89]
+loss: 0.050693  [   16/   89]
+loss: 0.039008  [   20/   89]
+loss: 0.041997  [   24/   89]
+loss: 0.040103  [   28/   89]
+loss: 0.034182  [   32/   89]
+loss: 0.045049  [   36/   89]
+loss: 0.061410  [   40/   89]
+loss: 0.055595  [   44/   89]
+loss: 0.059693  [   48/   89]
+loss: 0.043028  [   52/   89]
+loss: 0.058898  [   56/   89]
+loss: 0.040287  [   60/   89]
+loss: 0.047010  [   64/   89]
+loss: 0.038038  [   68/   89]
+loss: 0.048500  [   72/   89]
+loss: 0.036048  [   76/   89]
+loss: 0.051818  [   80/   89]
+loss: 0.042143  [   84/   89]
+loss: 0.043067  [   88/   89]
+loss: 0.039343  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04192530 
+ IoU: 0.991534 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04428537 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.056950  [    4/   89]
+loss: 0.037360  [    8/   89]
+loss: 0.067061  [   12/   89]
+loss: 0.046142  [   16/   89]
+loss: 0.064167  [   20/   89]
+loss: 0.049596  [   24/   89]
+loss: 0.028124  [   28/   89]
+loss: 0.043742  [   32/   89]
+loss: 0.032087  [   36/   89]
+loss: 0.039146  [   40/   89]
+loss: 0.075952  [   44/   89]
+loss: 0.043712  [   48/   89]
+loss: 0.045997  [   52/   89]
+loss: 0.043692  [   56/   89]
+loss: 0.042868  [   60/   89]
+loss: 0.050548  [   64/   89]
+loss: 0.050803  [   68/   89]
+loss: 0.044920  [   72/   89]
+loss: 0.038651  [   76/   89]
+loss: 0.050284  [   80/   89]
+loss: 0.052033  [   84/   89]
+loss: 0.051056  [   88/   89]
+loss: 0.038017  [   23/   89]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.04134522 
+ IoU: 0.991774 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.04412727 
+ IoU: 0.990904 
+ F1: nan 
+

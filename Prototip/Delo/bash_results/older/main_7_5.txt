@@ -1,0 +1,62 @@
+Validation phase: True
+Namespace(iter_possible_stop=999999, BATCH_SIZE=4, NUM_OF_DATALOADER_WORKERS=10, NUM_TRAIN_ITERS_BETWEEN_PRUNINGS=1, SAVE_DIR='SegNet', PATH_TO_DATA='./sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.02)
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 30
+val dataset len: 30
+test dataset len: 30
+train dataloader num of batches: 8
+val dataloader num of batches: 8
+test dataloader num of batches: 8
+Device: cuda
+Goal resource value: 39250380718.08
+----------
+sortable_list[:5]: [(((0,), 0), 13, 0.030570540577173233), (((0,), 0), 43, 0.03423551097512245), (((0,), 0), 18, 0.034519992768764496), (((0,), 0), 11, 0.034584298729896545), (((0,), 0), 52, 0.03691773861646652)]
+disallowed_directly: {((0,), 58)}
+disallowed_tree_ixs: {((0,), 58)}
+Pruned ((0,), 0), real_kernel_ix: 13, initial_kernel_ix: 13
+Pruned ((0,), 2), real_input_slice_ix: 13, initial_input_slice_ix: 13
+----------
+Pruned ((0,), 1), real kernel ix (in code real_input_slice_ix): 13, initial_input_slice_ix: 13
+----------
+Pruned ((0,), 0), real_kernel_ix: 42, initial_kernel_ix: 43
+Pruned ((0,), 2), real_input_slice_ix: 42, initial_input_slice_ix: 43
+----------
+Pruned ((0,), 1), real kernel ix (in code real_input_slice_ix): 42, initial_input_slice_ix: 43
+----------
+Pruned ((0,), 0), real_kernel_ix: 17, initial_kernel_ix: 18
+Pruned ((0,), 2), real_input_slice_ix: 17, initial_input_slice_ix: 18
+----------
+Pruned ((0,), 1), real kernel ix (in code real_input_slice_ix): 17, initial_input_slice_ix: 18
+----------
+Pruned ((0,), 0), real_kernel_ix: 11, initial_kernel_ix: 11
+Pruned ((0,), 2), real_input_slice_ix: 11, initial_input_slice_ix: 11
+----------
+Pruned ((0,), 1), real kernel ix (in code real_input_slice_ix): 11, initial_input_slice_ix: 11
+----------
+Pruned ((0,), 0), real_kernel_ix: 48, initial_kernel_ix: 52
+Pruned ((0,), 2), real_input_slice_ix: 48, initial_input_slice_ix: 52
+----------
+Pruned ((0,), 1), real kernel ix (in code real_input_slice_ix): 48, initial_input_slice_ix: 52
+----------
+Traceback (most recent call last):
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/segnet_main.py", line 861, in <module>
+    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, error_ix=err_ix,
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/training_support.py", line 459, in train_automatically
+    curr_pickleable_conv_res_calc, are_there_more_to_prune_in_the_future = model_wrapper.prune(**pruning_kwargs_dict)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 207, in prune
+    are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once) # this already does resource_calc.calculate_resources(self.input_example) 
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/ModelWrapper.py", line 172, in _prune_n_kernels
+    are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 339, in prune
+    succeeded = self.prune_one_layer_recursive(curr_to_prune_elem, curr_conv_resource_calc, wrapper_model)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/pruner.py", line 392, in prune_one_layer_recursive
+    inextricable_following_to_prune = self.kernel_connection_fn(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)
+  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/segnet_main.py", line 442, in segnet_kernel_connection_fn
+    conn_destinations.append(conv_tree_ixs[23], kernel_ix)
+TypeError: list.append() takes exactly one argument (2 given)

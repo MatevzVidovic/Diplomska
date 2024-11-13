@@ -1,0 +1,94 @@
+Validation phase: True
+Namespace(ips=999999, bs=4, nodw=10, ntibp=2, sd='UNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=True, pbop=True, e_ix=3, mti=1000000000.0, map=2, nept=1, pnkao=50, nftp=1, rn='flops_num', ptp=0.05, tp=True, ifn=(0.5, 0.5, 0.5))
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+Goal resource value: 37985085030.4
+disallowed_directly: {(((0,), 9), 0)}
+disallowed_tree_ixs: {(((0,), 9), 0)}
+----------
+sortable_list[:5]: [((((((0,), 5), 1), 0), 0), 204, 0.0018790791509673), ((((((0,), 5), 1), 0), 0), 351, 0.0019512975122779608), ((((((0,), 5), 1), 0), 0), 223, 0.001964723924174905), ((((((0,), 5), 1), 0), 0), 178, 0.002029622672125697), ((((((0,), 5), 1), 0), 0), 376, 0.0020327442325651646)]
+Pruned (((((0,), 5), 1), 0), 0), real_kernel_ix: 204, initial_kernel_ix: 204
+Pruned (((((0,), 5), 1), 0), 3), real_input_slice_ix: 204, initial_input_slice_ix: 204
+----------
+Pruned (((((0,), 5), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 204, initial_input_slice_ix: 204
+----------
+Pruned (((((0,), 6), 1), 0), 0), real_kernel_ix: 119, initial_kernel_ix: 119
+Pruned (((((0,), 6), 1), 0), 3), real_input_slice_ix: 119, initial_input_slice_ix: 119
+----------
+Pruned (((((0,), 6), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 119, initial_input_slice_ix: 119
+----------
+Pruned ((((((0,), 4), 0), 1), 0), 0), real_kernel_ix: 97, initial_kernel_ix: 97
+Pruned ((((((0,), 4), 0), 1), 0), 3), real_input_slice_ix: 97, initial_input_slice_ix: 97
+----------
+Pruned ((((((0,), 4), 0), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 97, initial_input_slice_ix: 97
+----------
+Pruned ((((((0,), 3), 0), 1), 0), 3), real_kernel_ix: 154, initial_kernel_ix: 154
+Pruned ((((((0,), 4), 0), 1), 0), 0), real_input_slice_ix: 154, initial_input_slice_ix: 154
+Pruned (((((0,), 5), 1), 0), 0), real_input_slice_ix: 666, initial_input_slice_ix: 666
+----------
+Pruned ((((((0,), 3), 0), 1), 0), 4), real kernel ix (in code real_input_slice_ix): 154, initial_input_slice_ix: 154
+----------
+Pruned (((((0,), 7), 1), 0), 0), real_kernel_ix: 3, initial_kernel_ix: 3
+Pruned (((((0,), 7), 1), 0), 3), real_input_slice_ix: 3, initial_input_slice_ix: 3
+----------
+Pruned (((((0,), 7), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 3, initial_input_slice_ix: 3
+----------
+Pruned ((((((0,), 3), 0), 1), 0), 0), real_kernel_ix: 493, initial_kernel_ix: 493
+Pruned ((((((0,), 3), 0), 1), 0), 3), real_input_slice_ix: 493, initial_input_slice_ix: 493
+----------
+Pruned ((((((0,), 3), 0), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 493, initial_input_slice_ix: 493
+----------
+Pruned ((((((0,), 2), 0), 1), 0), 3), real_kernel_ix: 19, initial_kernel_ix: 19
+Pruned ((((((0,), 3), 0), 1), 0), 0), real_input_slice_ix: 19, initial_input_slice_ix: 19
+Pruned (((((0,), 6), 1), 0), 0), real_input_slice_ix: 275, initial_input_slice_ix: 275
+----------
+Pruned ((((((0,), 2), 0), 1), 0), 4), real kernel ix (in code real_input_slice_ix): 19, initial_input_slice_ix: 19
+----------
+Pruned ((((((0,), 2), 0), 1), 0), 0), real_kernel_ix: 5, initial_kernel_ix: 5
+Pruned ((((((0,), 2), 0), 1), 0), 3), real_input_slice_ix: 5, initial_input_slice_ix: 5
+----------
+Pruned ((((((0,), 2), 0), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 5, initial_input_slice_ix: 5
+----------
+Pruned ((((((0,), 1), 0), 1), 0), 3), real_kernel_ix: 74, initial_kernel_ix: 74
+Pruned ((((((0,), 2), 0), 1), 0), 0), real_input_slice_ix: 74, initial_input_slice_ix: 74
+Pruned (((((0,), 7), 1), 0), 0), real_input_slice_ix: 202, initial_input_slice_ix: 202
+----------
+Pruned ((((((0,), 1), 0), 1), 0), 4), real kernel ix (in code real_input_slice_ix): 74, initial_input_slice_ix: 74
+----------
+Pruned (((((0,), 8), 1), 0), 0), real_kernel_ix: 55, initial_kernel_ix: 55
+Pruned (((((0,), 8), 1), 0), 3), real_input_slice_ix: 55, initial_input_slice_ix: 55
+----------
+Pruned (((((0,), 8), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 55, initial_input_slice_ix: 55
+----------
+Pruned ((((((0,), 1), 0), 1), 0), 0), real_kernel_ix: 14, initial_kernel_ix: 14
+Pruned ((((((0,), 1), 0), 1), 0), 3), real_input_slice_ix: 14, initial_input_slice_ix: 14
+----------
+Pruned ((((((0,), 1), 0), 1), 0), 1), real kernel ix (in code real_input_slice_ix): 14, initial_input_slice_ix: 14
+----------
+Pruned ((((0,), 0), 0), 3), real_kernel_ix: 34, initial_kernel_ix: 34
+Pruned ((((((0,), 1), 0), 1), 0), 0), real_input_slice_ix: 34, initial_input_slice_ix: 34
+Pruned (((((0,), 8), 1), 0), 0), real_input_slice_ix: 98, initial_input_slice_ix: 98
+----------
+Pruned ((((0,), 0), 0), 4), real kernel ix (in code real_input_slice_ix): 34, initial_input_slice_ix: 34
+----------
+Pruned ((((0,), 0), 0), 0), real_kernel_ix: 18, initial_kernel_ix: 18
+Pruned ((((0,), 0), 0), 3), real_input_slice_ix: 18, initial_input_slice_ix: 18
+----------
+Pruned ((((0,), 0), 0), 1), real kernel ix (in code real_input_slice_ix): 18, initial_input_slice_ix: 18
+----------
+Pruned 13 layers. No more to prune.
+Current resource value: 39523050752
+Copied UNet_0_0_special_save.pth to ./UNet/safety_copies/actual_safety_copies
+There are no more kernels that could be pruned in the future.

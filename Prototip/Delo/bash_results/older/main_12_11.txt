@@ -1,0 +1,56 @@
+Validation phase: False
+Namespace(ips=999999, bs=4, nodw=10, ntibp=10, sd='SegNet', ptd='./vein_sclera_data', is_test_run=True, pruning_phase=False, pbop=False, e_ix=3, mti=2, map=1000000000.0, nept=1, pnkao=20, nftp=1, rn='flops_num', ptp=0.01)
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 30
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 8
+val dataloader num of batches: 7
+test dataloader num of batches: 3
+Device: cuda
+loss: 0.338026  [    4/   30]
+loss: 0.339018  [    8/   30]
+loss: 0.340413  [   12/   30]
+loss: 0.337840  [   16/   30]
+loss: 0.334922  [   20/   30]
+loss: 0.333968  [   24/   30]
+loss: 0.333546  [   28/   30]
+loss: 0.335241  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33424325 
+ IoU: 0.991672 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33474191 
+ IoU: 0.990904 
+ F1: nan 
+
+loss: 0.342909  [    4/   30]
+loss: 0.332588  [    8/   30]
+loss: 0.341535  [   12/   30]
+loss: 0.334591  [   16/   30]
+loss: 0.340695  [   20/   30]
+loss: 0.334040  [   24/   30]
+loss: 0.332020  [   28/   30]
+loss: 0.334006  [   16/   30]
+/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.33528007 
+ IoU: 0.991659 
+ F1: nan 
+
+test Error: 
+ Avg loss: 0.33591352 
+ IoU: 0.990904 
+ F1: nan 
+

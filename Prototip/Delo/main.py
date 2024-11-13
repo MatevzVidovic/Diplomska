@@ -31,16 +31,163 @@ from ModelWrapper import ModelWrapper
 
 from training_support import *
 
+from typing import Union
 
 
 
 
-# main changable parameters between trainings:
-SAVE_DIR = "UNet"
-IS_TEST_RUN = True
-PATH_TO_DATA = "./vein_sclera_data"
-NUM_OF_DATALOADER_WORKERS = 1
-BATCH_SIZE = 4
+
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Process an optional positional argument.")
+    
+
+
+
+    # Mandatory args:
+
+
+    parser.add_argument('--ips', type=int, default=1e9,
+                        help='iter_possible_stop An optional positional argument with a default value of 1e9')
+
+    parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
+    parser.add_argument("--nodw", type=int, default=1, help='NUM_OF_DATALOADER_WORKERS')
+    parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
+
+    parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
+    parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
+
+
+
+
+
+
+    
+    # These store True if the flag is present and False otherwise.
+    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
+    # So --pbop False would still give True to the pbop field.
+    # This is why they are implemented this way now.
+    parser.add_argument("-t", "--is_test_run", action='store_true',
+                        help='If present, enables test run')
+    parser.add_argument('-p', '--pruning_phase', action='store_true',
+                        help='If present, enables pruning phase (automatic pruning)')
+    parser.add_argument('--pbop', action='store_true',
+                        help='Prune by original percent, otherwise by number of filters')
+    
+
+    # Add the optional arguments
+    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+    parser.add_argument('--e_ix', type=int, default=3,
+                        help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
+    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
+    parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
+    parser.add_argument('--nept', type=int, default=1,
+                        help='Number of epochs per training iteration')
+    parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
+                        1. calculate the importance of all kernels
+                        2. prune n kernels based on these importances
+                        3. calculate the importances based on the new pruned model
+                        4. prune n kernels based on these new importances
+                        5. ...
+                        Repeat until we have pruned the desired amount of kernels.
+
+                        Then we go back to training the model until it is time for another pruning iteration.
+
+
+                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
+                        However, this is very slow. And also it doesn't make that much of a difference in quality.
+                        (would be better to do an actual retraining between the prunings then, 
+                        since we are doing so many epoch passes it is basically computationally worse than retraining).
+
+                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
+
+                        If you are not using --pbop, then you can set --pnkao to 1e9.
+                        Because the number of kernels we actually prune is capped by --nftp.
+                        It will look like this:
+                        1. calculate the importance of all kernels
+                        2. prune --nftp kernels based on these importances
+                        Done.
+
+                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
+                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
+                        So if you set it to 1e9, it will simply prune the whole model in one go.
+
+                        """)
+    parser.add_argument('--nftp', type=int, default=1,
+                        help='Number of filters to prune in one pruning')
+    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
+    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
+
+    parser.add_argument("--tp", action="store_true", help="test pruning. This makes it so all the conv layers have 0.999999 as their limit for flops. This generally means each one only gets one kernel to prune.",)
+    parser.add_argument("--ifn", type=Union[int, tuple], default=(0.5, 0.5, 0.5), help="Importance func. If 0, random pruning. If 1, uniform pruning. If tuple, we get IPAD with those 3 alphas.")
+
+    args = parser.parse_args()
+
+    iter_possible_stop = args.ips
+
+    NUM_OF_DATALOADER_WORKERS = args.nodw
+    BATCH_SIZE = args.bs
+    NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+    SAVE_DIR = args.sd
+    PATH_TO_DATA = args.ptd
+
+    IS_TEST_RUN = args.is_test_run
+    is_pruning_ph = args.pruning_phase
+    prune_by_original_percent = args.pbop
+
+    err_ix = args.e_ix
+    max_train_iters = args.mti
+    max_auto_prunings = args.map
+    num_ep_per_iter = args.nept
+
+    prune_n_kernels_at_once = args.pnkao
+    num_to_prune = args.nftp
+    resource_name = args.rn
+    proportion_to_prune = args.ptp
+
+    TEST_PRUNING = args.tp
+    IMPORTANCE_FN_DEFINER = args.ifn
+
+
+
+
+
+    # print("Currently disregarding the args. They are hardcoded in the script.")
+
+    # is_pruning_ph = IS_PRUNING_PH
+    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
+    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
+    # max_train_iters = MAX_TRAIN_ITERS
+    # max_auto_prunings = MAX_AUTO_PRUNINGS
+    # err_ix = ERR_IX
+    # resource_name = RESOURCE_NAME
+    # proportion_to_prune = PROPORTION_TO_PRUNE
+
+
+
+
+
+    pruning_kwargs = {
+        "prune_by_original_percent": prune_by_original_percent,
+        "prune_n_kernels_at_once": prune_n_kernels_at_once,
+        "num_of_prunes": num_to_prune,
+        "resource_name": resource_name,
+        "original_proportion_to_prune": proportion_to_prune
+    }
+
+    print(f"Validation phase: {is_pruning_ph}")
+    print(args)
+
+
+
+# # main changable parameters between trainings:
+# SAVE_DIR = "UNet"
+# IS_TEST_RUN = True
+# PATH_TO_DATA = "./vein_sclera_data"
+# NUM_OF_DATALOADER_WORKERS = 1
+# BATCH_SIZE = 4
 
 
 # program args that could be hardcoded here:
@@ -438,7 +585,7 @@ def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_mo
 # ( \sum x_i + \sum x_j ) / (n_0 + n_1)
 # # Which is the correct mean of all the elements. By induction, the same logic applies to all iterations.  
 
-
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # IF USING INPUT OR MODULE WEIGHTS, YOU HAVE TO DETACH THEM!!!!!
 # Also, input is a tuple, so you have to figure out what it really is first - I haven't looked into it.
 # The output has already been detached, so we don't need to worry about backpropagation.
@@ -453,19 +600,24 @@ def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_mo
 #     Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
 # RuntimeError: Function ConvolutionBackward0 returned an invalid gradient at index 1 - got [128, 255, 3, 3] but expected shape compatible with [128, 256, 3, 3]
 
+# We would like to also use weights in our importance calculation.
+# The easiest and conceptually best place to put them is in the averaging function (outside of making their own function).
+# It doesn't make sense to average them, so we would just save them when the first average is made.
 
-INITIAL_AVG_OBJECT = (0, None)
+
+INITIAL_AVG_OBJECT = (0, None, None)
 def averaging_function(module, input, output, prev_avg_object):
     
     batch_size = output.shape[0]
     batch_mean = output.mean(dim=(0))
 
     if prev_avg_object[1] is None:
-        new_avg_object = (batch_size, batch_mean)
+        new_avg_object = (batch_size, batch_mean, module.weight.data.detach().clone())
         return new_avg_object
 
     new_avg_object = (prev_avg_object[0] + batch_size, 
-                      (prev_avg_object[0] * prev_avg_object[1] + batch_size * batch_mean) / (prev_avg_object[0] + batch_size))
+                      (prev_avg_object[0] * prev_avg_object[1] + batch_size * batch_mean) / (prev_avg_object[0] + batch_size),
+                        prev_avg_object[2])
 
     return new_avg_object 
 
@@ -488,6 +640,8 @@ def averaging_function(module, input, output, prev_avg_object):
 
 
 
+
+
 def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
     assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
     
@@ -498,7 +652,7 @@ def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
         # To convert this ix to the initial unpruned models kernel ix, use the pruner's
         # state of active kernels.
 
-        tree_ix_2_kernel_importances = {}
+        tree_ix_2_kernels_importances = {}
         for tree_ix in conv_tree_ixs:
 
             kernels_average_activation = averaging_objects[tree_ix][1]
@@ -510,24 +664,141 @@ def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
             # print(overall_average_activation)
             h = kernels_average_activation.shape[1]
             w = kernels_average_activation.shape[2]
-            L1_ADC = torch.abs(kernels_average_activation - overall_average_activation).sum(dim=(1,2)) / (h*w)
-            L2_ADC = (kernels_average_activation - overall_average_activation).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
-            kernel_importance = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
+            diff = kernels_average_activation - overall_average_activation
+            L1_ADC = torch.abs(diff).sum(dim=(1,2)) / (h*w)
+            L2_ADC = (diff).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
+            kernels_importances = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
             # print(f"L1_ADC: {L1_ADC}")
             # print(f"L2_ADC: {L2_ADC}")
-            # print(kernel_importance.shape)
-            # print(kernel_importance)
+            # print(kernels_importances.shape)
+            # print(kernels_importances)
 
-            tree_ix_2_kernel_importances[tree_ix] = kernel_importance
+            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
         
         
-        return tree_ix_2_kernel_importances
+        return tree_ix_2_kernels_importances
         
     
     return IPAD_kernel_importance_fn
-        
 
-IMPORTANCE_FN = IPAD_kernel_importance_fn_generator(0.5)
+
+
+
+def weights_importance_fn_generator(L1_over_L2_alpha):
+    assert L1_over_L2_alpha > 0 and L1_over_L2_alpha < 1, "L1_over_L2_alpha must be between 0 and 1."
+    
+    def weights_importance_fn(averaging_objects: dict, conv_tree_ixs):
+        # Returns dict tree_ix_2_list_of_kernel_importances
+        # The ix-th importance is for the kernel currently on the ix-th place.
+        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
+        # state of active kernels.
+
+        tree_ix_2_kernels_importances = {}
+        for tree_ix in conv_tree_ixs:
+            
+            # [num_of_kernels, depth, h, w]
+            kernels_weights = averaging_objects[tree_ix][2]
+            overall_weights = kernels_weights.mean(dim=(0))
+            d = kernels_weights.shape[1]
+            h = kernels_weights.shape[2]
+            w = kernels_weights.shape[3]
+            L1 = torch.abs(kernels_weights - overall_weights).sum(dim=(1,2,3)) / (d*h*w)
+            L2 = (kernels_weights - overall_weights).pow(2).sum(dim=(1,2,3)).sqrt() / (d*h*w)
+            kernels_importances = L1_over_L2_alpha * L1 + (1 - L1_over_L2_alpha) * L2
+
+            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
+        
+        
+        return tree_ix_2_kernels_importances
+        
+    
+    return weights_importance_fn
+
+
+
+def IPAD_and_weights(IPAD_over_weights_alpha, IPAD_L1_ADC_weight, weights_L1_over_L2_alpha):
+    assert IPAD_over_weights_alpha > 0 and IPAD_over_weights_alpha < 1, "IPAD_over_weights_alpha must be between 0 and 1."
+
+    IPAD_fn = IPAD_kernel_importance_fn_generator(IPAD_L1_ADC_weight)
+    weights_fn = weights_importance_fn_generator(weights_L1_over_L2_alpha)
+
+    def joined_imporance_fn(averaging_objects: dict, conv_tree_ixs):
+        IPAD_importances = IPAD_fn(averaging_objects, conv_tree_ixs)
+        weights_importances = weights_fn(averaging_objects, conv_tree_ixs)
+
+        joined_importances = {}
+        for tree_ix in conv_tree_ixs:
+            joined_importances[tree_ix] = IPAD_over_weights_alpha * IPAD_importances[tree_ix] + (1 - IPAD_over_weights_alpha) * weights_importances[tree_ix]
+
+        return joined_importances
+
+    return joined_imporance_fn
+
+
+
+def random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
+    tree_ix_2_kernel_importances = {}
+    for tree_ix in conv_tree_ixs:
+        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
+        kernel_importance = torch.rand(num_of_kernels)
+        tree_ix_2_kernel_importances[tree_ix] = kernel_importance
+
+    return tree_ix_2_kernel_importances
+
+
+
+# Da imamo najmanjše importance v layerju, čigar curr_conv_ix (ix v conv_tree_ixs) je enak oziroma njabližje CURR_PRUNING_IX.
+# Znotraj layerja pa imajo kernels v V shapeu - da se vedno na sredini prunea (saj uniform pruning bi bil, da vedno 0-tega prunaš.- Ampak mi ni všeč, da se vedno the edge one prunea. Raje da vedno the middle one.)
+# Za posamezen layer določimo oddaljenost od trenutnega pruninga:
+# curr_dist = abs(curr_conv_ix - CURR_PRUNING_IX)
+# Naredi torej recimo, da kernel importances iz sredine proti robu rastejo med:
+# curr_dist in curr_dist+1.
+
+CURRENT_PRUNING_IX = 0
+def uniform_random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
+
+    global CURRENT_PRUNING_IX
+
+    tree_ix_2_kernel_importances = {}
+    for ix, tree_ix in enumerate(conv_tree_ixs):
+        
+        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
+        curr_dist = abs(ix - CURRENT_PRUNING_IX)
+
+        middle_kernel_ix = num_of_kernels // 2
+        ixs = torch.arange(num_of_kernels)
+        kernel_distances = torch.abs(ixs - middle_kernel_ix)
+        
+        # should look sth like: [1.0, 0.97,...,0.0, 0.02, ... 1.0]
+        base_importances = kernel_distances.float() / kernel_distances.max().float()
+        # and now we put them in the right bracket based on distance of the layer from the current pruning ix
+        final_importances = base_importances + curr_dist
+        
+        tree_ix_2_kernel_importances[tree_ix] = final_importances
+    
+    CURRENT_PRUNING_IX += 1
+    if CURRENT_PRUNING_IX >= len(conv_tree_ixs):
+        CURRENT_PRUNING_IX = 0
+
+
+    return tree_ix_2_kernel_importances
+
+
+
+
+
+
+
+
+if IMPORTANCE_FN_DEFINER == 0:
+    IMPORTANCE_FN = random_pruning_importance_fn
+elif IMPORTANCE_FN_DEFINER == 1:
+    IMPORTANCE_FN = uniform_random_pruning_importance_fn
+else:
+    IMPORTANCE_FN = IPAD_and_weights(*IMPORTANCE_FN_DEFINER)
+
+
+
 
 
 
@@ -598,13 +869,74 @@ if __name__ == "__main__":
 
 
 
+
+
+
     tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
-    # Go see model graph to help you choose the right layers to prune.
-    # model_wrapper.model_graph()
 
-    # If you change FLOPS_min_res_percents and weights_min_res_percents between runnings of main, 
+    # If you change FLOPS_min_res_percents and weights_min_res_percents 
+    # or other disallowments
+    # between runnings of main, 
     # the new onew will be used. So you can have an effect on your training by doing this.
+
+    
+
+
+    
+
+
+    # Here we abuse the min_res_percentage class to disallow certain prunings.
+    # Both for general disallowments and for choice disallowments
+    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
+
+    # Important disallowing:
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
+    # Because otherwise your num of classes of the output (pred) will change.
+    # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    generally_disallowed = min_resource_percentage(tree_ix_2_name)
+
+    disallowed_dict = {
+        model_wrapper.conv_tree_ixs[18] : 1.1
+    }
+    generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
+
+
+
+
+    # Choice disallowing:
+    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
+    choice_disallowed = min_resource_percentage(tree_ix_2_name)
+    
+    # For segnet:
+    # conv_tree_ixs = model_wrapper.conv_tree_ixs
+    # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+    # The reasoning for this choice comes from kernel_connection_fn:
+    # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
+    # Because the kernel nums must match.
+    # """
+    # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+
+    # # Pairs of conv ixs:
+    # # 1 23
+    # # 3 21
+    # # 6 18
+    # # 9 15
+    # """
+    
+    # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+    #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+    # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+
+    
+    
+
+
+
+
+
 
     FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
     FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
@@ -616,16 +948,9 @@ if __name__ == "__main__":
 
 
 
+    if TEST_PRUNING:
+        FLOPS_min_res_percents.set_by_name("Conv2d", 0.999999)
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
-    # Because otherwise your num of classes of the output (pred) will change.
-    # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    disallowed_dict = {
-        model_wrapper.conv_tree_ixs[18] : 1.1
-    }
-    FLOPS_min_res_percents.set_by_tree_ix_dict(disallowed_dict)
 
 
 
@@ -633,7 +958,24 @@ if __name__ == "__main__":
     weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    model_wrapper.initialize_pruning(get_importance_dict, unet_input_slice_connection_fn, unet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)
+
+
+    
+
+    pruning_disallowments = {
+        "general" : generally_disallowed.min_resource_percentage_dict,
+        "choice" : choice_disallowed.min_resource_percentage_dict,
+        "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
+        "weights" : weights_min_res_percents.min_resource_percentage_dict
+    }
+
+
+
+
+
+
+
+    model_wrapper.initialize_pruning(get_importance_dict, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments)
 
 
 
@@ -673,7 +1015,7 @@ if __name__ == "__main__":
         
         # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
 
-        if (curr_train_iter - last_pruning_train_iter) >= 10:
+        if (curr_train_iter - last_pruning_train_iter) >= NUM_TRAIN_ITERS_BETWEEN_PRUNINGS:
             return True
         
         return False
@@ -698,115 +1040,6 @@ if __name__ == "__main__":
             
         return returner
         """
-
-
-
-    parser = argparse.ArgumentParser(description="Process an optional positional argument.")
-
-    # Add the optional positional arguments
-    parser.add_argument('iter_possible_stop', nargs='?', type=int, default=1e9,
-                        help='An optional positional argument with a default value of 1e9')
-    
-    # These store True if the flag is present and False otherwise.
-    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
-    # So --pbop False would still give True to the pbop field.
-    # This is why they are implemented this way now.
-    parser.add_argument('-p', '--pruning_phase', action='store_true',
-                        help='If present, enables pruning phase (automatic pruning)')
-    parser.add_argument('--pbop', action='store_true',
-                        help='Prune by original percent, otherwise by number of filters')
-    
-
-    # Add the optional arguments
-    # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
-    parser.add_argument('--e_ix', type=int, default=3,
-                        help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
-    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
-    parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
-    parser.add_argument('--nept', type=int, default=1,
-                        help='Number of epochs per training iteration')
-    parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
-                        1. calculate the importance of all kernels
-                        2. prune n kernels based on these importances
-                        3. calculate the importances based on the new pruned model
-                        4. prune n kernels based on these new importances
-                        5. ...
-                        Repeat until we have pruned the desired amount of kernels.
-
-                        Then we go back to training the model until it is time for another pruning iteration.
-
-
-                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
-                        However, this is very slow. And also it doesn't make that much of a difference in quality.
-                        (would be better to do an actual retraining between the prunings then, 
-                        since we are doing so many epoch passes it is basically computationally worse than retraining).
-
-                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
-
-                        If you are not using --pbop, then you can set --pnkao to 1e9.
-                        Because the number of kernels we actually prune is capped by --nftp.
-                        It will look like this:
-                        1. calculate the importance of all kernels
-                        2. prune --nftp kernels based on these importances
-                        Done.
-
-                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
-                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
-                        So if you set it to 1e9, it will simply prune the whole model in one go.
-
-                        """)
-    parser.add_argument('--nftp', type=int, default=1,
-                        help='Number of filters to prune in one pruning')
-    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
-
-    args = parser.parse_args()
-
-    is_pruning_ph = args.pruning_phase
-    iter_possible_stop = args.iter_possible_stop
-
-    err_ix = args.e_ix
-    max_train_iters = args.mti
-    max_auto_prunings = args.map
-    num_ep_per_iter = args.nept
-
-    prune_by_original_percent = args.pbop
-    prune_n_kernels_at_once = args.pnkao
-    num_to_prune = args.nftp
-    resource_name = args.rn
-    proportion_to_prune = args.ptp
-
-
-
-
-
-    # print("Currently disregarding the args. They are hardcoded in the script.")
-
-    # is_pruning_ph = IS_PRUNING_PH
-    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
-    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
-    # max_train_iters = MAX_TRAIN_ITERS
-    # max_auto_prunings = MAX_AUTO_PRUNINGS
-    # err_ix = ERR_IX
-    # resource_name = RESOURCE_NAME
-    # proportion_to_prune = PROPORTION_TO_PRUNE
-
-
-
-
-
-    pruning_kwargs = {
-        "prune_n_kernels_at_once": prune_n_kernels_at_once,
-        "prune_by_original_percent": prune_by_original_percent,
-        "num_of_prunes": num_to_prune,
-        "resource_name": resource_name,
-        "original_proportion_to_prune": proportion_to_prune
-    }
-
-    print(f"Validation phase: {is_pruning_ph}")
-    print(args)
-
-
 
 
 

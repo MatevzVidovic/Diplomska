@@ -24,10 +24,11 @@ class pruner:
 
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, FLOPS_min_resource_percentage, weights_min_resource_percentage, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, input_example):
+    def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, input_example):
         self.initial_conv_resource_calc = initial_conv_resource_calc
-        self.FLOPS_min_resource_percentage_dict = FLOPS_min_resource_percentage.min_resource_percentage_dict
-        self.weights_min_resource_percentage_dict = weights_min_resource_percentage.min_resource_percentage_dict
+        self.pruning_disallowments = pruning_disallowments
+        # self.pruning_disallowments["FLOPS"] = FLOPS_min_resource_percentage.min_resource_percentage_dict
+        # self.pruning_disallowments["weights"] = weights_min_resource_percentage.min_resource_percentage_dict
         self.input_slice_connection_fn = input_slice_connection_fn
         self.kernel_connection_fn = kernel_connection_fn
         self.conv_tree_ixs = conv_tree_ixs
@@ -216,27 +217,34 @@ class pruner:
 
         # first we find all the tree_ixs which are disallowed directly
 
-        # print(self.FLOPS_min_resource_percentage_dict)
+        # print(self.pruning_disallowments["FLOPS"])
 
         disallowed_directly = set()
-        for tree_ix in self.FLOPS_min_resource_percentage_dict:
+
+        for tree_ix, limit in self.pruning_disallowments["general"].items():
+            if limit > 1.0:
+                disallowed_directly.add(tree_ix)
+
+
+        for tree_ix, limit in self.pruning_disallowments["FLOPS"].items():
             try:
                 curr_flops_percentage = curr_conv_resource_calc.resource_name_2_resource_dict["flops_num"][tree_ix] / self.initial_conv_resource_calc.resource_name_2_resource_dict["flops_num"][tree_ix]
             except ZeroDivisionError:
                 curr_flops_percentage = 0
 
-            # print(self.FLOPS_min_resource_percentage_dict[tree_ix])
+            # print(self.pruning_disallowments["FLOPS"][tree_ix])
             # print(curr_flops_percentage)
-            if curr_flops_percentage < self.FLOPS_min_resource_percentage_dict[tree_ix]:
+            if curr_flops_percentage < limit:
                 disallowed_directly.add(tree_ix)
 
-        for tree_ix in self.weights_min_resource_percentage_dict:
+
+        for tree_ix, limit in self.pruning_disallowments["weights"].items():
             try:
                 curr_weights_percentage = curr_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix] / self.initial_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix]
             except ZeroDivisionError:
                 curr_weights_percentage = 0
                 
-            if curr_weights_percentage < self.weights_min_resource_percentage_dict[tree_ix]:
+            if curr_weights_percentage < limit:
                 disallowed_directly.add(tree_ix)
         
 
@@ -252,7 +260,27 @@ class pruner:
                         disallowed_tree_ixs.add(tree_ix)
                         break
         
-        return disallowed_directly, disallowed_tree_ixs
+
+
+        disallowed_choices = set()
+        for tree_ix, limit in self.pruning_disallowments["choice"].items():
+            if limit > 1.0:
+                disallowed_choices.add(tree_ix)
+        
+
+        disallowed_choices_tree_ixs = set()
+        for tree_ix in self.conv_tree_ixs:
+            if tree_ix in disallowed_choices:
+                disallowed_choices_tree_ixs.add(tree_ix)
+            else:
+                parents = curr_conv_resource_calc.module_tree_ix_2_all_parents_to_root_tree_ix_list[tree_ix]
+                for parent in parents:
+                    if parent in disallowed_choices:
+                        disallowed_choices_tree_ixs.add(tree_ix)
+                        break
+
+        
+        return disallowed_directly, disallowed_tree_ixs, disallowed_choices, disallowed_choices_tree_ixs
 
     
     def prune(self, num_to_prune, importance_dict, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
@@ -261,7 +289,60 @@ class pruner:
 
         
         
-        # We sort the kernels by their importance
+
+
+
+
+
+        # Pruning works like this:
+        """
+        Ot of the not-disallowed kernels, we sort them by their importance,
+        and keep pruning the least important ones until we have pruned num_to_prune of them.
+
+
+        We figure out 2 types of disallowments:
+        - general disallowments (like a limit on the amount of kernels)
+        - choice disallowments (the ones we can't choose to prune, but they can be pruned as a consequence of another layer being chosen)
+        (This happens throug kernel_connection_fn (architectures like ResNet and SegNet))
+
+        Here we take out all the ones that are disallowed in any of these 2 categories.
+
+        In prune_one_layer_recursive() we would then recursively prune all the layers that are inextricably connected to the pruned layer.
+        But before we do that, we go and check if any of the ones that would be pruned are disallowed - if any of them shouldn't be pruned, just return False.
+
+        And this is how pruning is done.
+        """
+
+
+        # TODO
+        # This would be better if we had conv_resource_calc.module_tree_ix_2_all_children_conv_tree_ixs_list
+        # We would only go through all tree_ixs once and record which conv_tree_ixs are disallowed.
+        # Now we go through all tree_ixs once, and then for all conv tree ix-s we go to the root. Not as nice.
+
+
+        disallowed_directly, disallowed_tree_ixs, _, disallowed_choices_tree_ixs = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
+
+        print(f"disallowed_directly: {disallowed_directly}")
+        print(f"disallowed_tree_ixs: {disallowed_tree_ixs}")
+
+
+        choice_disallowments = disallowed_tree_ixs.union(disallowed_choices_tree_ixs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # We plan to sort the kernels by their importance
 
         # importance_dict is:  {tree_ix: 1d_tensor_of_importances}
         # We have to convert these 1d tensors to
@@ -270,19 +351,19 @@ class pruner:
 
         sortable_list = []
         for tree_ix, importance_tensor in importance_dict.items():
+            
+            # Here we prevent the disallowed ones from being pruned.
+            if tree_ix in choice_disallowments:
+                continue
+
             for real_kernel_ix, importance in enumerate(importance_tensor):
                 sortable_list.append((tree_ix, real_kernel_ix, float(importance)))
         
+
+
+       
         sortable_list.sort(key=lambda x: x[2])
 
-        # print(sortable_list)
-        # input()
-
-        # Then we find out which tree_ixs are disallowed due to resource thresholds
-
-        # This would be better if we had conv_resource_calc.module_tree_ix_2_all_children_conv_tree_ixs_list
-        # We would only go through all tree_ixs once and record which conv_tree_ixs are disallowed.
-        # Now we go through all tree_ixs once, and then for all conv tree ix-s we go to the root. Not as nice.
 
         
         
@@ -292,49 +373,28 @@ class pruner:
 
 
 
-
-        # This step could be omitted, because .prune_one_layer_recursive() does it.
-        # But ist is better to have it, so that if we already know from the current tree_ix, that this can't be pruned,
-        #  we don't call .prune_one_layer_recursive() which would have to build this disallowed set and then just return False.
-        
-        # Just to explain: .prune_one_layer_recursive() doesn't just check if the tree_ix of the current layer is disallowed.
-        # It also checks if any of the layers that would recursively be pruned are disallowed.
-        # If any of them is, it returns False without pruning anything.
-
-        # This is important for networks like ResNet, where the layers are connected in a way that if you prune one, you have to prune the following ones too.
-        # Not just the input slices of the following layers, but actually prune their kernels.
-
-        # So, if the current layer is disallowed before we even started with pruning, no need to run .prune_one_layer_recursive().
-
-
-        # And this isn't even faster, because we have to make the list of all the kernels that can be pruned.
-        
-        disallowed_directly, disallowed_tree_ixs = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
-
-        print(f"disallowed_directly: {disallowed_directly}")
-        print(f"disallowed_tree_ixs: {disallowed_tree_ixs}")
-
-        # Then we find the least important ones that aren't disallowed.
-        to_prune = [(tree_ix, real_kernel_ix) for tree_ix, real_kernel_ix, importance in sortable_list if tree_ix not in disallowed_tree_ixs]
         
 
-        if len(to_prune) == 0:
+        if len(sortable_list) == 0:
             print("No more to prune!!!")
             return False
         
 
         
 
+        # ----------TAKE REAL_KERNEL_IXS TO THE INITIAL_KERNEL_IXS----------
         # We have to take to_prune to the initial kernel_ixs, because with the current mechanism of pruning num_to_prune at once
         # once we prune a kernel, if we then also go prune a kernel in the same layer, the kernel ix is wrong.
-        to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix in to_prune] 
+        to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix, _ in sortable_list]
 
 
 
 
         num_pruned = 0
         for to_prune_elem in to_prune:
+
             curr_to_prune_elem = (to_prune_elem[0], self.tree_ix_2_list_of_initial_kernel_ixs[to_prune_elem[0]].index(to_prune_elem[1]))
+
             # this also does curr_conv_resource_calc.calculate_resources(self.input_example)
             succeeded = self.prune_one_layer_recursive(curr_to_prune_elem, curr_conv_resource_calc, wrapper_model)
             if succeeded:
@@ -356,6 +416,9 @@ class pruner:
 
     def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, check_if_disallowed=True):
         
+        # to_prune is (tree_ix, real_kernel_ix)
+
+
         # check_disallowed is True in usual calls.
         # But when it calls itself recursively, it is False - because it had to be checked in advance anyway.
 
@@ -405,7 +468,7 @@ class pruner:
 
             # Checking if we are even able to do all of this pruning.
             # (following_to_prune can always be pruned tho, because we are pruning input slices.)
-            _, disallowed_tree_ixs = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
+            _, disallowed_tree_ixs, _, _ = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
 
             if to_prune[0] in disallowed_tree_ixs:
                 return False
