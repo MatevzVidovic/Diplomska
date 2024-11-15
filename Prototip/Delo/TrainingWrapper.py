@@ -396,8 +396,7 @@ class TrainingWrapper:
         num_batches = len(dataloader)
 
         self.model.eval()
-        test_loss, IoU, F1 = 0, 0, 0
-        IoU_as_avg_on_matrixes = 0
+        test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
         with torch.no_grad():
             for X, y in dataloader:
                     X, y = X.to(self.device), y.to(self.device)
@@ -417,7 +416,7 @@ class TrainingWrapper:
                     pred_binary = pred[:, 1] > pred[:, 0]
 
                     F1 += get_F1_from_predictions(pred_binary, y)
-                    IoU += get_IoU_from_predictions(pred_binary, y)
+                    approx_IoU += get_IoU_from_predictions(pred_binary, y)
 
 
                     # X and y are tensors of a batch, so we have to go over them all
@@ -428,27 +427,23 @@ class TrainingWrapper:
 
                         curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
                         # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                        IoU_as_avg_on_matrixes += curr_IoU
+                        IoU += curr_IoU
 
 
 
 
         test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
-        IoU /= num_batches
+        approx_IoU /= num_batches
         F1 /= num_batches
-        IoU_as_avg_on_matrixes /= size # should be same or even more accurate as (num_batches * batch_size)
+        IoU /= size # should be same or even more accurate as (num_batches * batch_size)
 
-        print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n IoU: {(IoU):>.6f} \n F1: {F1:>.6f} \n")
-        # print(f"IoU_as_avg_on_matrixes: {IoU_as_avg_on_matrixes:>.6f}")
-
-        # avg_losses.append(test_loss)
-        # IoUs.append(IoU)
-        # F1s.append(F1)
+        print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n approx_IoU: {(approx_IoU):>.6f} \n F1: {F1:>.6f} \n IoU: {IoU:>.6f}\n")
+       
 
         # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
         # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
-        return (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+        return (test_loss, approx_IoU, F1, IoU)
     
 
 
@@ -474,8 +469,7 @@ class TrainingWrapper:
         dataloader = self.dataloaders_dict[dataloader_name]
 
         self.model.eval()
-        test_loss, IoU, F1 = 0, 0, 0
-        IoU_as_avg_on_matrixes = 0
+        test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
         with torch.no_grad():
             for X, y in dataloader:
                     X, y = X.to(self.device), y.to(self.device)
@@ -495,7 +489,7 @@ class TrainingWrapper:
                     pred_binary = pred[:, 1] > pred[:, 0]
 
                     F1 += get_F1_from_predictions(pred_binary, y)
-                    IoU += get_IoU_from_predictions(pred_binary, y)
+                    approx_IoU += get_IoU_from_predictions(pred_binary, y)
 
 
                     # X and y are tensors of a batch, so we have to go over them all
@@ -506,7 +500,7 @@ class TrainingWrapper:
 
                         curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
                         # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                        IoU_as_avg_on_matrixes += curr_IoU
+                        IoU += curr_IoU
 
 
                         

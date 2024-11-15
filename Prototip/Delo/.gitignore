@@ -5,3 +5,11 @@ Unet/
 unet/
 ResNet/
 SegNet/
+bash_results/
+test_SegNet/
+test_SegNet_pruned/
+test_UNet/
+test_UNet_pruned/
+test_UNet_pruning/
+test_uniform_SegNet_pruning/
+test_SegNet_pruning/

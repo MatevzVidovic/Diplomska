@@ -224,8 +224,8 @@ class ModelWrapper:
 
 
     def model_graph(self):
-        model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance)
-        
+        fig, ax = model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance)
+        return fig, ax
 
     def print_logs(self):
         

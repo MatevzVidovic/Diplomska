@@ -8,7 +8,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import torch
-import ConvResourceCalc
+from ConvResourceCalc import ConvResourceCalc
 
 from model_vizualization import model_graph
 
@@ -27,8 +27,6 @@ class pruner:
     def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, input_example):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.pruning_disallowments = pruning_disallowments
-        # self.pruning_disallowments["FLOPS"] = FLOPS_min_resource_percentage.min_resource_percentage_dict
-        # self.pruning_disallowments["weights"] = weights_min_resource_percentage.min_resource_percentage_dict
         self.input_slice_connection_fn = input_slice_connection_fn
         self.kernel_connection_fn = kernel_connection_fn
         self.conv_tree_ixs = conv_tree_ixs
@@ -413,7 +411,7 @@ class pruner:
         
 
 
-
+    @py_log.log(passed_logger=MY_LOGGER)
     def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, check_if_disallowed=True):
         
         # to_prune is (tree_ix, real_kernel_ix)
@@ -469,6 +467,8 @@ class pruner:
             # Checking if we are even able to do all of this pruning.
             # (following_to_prune can always be pruned tho, because we are pruning input slices.)
             _, disallowed_tree_ixs, _, _ = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
+
+            py_log.log_locals(passed_logger=MY_LOGGER)
 
             if to_prune[0] in disallowed_tree_ixs:
                 return False

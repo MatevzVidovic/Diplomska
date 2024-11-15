@@ -12,7 +12,9 @@ mkdir -p ${results_folder_name}
 mkdir -p "${results_folder_name}/older"
 mkdir -p "${results_folder_name}/curr"
 
-
+# Move contents from /curr to /older
+# (the 2>/dev/null is to suppress the error message if the folder is empty)
+mv "${results_folder_name}/curr/"* "${results_folder_name}/older/" 2>/dev/null
 
 
 
@@ -26,21 +28,6 @@ else
     curr_bash_ix=0
 fi
 echo "$curr_bash_ix" > "$prev_bash_ix_file"
-
-
-
-
-
-# Move contents from /curr to /older
-# (the 2>/dev/null is to suppress the error message if the folder is empty)
-mkdir -p "${results_folder_name}/older/moved_in_${curr_bash_ix}"
-mv "${results_folder_name}/curr/"* "${results_folder_name}/older/" 2>/dev/null
-
-
-
-
-
-
 
 # Step 3: Save the script content into a file
 script_content_file="${results_folder_name}/curr/bash_code_${curr_bash_ix}.sh"
@@ -79,6 +66,8 @@ printf "g\nstop\n" > "$graph_and_stop"
 # python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
+
+
 # Writing to a file and a terminal:
 # [command]    2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 # Explanation:
@@ -106,72 +95,91 @@ printf "g\nstop\n" > "$graph_and_stop"
 main_name="segnet_main.py"
 
 
-program_content_file="${results_folder_name}/curr/program_code_${curr_bash_ix}.py"
-cat "${main_name}" > "${program_content_file}"
-
-
-
-# test main training (fast execution):
-# (and for testing --bs and --pnkao and such:
-# --bs - how much it can take
-# -- pnkao - how many "Curr resource value:" prints there are. It's safest to have sth like 3 pruning rounds
-# (at the point that if you decreased --pnkao by like 10, youd start getting a bounch of 4 iteration prunings - this means the 3rd iteration is mostly not overshooting)
-
-# folder_name="test_SegNet_main"
-
-# python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./sclera_data --mti 1          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-# te so itak hitri, ker majhen train set
-# python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-# torej (2 tr + k epoch passov) * 15 = 45 epochov
-# 4 tr * 15 = 60 trainingov
-# vsak pruning pa ima vsakih 100 kernelov en epoch pass
-# Rezimo torej še 7 epoch passov
-# python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --pruning_phase --pbop --map 2 --pnkao 80 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# Testing if this works:
+# - save
+# - train for 2 iterations
+# - save
+# - prune (2 prunings by 0.005 percent, between them 2 train iters)
+# - save
+# - prune (2 prunings by 0.005 percent, before each 2 train iters)
+# - save
+# - migrate to new dataset (from sclera to vein_sclera)
+# - prune (2 prunings by 0.005 percent, before each 2 train iters)
+# - save
+# - prune (2 prunings by 0.005 percent, before each 2 train iters)
+# - save
+# - train for 2 iterations
+# - save
 
 
 
 
-# Main training:
+# Test pruning:
 
-folder_name="SegNet"
+folder_name="test_uniform_SegNet_pruning"
 
-# ogromen dataset, ne rabis veliko trainingov
-python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./sclera_data --mti 10          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# Delete the folder if it exists, and then create it empty
+if [ -d "$folder_name" ]; then
+    rm -r "$folder_name"
+fi
+mkdir "$folder_name"
 
-# te so itak hitri, ker majhen train set
-python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-# torej (2 tr + k epoch passov) * 15 = 45 epochov
-# 4 tr * 15 = 60 trainingov
-# vsak pruning pa ima vsakih 100 kernelov en epoch pass
-# Rezimo torej še 7 epoch passov
-python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 4 --sd ${folder_name} --ptd ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao 80 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-
-
-
-
-
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-    # # Model specific arguments (because of default being different between different models you can't just copy them between models)
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-    # parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
-    # parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
-    # parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
-    # parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
-    # parser.add_argument("--lr", type=str, help="Learning rate", default=1e-3)
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 ${main_name} --tp  --ips 999999 --bs 4 --nodw 10 --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 ${main_file} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
-    # # General arguments
+
+
+    # # Mandatory args:
+
 
     # parser.add_argument('--ips', type=int, default=1e9,
     #                     help='iter_possible_stop An optional positional argument with a default value of 1e9')
+
+    # parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
+    # parser.add_argument("--nodw", type=int, default=1, help='NUM_OF_DATALOADER_WORKERS')
     # parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
+
+    # parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
+    # parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
+
+
+
+
+
 
     
     # # These store True if the flag is present and False otherwise.
@@ -187,21 +195,14 @@ python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 4 --sd ${folder_name
     
 
     # # Add the optional arguments
-    # # setting error_ix: ix of the loss you want in the tuple: (CE_loss, approx_IoU, F1, IoU)
-    # # CE_loss only really makes sense - because if the model is a bit better, we are sure it goes down
-    # # (IoU and F1 are based on binary classification, so a slightly better model might still do the same predictions, so the loss would be the same - and so you can't choose which to clean away)
-    # parser.add_argument('--ce_ix', type=int, default=0,
-    #                     help='cleaning error ix. We takeix of the loss you want in the tuple: (CE_loss, IoU, F1, IoU_as_avg_on_matrixes)')
-    # parser.add_argument("--ck", type=int, default=3, help="Cleanup k. When saving, how many models to keep. (k+1 models are kept if the current model is not in the best k - because we have to keep it to train the next one.)")
+    # # setting error_ix: ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)
+    # parser.add_argument('--e_ix', type=int, default=3,
+    #                     help='ix of the loss you want in the tuple: (test_loss, IoU, F1, IoU_as_avg_on_matrixes)')
     # parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
     # parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
     # parser.add_argument('--nept', type=int, default=1,
     #                     help='Number of epochs per training iteration')
-    # parser.add_argument('--pnkao', type=int, default=20, help="""
-    #                     !!! THIS IS OVERRIDDEN IF --ifn IS 0 OR 1 !!!
-    #                     It becomes 1. Because we need the new importances to be calculated after every pruning.
-
-    #                     Prune n kernels at once - in one pruning iteration, we:
+    # parser.add_argument('--pnkao', type=int, default=20, help="""Prune n kernels at once - in one pruning iteration, we:
     #                     1. calculate the importance of all kernels
     #                     2. prune n kernels based on these importances
     #                     3. calculate the importances based on the new pruned model
@@ -237,19 +238,4 @@ python3 ${main_name} --ips 999999 --bs 10 --nodw 10 --ntibp 4 --sd ${folder_name
     # parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
 
     # parser.add_argument("--tp", action="store_true", help="test pruning. This makes it so all the conv layers have 0.999999 as their limit for flops. This generally means each one only gets one kernel to prune.",)
-    
-
-    
-    # def custom_type_conversion(value):
-    #     try:
-    #         # Try to convert to int
-    #         return int(value)
-    #     except ValueError:
-    #         try:
-    #             # Try to convert to tuple using ast.literal_eval
-    #             return ast.literal_eval(value)
-    #         except (ValueError, SyntaxError):
-    #             raise argparse.ArgumentTypeError(f"Invalid value: {value}")
-    # parser.add_argument("--ifn", type=custom_type_conversion, default=(0.5, 0.5, 0.5), help="Importance func. If 0, random pruning. If 1, uniform pruning. If tuple, we get IPAD with those 3 alphas.")
-
-
+    # parser.add_argument("--ifn", type=Union[int, tuple], default=(0.5, 0.5, 0.5), help="Importance func. If 0, random pruning. If 1, uniform pruning. If tuple, we get IPAD with those 3 alphas.")

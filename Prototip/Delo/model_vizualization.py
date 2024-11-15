@@ -66,8 +66,56 @@ def string_of_pruned(list_of_initial_ixs, initial_dim_size):
 
 
 
+def get_string_of_pruned(tree_ix, initial_resource_calc, pruner):
+    
+    ix = tree_ix
 
-def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc: Union[None, ConvResourceCalc], initial_resource_calc: Union[None, ConvResourceCalc], pruner, lowest_level_modules):
+    display_string = ""
+
+    # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+    initial_weights_shape = initial_resource_calc.resource_name_2_resource_dict["weights_dimensions"][ix]
+    
+    if ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
+        list_of_active_initial_kernel_ixs = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix]
+        initial_dim_size = initial_weights_shape[0]
+        display_string += f"\nKernels pruned: [{string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)}]"
+    
+    if ix in pruner.tree_ix_2_list_of_initial_input_slice_ixs.keys():
+        list_of_active_initial_input_slice_ixs = pruner.tree_ix_2_list_of_initial_input_slice_ixs[ix]
+        initial_dim_size = initial_weights_shape[1]
+        display_string += f"\nInput slices pruned: [{string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)}]"
+    
+    return display_string
+
+
+# Only used if dynamically resizing text:
+def rescale_text_to_fit(ax, rect, text):
+    # Get the bounding box of the rectangle and text
+    renderer = ax.figure.canvas.get_renderer()
+    rect_extent = rect.get_window_extent(renderer=renderer)
+    text_extent = text.get_window_extent(renderer=renderer)
+
+    # Calculate scaling factors for width and height
+    scale_width = rect_extent.width / text_extent.width
+    scale_height = rect_extent.height / text_extent.height
+
+    # Use the smaller scale to ensure the text fits within both dimensions
+    scale = min(scale_width, scale_height)
+
+    # Set the new font size
+    current_fontsize = text.get_fontsize()
+    text.set_fontsize(current_fontsize * scale)
+
+# Only used if dynamically resizing text:
+RECTS = []
+TEXTS = []
+def on_draw(event):
+    ax = event.canvas.figure.axes[0]
+    for rect, text in zip(RECTS, TEXTS):
+        rescale_text_to_fit(ax, rect, text)
+
+
+def draw_tree(ix, layer_name, fig, ax, x, y, width, height, max_depth, resource_calc: Union[None, ConvResourceCalc], initial_resource_calc: Union[None, ConvResourceCalc], pruner, lowest_level_modules):
     # Draw the rectangle and label it
 
 
@@ -106,28 +154,71 @@ def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc:
     
 
     # The display of what we have pruned:
-    if pruner is not None and initial_resource_calc is not None:
+    if pruner is not None and initial_resource_calc is not None and ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
 
         # print(display_string)
+        display_string += get_string_of_pruned(ix, initial_resource_calc, pruner)
 
-        if ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
-            list_of_active_initial_kernel_ixs = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix]
-            # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
-            initial_dim_size = initial_resource_calc.resource_name_2_resource_dict["weights_dimensions"][ix][0]
-            display_string += f"\nKernels pruned: [{string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)}]"
+        # just take one real_kernel_ix we are sure exists
+        real_kernel_ix = 0
+        initial_kernel_ix = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix][real_kernel_ix]
+
+        try:
+            
+
+            inextricable_following_to_prune = pruner.kernel_connection_fn(ix, real_kernel_ix, pruner.conv_tree_ixs, pruner.lowest_level_modules)        
+
+            following_to_prune = pruner.input_slice_connection_fn(ix, initial_kernel_ix, pruner.conv_tree_ixs, pruner.lowest_level_modules)
+
+            display_string += 3*"\n" + 10*"=" + "\n"
+
+
+            if len(inextricable_following_to_prune) > 0:
+                display_string += 3*"\n"
+                display_string += f"\nInextricable pruned connections:"
+
+            for following_ix, _ in inextricable_following_to_prune:
+                to_add = get_string_of_pruned(following_ix, initial_resource_calc, pruner)
+                display_string += f"\n{following_ix}: {to_add}"
+                display_string += "\n"
+
+
+
+            
+            if len(following_to_prune) > 0:
+                display_string += 3*"\n"
+                display_string += f"\nInput slice pruned connections:"
+
+            for following_ix, _ in following_to_prune:
+                to_add = get_string_of_pruned(following_ix, initial_resource_calc, pruner)
+                display_string += f"\n{following_ix}: {to_add}"
+                display_string += "\n"
+        except:
+            pass
         
-        if ix in pruner.tree_ix_2_list_of_initial_input_slice_ixs.keys():
-            list_of_active_initial_input_slice_ixs = pruner.tree_ix_2_list_of_initial_input_slice_ixs[ix]
-            initial_dim_size = initial_resource_calc.resource_name_2_resource_dict["weights_dimensions"][ix][1]
-            display_string += f"\nInput slices pruned: [{string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)}]"
+        # now for all that this connects to:
+        
 
 
-    
 
     
 
-    ax.add_patch(patches.Rectangle((x, y), width, height, edgecolor='black', facecolor='none'))
-    ax.text(x + width/2, y + height/2, display_string, ha='center', va='center')
+    
+    rect = patches.Rectangle((x, y), width, height, edgecolor='black', facecolor='none')
+    ax.add_patch(rect)
+    # text = ax.text(x + width/2, y + height/2, display_string, ha='center', va='center')
+    text = ax.text(x + width/2, y + 15/16* height, display_string, ha='center', va='top')
+    
+
+    # If you want dynamic resizing of the text:
+    if False:
+        global RECTS, TEXTS
+        RECTS.append(rect)
+        TEXTS.append(text)
+
+        # Connect the draw event
+        fig.canvas.mpl_connect('draw_event', on_draw)
+
 
     # Find children of the current index
     children = [key for key in resource_calc.module_tree_ix_2_name if key[0] == ix]
@@ -135,7 +226,7 @@ def draw_tree(ix, layer_name, ax, x, y, width, height, max_depth, resource_calc:
         child_width = width / len(children)
         for i, child in enumerate(sort_tree_ixs(children)):
             child_name = resource_calc.module_tree_ix_2_name[child]
-            draw_tree(child, child_name, ax, x + i * child_width, y - height, child_width, height, max_depth - 1, resource_calc, initial_resource_calc, pruner, lowest_level_modules)
+            draw_tree(child, child_name, fig, ax, x + i * child_width, y - height, child_width, height, max_depth - 1, resource_calc, initial_resource_calc, pruner, lowest_level_modules)
 
 
 
@@ -155,13 +246,15 @@ def model_graph(resource_calc, initial_resource_calc=None, pruner=None, width=1,
     total_height = max_depth * height
     root_ix = (0,)
     root_name = tree[root_ix]
-    draw_tree(root_ix, root_name, ax, 0, total_height, width, height, max_depth, resource_calc, initial_resource_calc, pruner, lowest_level_modules)
+    draw_tree(root_ix, root_name, fig, ax, 0, total_height, width, height, max_depth, resource_calc, initial_resource_calc, pruner, lowest_level_modules)
 
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis('off')
     plt.show(block=False)
+
+    return fig, ax
 
 
 
