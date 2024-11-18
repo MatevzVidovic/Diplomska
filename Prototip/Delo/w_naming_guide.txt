@@ -1,0 +1,19 @@
+
+I have:
+
+x_out.txt for the current out file.
+y_run_me.sbatch for the script that runs on FRIDA
+
+And then i have the shell scripts.
+
+z_ are the ones I actually run.
+
+I have z_general.sh
+Here, write anything the moment requires.
+It should be gitignored so this doesn't keep making needles changes.
+
+z_0 - z_9 are levels of calling.
+z_0 don't saurce anything.
+z_1 source some from z_0. And so on.
+
+zz_ are the old scripts.
