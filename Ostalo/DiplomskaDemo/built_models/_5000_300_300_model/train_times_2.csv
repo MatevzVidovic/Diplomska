@@ -1,3 +1,0 @@
-,train_times,accuracies,avg_losses
-0,7.778658084000199,{(100*correct):>0.1f}%,{test_loss:>8f}
-1,7.466676300002291,{(100*correct):>0.1f}%,{test_loss:>8f}

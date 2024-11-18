@@ -1,0 +1,38 @@
+Validation phase: False
+Namespace(bs=210, nodw=64, sd='SegNet_main', ptd='./sclera_data', lr=0.001, ips=999999, ntibp=1, is_test_run=False, pruning_phase=False, ce_ix=0, ck=3, mti=10, map=1000000000.0, nept=1, pbop=False, nftp=1, pnkao=20, rn='flops_num', ptp=0.01, ifn=(0.5, 0.5, 0.5), tp=False)
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 1288
+val dataset len: 344
+test dataset len: 208
+train dataloader num of batches: 7
+val dataloader num of batches: 2
+test dataloader num of batches: 1
+Device: cuda
+loss: 0.644286  [  210/ 1288]
+loss: 0.642735  [  420/ 1288]
+loss: 0.638452  [  630/ 1288]
+loss: 0.637784  [  840/ 1288]
+loss: 0.636311  [ 1050/ 1288]
+loss: 0.632964  [ 1260/ 1288]
+loss: 0.627662  [  196/ 1288]
+validation Error: 
+ Avg loss: 0.64360401 
+ approx_IoU: 0.796456 
+ F1: 0.125506 
+ IoU: 0.796379
+
+test Error: 
+ Avg loss: 0.64189506 
+ approx_IoU: 0.805230 
+ F1: 0.119940 
+ IoU: 0.805118
+
+srun: Job step aborted: Waiting up to 122 seconds for job step to finish.
+slurmstepd: error: *** JOB 10057 ON ana CANCELLED AT 2024-11-18T18:53:45 ***
+slurmstepd: error: *** STEP 10057.0 ON ana CANCELLED AT 2024-11-18T18:53:45 ***

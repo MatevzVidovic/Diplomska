@@ -1,0 +1,73 @@
+Validation phase: False
+Namespace(bs=105, nodw=64, sd='UNet_main', ptd='./sclera_data', lr=0.001, ips=999999, ntibp=1, is_test_run=False, pruning_phase=False, ce_ix=0, ck=3, mti=10, map=1000000000.0, nept=1, pbop=False, nftp=1, pnkao=20, rn='flops_num', ptp=0.01, ifn=(0.5, 0.5, 0.5), tp=False)
+path to file: ./sclera_data
+summary for train
+valid images: 1288
+summary for val
+valid images: 344
+summary for test
+valid images: 208
+train dataset len: 1288
+val dataset len: 344
+test dataset len: 208
+train dataloader num of batches: 13
+val dataloader num of batches: 4
+test dataloader num of batches: 2
+Device: cuda
+loss: 0.772727  [  105/ 1288]
+loss: 0.739684  [  210/ 1288]
+loss: 0.716136  [  315/ 1288]
+loss: 0.697381  [  420/ 1288]
+loss: 0.680176  [  525/ 1288]
+loss: 0.665388  [  630/ 1288]
+loss: 0.646264  [  735/ 1288]
+loss: 0.637785  [  840/ 1288]
+loss: 0.625674  [  945/ 1288]
+loss: 0.615501  [ 1050/ 1288]
+loss: 0.603685  [ 1155/ 1288]
+loss: 0.594742  [ 1260/ 1288]
+loss: 0.585601  [  364/ 1288]
+/shared/home/matevz.vidovic/Diplomska/Prototip/Delo/TrainingWrapper.py:225: RuntimeWarning: invalid value encountered in scalar divide
+  precision = TP / (TP + FP)
+validation Error: 
+ Avg loss: 0.64111710 
+ approx_IoU: 0.862487 
+ F1: nan 
+ IoU: 0.862047
+
+/shared/home/matevz.vidovic/Diplomska/Prototip/Delo/TrainingWrapper.py:200: RuntimeWarning: invalid value encountered in divide
+  IoU = np.diag(confusion_matrix) / (
+test Error: 
+ Avg loss: 0.63927066 
+ approx_IoU: 0.873048 
+ F1: nan 
+ IoU: 0.873004
+
+loss: 0.575330  [  105/ 1288]
+loss: 0.568571  [  210/ 1288]
+loss: 0.561275  [  315/ 1288]
+loss: 0.551921  [  420/ 1288]
+loss: 0.544382  [  525/ 1288]
+loss: 0.538374  [  630/ 1288]
+loss: 0.534558  [  735/ 1288]
+loss: 0.517851  [  840/ 1288]
+loss: 0.520709  [  945/ 1288]
+loss: 0.509027  [ 1050/ 1288]
+loss: 0.503703  [ 1155/ 1288]
+loss: 0.499408  [ 1260/ 1288]
+loss: 0.494446  [  364/ 1288]
+validation Error: 
+ Avg loss: 0.60234553 
+ approx_IoU: 0.866891 
+ F1: 0.117518 
+ IoU: 0.868785
+
+test Error: 
+ Avg loss: 0.60026014 
+ approx_IoU: 0.878296 
+ F1: 0.103792 
+ IoU: 0.878196
+
+srun: Job step aborted: Waiting up to 122 seconds for job step to finish.
+slurmstepd: error: *** STEP 10056.0 ON aga1 CANCELLED AT 2024-11-18T18:53:50 ***
+slurmstepd: error: *** JOB 10056 ON aga1 CANCELLED AT 2024-11-18T18:53:50 ***
