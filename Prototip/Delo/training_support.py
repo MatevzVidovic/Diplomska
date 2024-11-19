@@ -402,6 +402,23 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            if inp == "resource_graph":
+                fig, _, res_dict = resource_graph(model_wrapper.initial_resource_calc, pruning_logs)
+                fig.savefig(os.path.join(main_save_path, f"{train_iter}_resource_graph.png"))
+                with open(os.path.join(main_save_path, f"{train_iter}_resource_graph.pkl"), "wb") as f:
+                    pickle.dump(fig, f)
+                with open(os.path.join(main_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
+                    pickle.dump(res_dict, f)
+                inp = input(f"""
                         Enter s to save the model and re-ask for input.
                         Enter g to show the graph of the model and re-ask for input.
                         Enter r to trigger show_results() and re-ask for input.
@@ -529,6 +546,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
         if num_of_auto_prunings >= max_auto_prunings:
             break
+    
 
 
 
@@ -553,9 +571,14 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
         training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, train_iter, "", curr_training_phase_serial_num, cleanup_k, val_error, test_error)
-        
 
 
+
+
+
+    # After the while loop is broken out of:
+    model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_ending_save")
+    training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, main_save_path, train_iter, "ending_save", curr_training_phase_serial_num, cleanup_k)
 
 
         
@@ -677,4 +700,53 @@ def show_results(main_save_path):
         print("Continuing operation.")
         return None, None
 
+
+
+def resource_graph(initial_resource_calc, pruning_logs):
+
+    try:
+
+        initial_flops = initial_resource_calc.get_resource_of_whole_model("flops_num")
+        initial_weights = initial_resource_calc.get_resource_of_whole_model("weights_num")
+
+        pruning_moments = [i[0] for i in pruning_logs.pruning_logs]
+        resource_calcs = [i[2] for i in pruning_logs.pruning_logs]
+        flops = [i.get_resource_of_whole_model("flops_num") for i in resource_calcs]
+        weights = [i.get_resource_of_whole_model("weights_num") for i in resource_calcs]
+
+        flops_percents = [(i) / initial_flops for i in flops]
+        weights_percents = [(i) / initial_weights for i in weights]
+
+        fig, ax = plt.subplots()
+        plt.plot(pruning_moments, flops_percents, label="FLOPs")
+        plt.plot(pruning_moments, weights_percents, label="Weights")
+
+        plt.ylabel("Resource percent")
+        plt.xlabel("training iterations")
+
+        plt.legend()
+
+
+        plt.show(block=False)
+
+        to_pkl = []
+        for i in range(len(pruning_moments)):
+            to_pkl.append((pruning_moments[i], flops_percents[i], weights_percents[i]))
+
+        res_dict = {"(pruning_moment, flops_percent, weights_percent": to_pkl}
+
+        return fig, ax, res_dict
+
+
+
+    except Exception as e:
+
+        # raise e
+
+        # Print the exception message
+        print("An exception occurred in resource_graph():", e)
+        # Print the type of the exception
+        print("Exception type:", type(e).__name__)
+        print("Continuing operation.")
+        return None, None, None
 

@@ -10,4 +10,4 @@
 # bs=$3
 # nodw=$4
 
-source z1_test_uniform.sh segnet_main.py test_uniform_SegNet_pruning 56 64
+bash z1_test_uniform.sh segnet_main.py test_uniform_SegNet_pruning 56 64
