@@ -21,11 +21,14 @@
 
 # Za pruning se uporablja vein, ki itak ne preseže 90 primerkov,torej nas ne rabi skrbet pruning del.
 
-# source z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
+
+
+
+# bash z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
 
 
 
 
 
-source z1_standard_main.sh segnet_main.py SegNet_main 210 64 80
+bash z1_standard_main.sh segnet_main.py SegNet_main 210 64 80
 

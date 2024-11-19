@@ -3,15 +3,6 @@
 /sclera_data
 /vein_sclera_data
 
-x_out_0.txt
-x_out_1.txt
-x_out_2.txt
-x_out_3.txt
-
-y_run_me_0.sbatch
-y_run_me_1.sbatch
-y_run_me_2.sbatch
-y_run_me_3.sbatch
 
 saved/
 saved_main/
@@ -32,3 +23,30 @@ test_UNet_pruned/
 test_UNet_pruning/
 test_uniform_SegNet_pruning/
 test_SegNet_pruning/
+
+for_fig_shower/
+
+
+
+
+z_general.sh
+
+x_out_0.txt
+x_out_1.txt
+x_out_2.txt
+x_out_3.txt
+
+y_run_me_0.sbatch
+y_run_me_1.sbatch
+y_run_me_2.sbatch
+y_run_me_3.sbatch
+
+x0_out.txt
+x1_out.txt
+x2_out.txt
+x3_out.txt
+
+y0_run_me.sbatch
+y1_run_me.sbatch
+y2_run_me.sbatch
+y3_run_me.sbatch
