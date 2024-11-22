@@ -1,16 +1,18 @@
 
 
 import os
+import os.path as osp
 import logging
 import python_logger.log_helper_off as py_log
+import python_logger.log_helper as py_log_always_on
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
+python_logger_path = osp.join(osp.dirname(__file__), 'python_logger')
+handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
 
 
 
@@ -251,10 +253,10 @@ if __name__ == "__main__":
 
 
 
-# save_path = os.path.join(os.path.dirname(__file__), "UNet")
-save_path = os.path.join(".", SAVE_DIR)
+# save_path = osp.join(osp.dirname(__file__), "UNet")
+save_path = osp.join(".", SAVE_DIR)
 
-main_save_path = os.path.join(save_path, "saved_main")
+main_save_path = osp.join(save_path, "saved_main")
 
 
 

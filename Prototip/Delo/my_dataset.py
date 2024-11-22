@@ -24,6 +24,8 @@ Train Image Augmentation Procedure Followed
 import os
 import logging
 import python_logger.log_helper_off as py_log
+import python_logger.log_helper as py_log_always_on
+
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.

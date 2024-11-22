@@ -26,10 +26,16 @@ test_SegNet_pruning/
 
 for_fig_shower/
 
+DonePrunedModels/
+PrunedModels/
 
-
+scp_copy_0/
 
 z_general.sh
+
+y_*
+SegNet_*/
+UNet_*/
 
 x_out_0.txt
 x_out_1.txt
