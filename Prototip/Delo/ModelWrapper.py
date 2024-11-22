@@ -11,10 +11,12 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import os
+import os.path as osp
 import torch
 import pickle
-import pandas as pd
 import shutil
+
+import json_handler as jh
 
 
 from TrainingWrapper import TrainingWrapper
@@ -37,32 +39,37 @@ class ModelWrapper:
 
         self.model_class = model_class
         
-        # self.save_path = os.path.join(os.path.dirname(__file__), "saved")
-        self.save_path = os.path.join(save_path, "saved_model_wrapper")
+        # self.save_path = osp.join(osp.dirname(__file__), "saved")
+        self.save_path = osp.join(save_path, "saved_model_wrapper")
 
         os.makedirs(self.save_path, exist_ok=True)
 
 
-        if os.path.exists(os.path.join(self.save_path, "previous_model_details.csv")):
-            prev_model_details = pd.read_csv(os.path.join(self.save_path, "previous_model_details.csv"))
-            self.prev_serial_num = prev_model_details["previous_serial_num"][0]
-            self.prev_model_path = prev_model_details["previous_model_path"][0]
-            self.prev_pruner_path = prev_model_details["previous_pruner_path"][0]
 
-            # To help with migration after I changed pruner.py right after the training phase 
-            # (no prunings had happened so I could just create a new pruner instance)
-            if self.prev_pruner_path == "remake_pruner":
-                self.prev_pruner_path = None
 
-        else:
-            self.prev_serial_num = None
+        j_path = osp.join(self.save_path, "previous_model_details.json")
+        j_dict = jh.load(j_path)
+
+        if j_dict is None:
             self.prev_model_path = None
+            self.prev_pruner_path = None
+        else:
+
+            model_filename = j_dict["previous_model_filename"]
+            pruner_filename = j_dict["previous_pruner_filename"]
+            
+            self.prev_model_path = osp.join(self.save_path, model_filename)
+            self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+
+
+            
+        # To help with migration after I changed pruner.py right after the training phase 
+        # (no prunings had happened so I could just create a new pruner instance)
+        if self.prev_pruner_path == "remake_pruner":
             self.prev_pruner_path = None
 
 
-
-
-        if self.prev_model_path is not None and os.path.exists(self.prev_model_path):
+        if self.prev_model_path is not None and osp.exists(self.prev_model_path):
             self.model = torch.load(self.prev_model_path)
         else:
             self.model = self.model_class(**model_parameters)
@@ -99,8 +106,8 @@ class ModelWrapper:
         self.batch_norm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
 
 
-        initial_resource_calc_path = os.path.join(self.save_path, "initial_conv_resource_calc.pkl")
-        if os.path.exists(os.path.join(initial_resource_calc_path)):
+        initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
+        if osp.exists(osp.join(initial_resource_calc_path)):
             with open(initial_resource_calc_path, "rb") as f:
                 self.initial_resource_calc = pickle.load(f)
         else:
@@ -241,21 +248,25 @@ class ModelWrapper:
     @py_log.log(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
 
-        curr_serial_num = self.prev_serial_num + 1 if self.prev_serial_num is not None else 0
-
-        new_model_path = os.path.join(self.save_path , self.model_class.__name__ + "_" + str(curr_serial_num) + "_" + str_identifier + ".pth")
+        model_filename = self.model_class.__name__ + "_" + str_identifier + ".pth"
+        new_model_path = osp.join(self.save_path, model_filename)
 
         torch.save(self.model, new_model_path)
 
-        new_pruner_path = os.path.join(self.save_path, f"pruner_{curr_serial_num}_" + str_identifier + ".pkl")
+        pruner_filename = f"pruner_" + str_identifier + ".pkl"
+        new_pruner_path = osp.join(self.save_path, pruner_filename)
         with open(new_pruner_path, "wb") as f:
             pickle.dump(self.pruner_instance, f)
         
+
+        j_path = osp.join(self.save_path, "previous_model_details.json")
+        j_dict = { 
+            "previous_model_filename": model_filename,
+            "previous_pruner_filename": pruner_filename
+        }
+        jh.dump(j_path, j_dict)
         
-        new_df = pd.DataFrame({"previous_serial_num": [curr_serial_num], "previous_model_path": new_model_path, "previous_pruner_path": new_pruner_path})
-        new_df.to_csv(os.path.join(self.save_path, "previous_model_details.csv"))
-        
-        return (new_model_path, new_pruner_path)
+        return (model_filename, pruner_filename)
     
 
     def create_safety_copy_of_existing_models(self, str_identifier: str):
@@ -265,38 +276,51 @@ class ModelWrapper:
         # get dirname of savepath
 
 
-        parent_dir_path = os.path.dirname(self.save_path)
-        safety_path = os.path.join(parent_dir_path, "safety_copies")
+        parent_dir_path = osp.dirname(self.save_path)
+
+        safety_path = osp.join(parent_dir_path, "safety_copies")
         os.makedirs(safety_path, exist_ok=True)
 
-        safety_copy_dir = os.path.join(safety_path, f"actual_safety_copies")
+        safety_copy_dir = osp.join(safety_path, f"actual_safety_copies")
+        os.makedirs(safety_copy_dir, exist_ok=True)
+
+
 
         try:
             # Create the safety copy directory if it doesn't exist
-            os.makedirs(safety_copy_dir, exist_ok=True)
 
-            curr_safety_copy_paths = []
+            copied_filenames = []
 
             # Iterate through all files in self.save_path
             for filename in os.listdir(self.save_path):
                 if filename.startswith(model_name):
-                    src_file = os.path.join(self.save_path, filename)
-                    dst_file = os.path.join(safety_copy_dir, filename)
+                    src_file = osp.join(self.save_path, filename)
+                    dst_file = osp.join(safety_copy_dir, filename)
 
-                    curr_safety_copy_paths.append(dst_file)
+                    copied_filenames.append(filename)
                     
-                    if os.path.exists(dst_file):
+                    if osp.exists(dst_file):
                         print(f"File {filename} already exists in safety copies, skipping.")
                     else:
                         shutil.copy2(src_file, dst_file)
                         print(f"Copied {filename} to {safety_copy_dir}")
             
-            csv_file_path = os.path.join(safety_path, f"safety_copies_{str_identifier}.csv")
-            try:
-                new_df = pd.DataFrame({"safety_copy_model_paths": curr_safety_copy_paths})
-                new_df.to_csv(csv_file_path, mode="x") # mode x raises an error if the file already exists
-            except FileExistsError:
-                print(f"CSV file {csv_file_path} already exists. Please choose a different name or handle the existing file.")
+
+            j_path = osp.join(safety_path, f"safety_copies_{str_identifier}.json")
+            
+            if osp.exists(j_path):
+                id = 1
+                new_j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                while osp.exists(new_j_path):
+                    id += 1
+                    new_j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                print(f"JSON file {j_path} already exists. We made {new_j_path} instead.")
+            
+            
+            j_dict = {"copied_filenames": copied_filenames}
+            jh.dump(j_path, j_dict)
+
+
             
 
         except OSError as e:
