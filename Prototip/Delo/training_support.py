@@ -194,9 +194,6 @@ class TrainingLogs:
         while len(sorted_errors) > 0 and (len(self.errors) - len(to_delete)) > k:
 
             error = sorted_errors.pop() # pops last element
-
-            print(f"Deleting model {error[3]}")
-            print(sorted_errors)
             
             model_path = error[3]
             if is_previous_model(model_path, model_wrapper):
@@ -211,6 +208,7 @@ class TrainingLogs:
             self.delete_error(error)
             try:
                 os.remove(model_path)
+                print(f"Deleting model {model_path}")
             except:
                 print(f"Couldn't delete {model_path}. Probably doesn't exist.")
 
@@ -621,10 +619,6 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
     # After the while loop is broken out of:
     model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_ending_save")
-    training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
-
-
-
         
 
 
