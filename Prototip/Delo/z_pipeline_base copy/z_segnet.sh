@@ -9,6 +9,7 @@
 # pnkao=$5
 
 
+# -c 64, ampak pomoje to nic ne spremeni
 
 
 # grafa:2 ne pomaga. Bi moral pomoje nekaj s pytorchom dodatno naredit, da bi 2 naenkrat uporabljal.
