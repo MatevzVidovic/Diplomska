@@ -21,7 +21,17 @@ import sys
 # [(61, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
 # python3 porter.py --sp scp_1/SegNet_random_main_60 -m "[(61, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn SegNet --fid random_main --main segnet_main.py --gti 140
 
+# python3 model_eval_graphs.py --msp ./scp_1/SegNet_uniform_main_60/saved_main --smp ./scp_1/SegNet_uniform_main_60/saved_model_wrapper
+# [(61, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
+# python3 porter.py --sp scp_1/SegNet_uniform_main_60 -m "[(61, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn SegNet --fid uniform_main --main segnet_main.py --gti 140
 
+# python3 model_eval_graphs.py --msp ./scp_1/UNet_random_main_60/saved_main --smp ./scp_1/UNet_random_main_60/saved_model_wrapper
+# [(63, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
+# python3 porter.py --sp scp_1/UNet_random_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid random_main --main main.py --gti 140
+
+# python3 model_eval_graphs.py --msp ./scp_1/UNet_uniform_main_60/saved_main --smp ./scp_1/UNet_uniform_main_60/saved_model_wrapper
+# [(63, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
+# python3 porter.py --sp scp_1/UNet_uniform_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid uniform_main --main main.py --gti 140
 
 
 
@@ -227,10 +237,11 @@ with open(to_z0_temp_inputs, "w") as f:
     f.write(z0_temp_inputs)
 
 
+threads = 48
 
 model_params= """#!/bin/bash
 batch_size=100
-nodw=32
+nodw={threads}
 """
 to_model_params = osp.join(to_pipeline_folder, f"{folder_name}_params.sh")
 with open(to_model_params, "w") as f:
@@ -362,7 +373,7 @@ source {pipeline_folder}/z0_temp_inputs.sh
 # Sets vars batch_size, nodw
 source {pipeline_folder}/{folder_name}_params.sh
 
-mti = {goal_train_iters - train_iter}
+mti={goal_train_iters - train_iter}
 
 python3 {main_py} --ips 999999 --bs ${{batch_size}} --nodw $nodw --sd {folder_name}_{str_id} --ptd ./vein_sclera_data --mti ${{mti}}          2>&1 | tee "${{rfn}}/curr/${{obn}}_${{cbi}}_${{cn}}.txt"; cn=$((cn + 1))
 """
@@ -382,13 +393,15 @@ python3 {main_py} --ips 999999 --bs ${{batch_size}} --nodw $nodw --sd {folder_na
 #SBATCH --time=0-02:00:00
 
 #SBATCH -p frida
-#SBATCH -c 32
+#SBATCH -c {threads}
 #SBATCH --gpus=A100
 #SBATCH --output={folder_name}_{str_id}_out.txt
 
-srun bash {pipeline_folder}/z_combining_script.sh
+srun bash {model_pipeline_sh_name}
 """
     
+    with open(to_model_pipeline_sbatch, "w") as f:
+        f.write(model_pipeline_sbatch)
 
 
     """
@@ -454,7 +467,7 @@ srun bash {pipeline_folder}/z_combining_script.sh
         - z0_temp_inputs.sh     # same as so far
 
         - {folder_name}_params.sh   
-        # just batch_size=100, nodw=32.  This is created here so it can later be changed easily for the whole pipeline.
+        # just batch_size=100, nodw={threads}.  This is created here so it can later be changed easily for the whole pipeline.
     
         
 
@@ -475,7 +488,7 @@ srun bash {pipeline_folder}/z_combining_script.sh
     # Sets vars batch_size, nodw
     source {folder_name}_params.sh
 
-    mti = {goal_train_iters - train_iter}
+    mti={goal_train_iters - train_iter}
 
     python3 {main} --ips 999999 --bs $\{batch_size\} --nodw $nodw --sd {folder_name}_{str_id} --ptd ./vein_sclera_data --mti $\{mti\}          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
@@ -490,7 +503,7 @@ srun bash {pipeline_folder}/z_combining_script.sh
     #SBATCH --time=0-02:00:00
 
     #SBATCH -p frida
-    #SBATCH -c 32
+    #SBATCH -c {threads}
     #SBATCH --gpus=A100
     #SBATCH --output=x0_out.txt
 
