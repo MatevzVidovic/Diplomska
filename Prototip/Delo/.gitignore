@@ -24,6 +24,22 @@ test_UNet_pruning/
 test_uniform_SegNet_pruning/
 test_SegNet_pruning/
 
+
+PrunedModels*/
+DonePrunedModels*/
+z_pipeline_SegNet*/
+z_pipeline_UNet*/
+SegNet_*.sh
+UNet_*.sh
+SegNet_*.sbatch
+UNet_*.sbatch
+SegNet_*_out.txt
+UNet_*_out.txt
+
+
+
+
+
 for_fig_shower/
 
 DonePrunedModels/

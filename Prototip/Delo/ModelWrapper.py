@@ -69,8 +69,25 @@ class ModelWrapper:
             self.prev_pruner_path = None
 
 
+
+        # Get cpu, gpu or mps device for training.
+        device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
+        # self.device = "cpu" # for debugging purposes
+        print(f"Device: {device}")
+
+
+
         if self.prev_model_path is not None and osp.exists(self.prev_model_path):
-            self.model = torch.load(self.prev_model_path)
+            print(self.prev_model_path)
+            # you can specify the map_location parameter to map the model to the CPU. This tells PyTorch to load the model onto the CPU, even if it was originally saved on a GPU.
+            # Otherwise: RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False.
+            self.model = torch.load(self.prev_model_path, map_location=torch.device(device))
         else:
             self.model = self.model_class(**model_parameters)
         
@@ -90,7 +107,7 @@ class ModelWrapper:
             "loss_fn": learning_dict["loss_fn"],
         }
 
-        self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict)
+        self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict, device)
 
         self.initialize_optimizer()
 

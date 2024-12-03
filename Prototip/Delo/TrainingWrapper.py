@@ -319,23 +319,11 @@ def conf_matrix_to_mIoU(confusion_matrix):
 class TrainingWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model, dataloaders_dict, learning_parameters):
+    def __init__(self, model, dataloaders_dict, learning_parameters, device):
         
         try:
-            # Get cpu, gpu or mps device for training.
-            self.device = (
-                "cuda"
-                if torch.cuda.is_available()
-                else "mps"
-                if torch.backends.mps.is_available()
-                else "cpu"
-            )
 
-            # self.device = "cpu" # for debugging purposes
-
-            print(f"Device: {self.device}")
-
-
+            self.device = device
 
             self.model = model.to(self.device)
             self.dataloaders_dict = dataloaders_dict
@@ -568,6 +556,12 @@ class TrainingWrapper:
                             image_tensor = X[i].cpu()
                             image_np = image_tensor.permute(1, 2, 0).numpy()
 
+                            # print("min(Ground truth):", y[i].min())
+                            # print("max(Ground truth):", y[i].max())
+                            # print("num of ones in Ground truth:", torch.sum(y[i] == 1).item())
+                            # print("num of zeros in Ground truth:", torch.sum(y[i] == 0).item())
+                            # print("num of all elements in Ground truth:", y[i].numel())
+
                             plt.subplot(2, 2, 1)
                             plt.gca().set_title('Original image')
                             plt.imshow(image_np)
@@ -581,6 +575,10 @@ class TrainingWrapper:
                             plt.gca().set_title('Sclera - bg, min-max normed')
                             plt.imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
                             plt.show(block=False)
+
+
+                            plt.pause(1.0)
+
 
                             inp = input("Enter anything to stop. Press Enter to continue...")
                             if inp:
