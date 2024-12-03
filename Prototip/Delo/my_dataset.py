@@ -101,81 +101,85 @@ def print_time_since_last_call():
 SHOW_IMAGE_IX = [0]
 def show_image(passed_img, title="", close_all_limit=1e9):
 
-    # passed_img can be np.ndarray, Image.Image, or torch.Tensor
-    # If passed_img is a list, it will show all images in the list on one plot.
-    # passed_img as a list can also have tuples with titles: e.g. [(img1, title1), (img2, title2]
+    try:
+        # passed_img can be np.ndarray, Image.Image, or torch.Tensor
+        # If passed_img is a list, it will show all images in the list on one plot.
+        # passed_img as a list can also have tuples with titles: e.g. [(img1, title1), (img2, title2]
 
-    # Close all open figures
-    figure_numbers = plt.get_fignums()
-    if len(figure_numbers) >= close_all_limit:
-        plt.close('all')
-
-
-    if not isinstance(passed_img, list):
-        passed_img = [passed_img]
+        # Close all open figures
+        figure_numbers = plt.get_fignums()
+        if len(figure_numbers) >= close_all_limit:
+            plt.close('all')
 
 
-    imgs = passed_img
-
-    # determine rown and columns:
-    if len(imgs) == 1:
-        rc = (1,1)
-    elif len(imgs) == 2:
-        rc = (1,2)
-    elif len(imgs) <= 4:
-        rc = (2,2)
-    elif len(imgs) <= 6:
-        rc = (2,3)
-    elif len(imgs) <= 9:
-        rc = (3,3)
-    else:
-        cols = len(imgs) // 3 + 1
-        rc = (3, cols)
-    
-    fig, axes = plt.subplots(rc[0], rc[1])
-
-    # when rc = (1,1), axes is not a np.array of many axes, but a single Axes object. And then flatten doesn't work, and iteration doesn't work.
-    # It's just easier to make it into a np.array.
-    if isinstance(axes, plt.Axes):
-        axes = np.array([axes])
-
-    # Flatten the axes array for easy iteration
-    axes = axes.flatten()
-
-    # Iterate over images and axesk
-    for i, ax in enumerate(axes):
-        if i < len(imgs):
-
-            curr_img = imgs[i][0] if isinstance(imgs[i], tuple) else imgs[i]
-            curr_title = imgs[i][1] if isinstance(imgs[i], tuple) else title
+        if not isinstance(passed_img, list):
+            passed_img = [passed_img]
 
 
-            try:
-                # this clones the image anyway
-                img = smart_conversion(curr_img, 'ndarray', 'uint8')
-            except Exception as e:
-                py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
-                raise e
+        imgs = passed_img
 
-            ax.imshow(img, cmap='gray')
-            ax.set_title(f"{curr_title} ({SHOW_IMAGE_IX[0]})")
-            ax.axis('off')
-            SHOW_IMAGE_IX[0] += 1
-    
-    # set main title to the line where this function was called from
-    caller_frame = inspect.currentframe().f_back
-    caller_line = caller_frame.f_lineno
-    caller_func = caller_frame.f_code.co_name
-    caller_file = caller_frame.f_code.co_filename
-    caller_file = osp.basename(caller_file)
-    fig.suptitle(f"Called from line {caller_line} in {caller_func} in {caller_file}")
+        # determine rown and columns:
+        if len(imgs) == 1:
+            rc = (1,1)
+        elif len(imgs) == 2:
+            rc = (1,2)
+        elif len(imgs) <= 4:
+            rc = (2,2)
+        elif len(imgs) <= 6:
+            rc = (2,3)
+        elif len(imgs) <= 9:
+            rc = (3,3)
+        else:
+            cols = len(imgs) // 3 + 1
+            rc = (3, cols)
+        
+        fig, axes = plt.subplots(rc[0], rc[1])
 
-    initial_fig_name = plt.get_current_fig_manager().get_window_title()
-    plt.get_current_fig_manager().set_window_title(f"{initial_fig_name}, line {caller_line} in {caller_func} in {caller_file}")
+        # when rc = (1,1), axes is not a np.array of many axes, but a single Axes object. And then flatten doesn't work, and iteration doesn't work.
+        # It's just easier to make it into a np.array.
+        if isinstance(axes, plt.Axes):
+            axes = np.array([axes])
 
-    plt.show(block=False)
-    plt.pause(0.001)
+        # Flatten the axes array for easy iteration
+        axes = axes.flatten()
 
+        # Iterate over images and axesk
+        for i, ax in enumerate(axes):
+            if i < len(imgs):
+
+                curr_img = imgs[i][0] if isinstance(imgs[i], tuple) else imgs[i]
+                curr_title = imgs[i][1] if isinstance(imgs[i], tuple) else title
+
+
+                try:
+                    # this clones the image anyway
+                    img = smart_conversion(curr_img, 'ndarray', 'uint8')
+                except Exception as e:
+                    py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+                    raise e
+
+                ax.imshow(img, cmap='gray')
+                ax.set_title(f"{curr_title} ({SHOW_IMAGE_IX[0]})")
+                ax.axis('off')
+                SHOW_IMAGE_IX[0] += 1
+        
+        # set main title to the line where this function was called from
+        caller_frame = inspect.currentframe().f_back
+        caller_line = caller_frame.f_lineno
+        caller_func = caller_frame.f_code.co_name
+        caller_file = caller_frame.f_code.co_filename
+        caller_file = osp.basename(caller_file)
+        fig.suptitle(f"Called from line {caller_line} in {caller_func} in {caller_file}")
+
+        initial_fig_name = plt.get_current_fig_manager().get_window_title()
+        plt.get_current_fig_manager().set_window_title(f"{initial_fig_name}, line {caller_line} in {caller_func} in {caller_file}")
+
+        plt.show(block=False)
+        plt.pause(0.001)
+
+    except Exception as e:
+        py_log_always_on.log_stack(MY_LOGGER)
+        raise e
 
 
 

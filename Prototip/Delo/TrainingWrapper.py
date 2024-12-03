@@ -22,7 +22,7 @@ import torch
 from timeit import default_timer as timer
 import gc
 
-
+from my_dataset import show_image
 
 
 
@@ -80,7 +80,7 @@ from train_with_knowledge_distillation import get_mIoU_from_predictions, get_con
 """
 
 
-def get_conf_matrix(predictions, targets):
+def get_conf_matrix(predictions, targets, num_classes=2):
     """
     predictions and targets can be matrixes or tensors.
     
@@ -108,8 +108,6 @@ def get_conf_matrix(predictions, targets):
 
 
 
-        num_classes = 2
-
         """
         c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,0]))
         print(c)
@@ -121,15 +119,12 @@ def get_conf_matrix(predictions, targets):
         [0 1 1 0]   2  TARGETS
         [0 0 0 1]]  3 |
         """
+
+
+        # The mask is here mostly to make this a 1D array.
         mask = (targets_np >= 0) & (targets_np < num_classes)
 
 
-        # print(np.any(mask == False))
-        # False
-        """
-        I'm not sure why the mask is needed - wouldn't all the values be in this range?
-        And if they weren't, shouldn't we throw an error?
-        """
 
 
         """
@@ -143,38 +138,31 @@ def get_conf_matrix(predictions, targets):
         Label values [4, 5, 6, 7] are those that are 1 in the target, etc.
         Then this gets reshaped into a confusion matrix.
         np.reshape fills the matrix row by row.
-        I don't like this, because in the 2 class case it is intuitive that background is the true negative,
-        and so this doesn't conform to the usual confusion matrix representation:
-        (predicted values as columns and target values as rows)
-        [[TP, FN],
-        [FP, TN]]
-
-        First, we tried transposing along the anti-diagonal (np.rot90(confusion_matrix, 2).T), but this is wrong.
-        Just perform an antidiagonal transpose on a 3x3 matrix on paper by hand and keep track of the column and row labels.
-        They switch places. It's all wrong.
-
-        Instead, we shold flip the columns along their centre, and then flip the rows along their centre.
-        Essentially reshuffling them along the centre. This way the labels stay correctly corresponding after each of the operations.
         
-        This means performing flipud and fliplr.
-        But this is actually the same as just doing
-        np.rot90(confusion_matrix, 2)
-        and not doing the transpose.
+
+        So the leftmost column will be the background.
+        The top row will be the background.
+
+        The diagonal will be the correct predictions.
+
+        
         """
 
+        if num_classes > 8:
+            raise NotImplementedError("This function is not intended for more than 8 classes. Because np.uint8. Its easy to make it more general.")
+
         # print(mask) # 2d/3d tensor of true/false
-        label = num_classes * targets_np[mask].astype('int') + predictions_np[
-            mask]  # gt_image[mask] vzame samo tiste vrednosti, kjer je mask==True
+        label = num_classes * targets_np[mask].astype(np.uint8) + predictions_np[mask].astype(np.uint8)
+        # show_image([(predictions_np[mask], "Predictions"), (targets_np[mask], "Targets"))
+        # gt_image[mask] vzame samo tiste vrednosti, kjer je mask==True
         # print(mask.shape)  # batch_size, 128, 128
         # print(label.shape) # batch_size * 128 * 128 (with batch_size==1:   = 16384)
         # print(label)  # vector composed of 0, 1, 2, 3 (in the multilabel case)
         count = np.bincount(label, minlength=num_classes ** 2)  # number of repetitions of each unique value
         # print(count) # [14359   475    98  1452]
+        # so [predBGisBG, predBGisFG, predFGisBG, predFGisFG]
         confusion_matrix = count.reshape(num_classes, num_classes)
-        confusion_matrix = np.rot90(confusion_matrix, 2)
-        # print(confusion_matrix)
-        # [[ 1452   475]
-        #  [   98 14359]]
+
 
         return confusion_matrix
 
@@ -186,13 +174,118 @@ def get_conf_matrix(predictions, targets):
 
 
 
+# # slow but surely correct
 
-def get_IoU_from_predictions(predictions, targets):
+# def get_conf_matrix(predictions, targets, num_classes=2):
+#     """
+#     predictions and targets can be matrixes or tensors.
+    
+#     In both cases we only get a single confusion matrix
+#     - in the tensor case it is simply agreggated over all examples in the batch.
+#     """
+
+#     try:
+
+#         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
+#         targets_np = targets.cpu().long().numpy().astype(np.uint8)
+        
+        
+#         try:
+#             assert (predictions.shape == targets.shape)
+#         except:
+#             print("predictions.shape: ", predictions.shape)
+#             print("targets.shape: ", targets.shape)
+#             raise AssertionError
+
+
+#         confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.uint64)
+
+#         for tar in range(num_classes):
+#             tar_mask = targets_np == tar
+#             for pred in range(num_classes):
+#                 curr_pred = predictions_np[tar_mask] == pred
+#                 confusion_matrix[tar, pred] = curr_pred.sum()
+
+#         return confusion_matrix
+
+
+#     except Exception as e:
+#         py_log_always_on.log_stack(MY_LOGGER)
+#         raise e
+
+
+
+
+
+
+# def two_class_IoU_from_predictions(predictions, targets):
+#     """
+#     predictions and targets can be matrixes or tensors.
+    
+#     In both cases we only get a single confusion matrix
+#     - in the tensor case it is simply agreggated over all examples in the batch.
+#     """
+
+#     try:
+
+#         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
+#         targets_np = targets.cpu().long().numpy().astype(np.uint8)
+#         # for batch of predictions
+#         # if len(np.unique(targets)) != 2:
+#         #    print(len(np.unique(targets)))
+        
+        
+#         try:
+#             assert (predictions.shape == targets.shape)
+#         except:
+#             print("predictions.shape: ", predictions.shape)
+#             print("targets.shape: ", targets.shape)
+#             raise AssertionError
+
+
+#         # Calculate intersection and union
+#         intersection = np.logical_and(predictions_np, targets_np).astype(np.uint8)
+#         union = np.logical_or(predictions_np, targets_np).astype(np.uint8)
+
+#         union_sum = union.sum()
+#         # Calculate IoU
+#         iou = intersection.sum() / union_sum if union_sum != 0 else 0
+
+#         if len(predictions_np.shape) > 2:
+#             for ix in range(union.shape[0]):
+#                 print("IoU for image", ix, ":", intersection[ix].sum() / union[ix].sum())
+#                 show_image([(predictions_np[ix], "Predictions"), (targets_np[ix], "Targets"), (intersection[ix], "Intersection"), (union[ix], "Union")])
+#                 input("Press Enter to continue...")
+
+#         return iou
+
+
+#     except Exception as e:
+#         py_log_always_on.log_stack(MY_LOGGER)
+#         raise e
+
+
+
+
+
+
+
+
+
+
+
+
+
+def get_IoU_from_predictions(predictions, targets, num_classes=2):
+    """
+    Returns vector of IoU for each class.
+    IoU[0] is the IoU for the background, for example.
+    """
 
     try:
 
-        confusion_matrix = get_conf_matrix(predictions, targets)
-        IoU = conf_matrix_to_IoU(confusion_matrix)
+        confusion_matrix = get_conf_matrix(predictions, targets, num_classes)
+        IoU = conf_matrix_to_IoU(confusion_matrix, num_classes)
 
         return IoU
     
@@ -201,7 +294,7 @@ def get_IoU_from_predictions(predictions, targets):
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
 
-def conf_matrix_to_IoU(confusion_matrix):
+def conf_matrix_to_IoU(confusion_matrix, n_classes):
     """
     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
     print(c)
@@ -214,8 +307,6 @@ def conf_matrix_to_IoU(confusion_matrix):
     """
 
     try:
-        #print(confusion_matrix)
-        n_classes = 2
         if confusion_matrix.shape != (n_classes, n_classes):
             print(confusion_matrix.shape)
             raise NotImplementedError()
@@ -223,8 +314,11 @@ def conf_matrix_to_IoU(confusion_matrix):
         IoU = np.diag(confusion_matrix) / (
                 np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
                 np.diag(confusion_matrix))
+        
+        # print("Conf matrix:", confusion_matrix)
+        # print("IoU diag:", IoU)
 
-        return IoU.item(1) # only IoU for sclera (not background)
+        return IoU
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
@@ -243,12 +337,16 @@ def get_F1_from_predictions(predictions, targets):
 
 def conf_matrix_to_F1(confusion_matrix):
 
+
     try:
 
-        TP = confusion_matrix[0][0]
+        TP = confusion_matrix[0][0] # this is actually the background
         FN = confusion_matrix[0][1]
         FP = confusion_matrix[1][0]
-        TN = confusion_matrix[1][1]
+        TN = confusion_matrix[1][1] # this is the target.
+
+        # We could switch them, but it doesn't matter computationally.
+
 
         precision = TP / (TP + FP)
         recall = TP / (TP + FN)
@@ -263,47 +361,47 @@ def conf_matrix_to_F1(confusion_matrix):
         raise e
 
 
-# On mIoU: It is particularly useful for multi-class segmentation tasks.
-# mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
-def get_mIoU_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    mIoU = conf_matrix_to_mIoU(confusion_matrix)
+# # On mIoU: It is particularly useful for multi-class segmentation tasks.
+# # mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
+# def get_mIoU_from_predictions(predictions, targets):
+#     confusion_matrix = get_conf_matrix(predictions, targets)
+#     mIoU = conf_matrix_to_mIoU(confusion_matrix)
 
-    return mIoU
+#     return mIoU
 
 
-def conf_matrix_to_mIoU(confusion_matrix):
-    """
-    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
-    print(c)
-    [[1 0 0 0]
-     [0 0 0 0]
-     [0 1 1 0]
-     [0 0 0 2]]
-    miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
-    print(miou) # 0.625
-    """
+# def conf_matrix_to_mIoU(confusion_matrix):
+#     """
+#     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
+#     print(c)
+#     [[1 0 0 0]
+#      [0 0 0 0]
+#      [0 1 1 0]
+#      [0 0 0 2]]
+#     miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
+#     print(miou) # 0.625
+#     """
 
-    try:
-        #print(confusion_matrix)
-        n_classes = 2
-        if confusion_matrix.shape != (n_classes, n_classes):
-            print(confusion_matrix.shape)
-            raise NotImplementedError()
+#     try:
+#         #print(confusion_matrix)
+#         n_classes = 2
+#         if confusion_matrix.shape != (n_classes, n_classes):
+#             print(confusion_matrix.shape)
+#             raise NotImplementedError()
 
-        MIoU = np.diag(confusion_matrix) / (
-                np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
-                np.diag(confusion_matrix))
+#         MIoU = np.diag(confusion_matrix) / (
+#                 np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
+#                 np.diag(confusion_matrix))
 
-        if n_classes == 2:
-            print("mIoU computed with only two classes. Background omitted.")
-            return MIoU.item(1) # only IoU for sclera (not background)
-        else:
-            return np.mean(MIoU)
+#         if n_classes == 2:
+#             print("mIoU computed with only two classes. Background omitted.")
+#             return MIoU.item(1) # only IoU for sclera (not background)
+#         else:
+#             return np.mean(MIoU)
 
-    except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
-        raise e
+#     except Exception as e:
+#         py_log_always_on.log_stack(MY_LOGGER)
+#         raise e
 
 
 
@@ -452,7 +550,7 @@ class TrainingWrapper:
                         pred_binary = pred[:, 1] > pred[:, 0]
 
                         F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoU += get_IoU_from_predictions(pred_binary, y)
+                        approx_IoU += get_IoU_from_predictions(pred_binary, y).item(1) # only IoU for sclera (not background)
 
 
                         # X and y are tensors of a batch, so we have to go over them all
@@ -461,7 +559,7 @@ class TrainingWrapper:
                             pred_binary = pred[i][1] > pred[i][0]
 
 
-                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
+                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i]).item(1) # only IoU for sclera (not background)
                             # print(f"This image's IoU: {curr_IoU:>.6f}%")
                             IoU += curr_IoU
 
@@ -532,7 +630,7 @@ class TrainingWrapper:
                         pred_binary = pred[:, 1] > pred[:, 0]
 
                         F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoU += get_IoU_from_predictions(pred_binary, y)
+                        approx_IoU += get_IoU_from_predictions(pred_binary, y).item(1) # only IoU for sclera (not background)
 
 
                         # X and y are tensors of a batch, so we have to go over them all
@@ -541,7 +639,7 @@ class TrainingWrapper:
                             pred_binary = pred[i][1] > pred[i][0]
 
 
-                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i])
+                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i]).item(1) # only IoU for sclera (not background)
                             # print(f"This image's IoU: {curr_IoU:>.6f}%")
                             IoU += curr_IoU
 

@@ -84,7 +84,7 @@ class ModelWrapper:
 
 
         if self.prev_model_path is not None and osp.exists(self.prev_model_path):
-            print(self.prev_model_path)
+            print("Loaded model path: ", self.prev_model_path)
             # you can specify the map_location parameter to map the model to the CPU. This tells PyTorch to load the model onto the CPU, even if it was originally saved on a GPU.
             # Otherwise: RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False.
             self.model = torch.load(self.prev_model_path, map_location=torch.device(device))
