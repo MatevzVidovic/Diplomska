@@ -214,6 +214,14 @@ class ModelWrapper:
 
 
         else:
+            
+            """
+            We don't just prune by this percent, because that get's us bad results.
+            Every time we prune, we prune e.g. 1 percent. Because of pnkao we overshoot by a little. So next time, if we prune by 1 percent again, we will overshoot by a little again, and the overshoots compound.
+            So we will instead prune in this way: get in which bracket of this percent we are so far (eg, we have 79.9 percent of original weights), then we will prune to 79 percent and pnkao will overshoot a little.
+            
+
+            Old code:
             initial_resource_value = self.initial_resource_calc.get_resource_of_whole_model(resource_name)
             value_to_prune = initial_resource_value * original_proportion_to_prune
             
@@ -221,6 +229,38 @@ class ModelWrapper:
             curr_resource_value = starting_resource_value
 
             goal_resource_value = starting_resource_value - value_to_prune
+            print(f"Goal resource value: {goal_resource_value}")
+            
+            """
+
+
+
+            initial_resource_value = self.initial_resource_calc.get_resource_of_whole_model(resource_name)
+
+            bracket_size = initial_resource_value * original_proportion_to_prune
+            
+            starting_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
+            starting_bracket = starting_resource_value / bracket_size
+            lower_lim_starting_bracket = int(starting_bracket)
+            residual_part = starting_bracket - lower_lim_starting_bracket
+
+            # if we are too close to the next bracket, that is somewhat suspicious, so just to prevent problems like:
+            # we are at bracket 79.01 so we go prune to 79 but we again just stop and end up at 79.01, so we never prune anything.
+            # Not that this has happened, just that it can happen in general.
+            # Pnkao should never overshoot by 0.9 o a bracket size, so this is a safe assumption. If it does overshoot by that much, it's a much bigger problem than just this skipping of a bracket,
+            # and it should obviously be made much lower.
+
+            if residual_part < 0.1:
+                lower_lim_starting_bracket -= 1
+            
+            goal_resource_value = bracket_size * lower_lim_starting_bracket
+            
+
+
+            curr_resource_value = starting_resource_value
+            
+            
+
             print(f"Goal resource value: {goal_resource_value}")
             
             while curr_resource_value > goal_resource_value:
