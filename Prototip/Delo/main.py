@@ -130,7 +130,10 @@ if __name__ == "__main__":
 
                         """)
     parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
+    parser.add_argument('--ptp', type=float, default=0.01, help="""Proportion of original {resource_name} to prune - actually, we don't just prune by this percent, because that get's us bad results.
+                        Every time we prune, we prune e.g. 1 percent. Because of pnkao we overshoot by a little. So next time, if we prune by 1 percent again, we will overshoot by a little again, and the overshoots compound.
+                        So we will instead prune in this way: get in which bracket of this percent we are so far (eg, we have 79.9 percent of original weights), then we will prune to 79 percent and pnkao will overshoot a little.
+                        """)
 
 
     
