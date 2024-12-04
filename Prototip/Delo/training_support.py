@@ -18,6 +18,8 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
+from type_conv_and_show_img import show_image
+from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
 import pickle
@@ -430,6 +432,62 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter ts to do a test showcase of the model and re-ask for input.
+                        Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+
+            if inp == "da":
+                
+                inp = ""
+                curr_dataset = model_wrapper.training_wrapper.dataloaders_dict["train"].dataset
+                da_dataloader = DataLoader(curr_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
+                img_ix = 0
+
+                while inp == "":
+                    
+                    ix = 0
+                    for X, y in da_dataloader:
+                        
+                        # so we actually get to the image we want to see
+                        if ix < img_ix:
+                            ix += 1
+                            continue
+
+                        curr_img = X[0]
+                        curr_target = y[0]
+                        break
+
+                    show_image([curr_img, curr_target])
+
+                    inp = input("""Press Enter to get the next data augmentation. Enter a number to swith to img with that ix in the dataset as the subject of this data augmentation test.
+                                Enter anything to stop with the data augmentation testing.\n""")
+                    
+                    if inp.isdigit():
+                        img_ix = int(inp)
+                        inp = ""
+                    
+                    
+
+                inp = input(f"""
+                        Enter ts to do a test showcase of the model and re-ask for input.
+                        Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.\n""")
+            
+            if inp == "ts":
+                model_wrapper.training_wrapper.test_showcase()
+                inp = input(f"""
                         Enter "resource_graph" to trigger resource_graph() and re-ask for input.
                         Enter s to save the model and re-ask for input.
                         Enter g to show the graph of the model and re-ask for input.

@@ -22,7 +22,7 @@ import torch
 from timeit import default_timer as timer
 import gc
 
-from my_dataset import show_image
+from type_conv_and_show_img import show_image
 
 
 
