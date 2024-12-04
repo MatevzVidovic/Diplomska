@@ -1,4 +1,13 @@
 
+import os
+import logging
+import python_logger.log_helper_off as py_log
+import python_logger.log_helper as py_log_always_on
+
+
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
+MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import os.path as osp
@@ -9,6 +18,7 @@ import json_handler as jh
 import matplotlib.pyplot as plt
 
 import argparse
+
 
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -122,14 +132,18 @@ def show_results(main_save_path):
         plt.show(block=False)
 
         return fig, ax
-
+    
     except Exception as e:
-        # Print the exception message
-        print("An exception occurred in show_results():", e)
-        # Print the type of the exception
-        print("Exception type:", type(e).__name__)
-        print("Continuing operation.")
-        return None, None
+        py_log_always_on.log_stack(MY_LOGGER)
+        raise e
+
+    # except Exception as e:
+    #     # Print the exception message
+    #     print("An exception occurred in show_results():", e)
+    #     # Print the type of the exception
+    #     print("Exception type:", type(e).__name__)
+    #     print("Continuing operation.")
+    #     return None, None
 
 
 
@@ -177,18 +191,21 @@ def resource_graph(main_save_path, saved_model_wrapper_path):
 
         return fig, ax, res_dict
 
-
-
     except Exception as e:
+        py_log_always_on.log_stack(MY_LOGGER)
+        raise e
 
-        # raise e
 
-        # Print the exception message
-        print("An exception occurred in resource_graph():", e)
-        # Print the type of the exception
-        print("Exception type:", type(e).__name__)
-        print("Continuing operation.")
-        return None, None, None
+    # except Exception as e:
+
+    #     # raise e
+
+    #     # Print the exception message
+    #     print("An exception occurred in resource_graph():", e)
+    #     # Print the type of the exception
+    #     print("Exception type:", type(e).__name__)
+    #     print("Continuing operation.")
+    #     return None, None, None
 
 
 

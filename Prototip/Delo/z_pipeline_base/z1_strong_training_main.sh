@@ -19,7 +19,7 @@
 # cbi=${curr_bash_ix}
 # cn=${command_num}
 
-source z_pipeline_base/z0_bash_saver.sh z_pipeline_base
+source z_pipeline_base/z0_bash_saver.sh
 
 
 # Creates temp files save_and_stop, results_and_stop, and graph_and_stop
@@ -29,108 +29,17 @@ source z_pipeline_base/z0_temp_inputs.sh
 
 
 
-
-
-
-# main_name="segnet_main.py"
-# folder_name="test_SegNet"
-# bs=56
-# nodw=64
-
 main_name=$1
 folder_name=$2
 bs=$3
 nodw=$4
-
-
-# Testing if this works:
-# - save
-# - train for 2 iterations
-# - save
-# - prune (2 prunings by 0.005 percent, between them 2 train iters)
-# - save
-# - prune (2 prunings by 0.005 percent, before each 2 train iters)
-# - save
-# - migrate to new dataset (from sclera to vein_sclera)
-# - prune (2 prunings by 0.005 percent, before each 2 train iters)
-# - save
-# - prune (2 prunings by 0.005 percent, before each 2 train iters)
-# - save
-# - train for 2 iterations
-# - save
+pnkao=$5
 
 
 
-# Delete the folder if it exists, and then create it empty
-if [ -d "$folder_name" ]; then
-    rm -r "$folder_name"
-fi
-mkdir "$folder_name"
-
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.005           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.005           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.005           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.005           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-
-
-
-
-
-
-
-# Test pruning:
-
-folder_name="${folder_name}_pruning"
-
-# Delete the folder if it exists, and then create it empty
-if [ -d "$folder_name" ]; then
-    rm -r "$folder_name"
-fi
-mkdir "$folder_name"
-
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.05           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 2 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$results_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$resources_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# additional use of z_bash_saver.sh
+program_content_file="${results_folder_name}/curr/program_code_${curr_bash_ix}.py"
+cat "${main_name}" > "${program_content_file}"
 
 
 
@@ -143,7 +52,14 @@ python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"         
 
 
 
+# Main training:
 
+# ogromen dataset, ne rabis veliko trainingov
+# python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./sclera_data --mti 10          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# po stevilu datapointov je 1 epoch tu 13 epochov na vein_sclera_data
+
+# te so itak hitri, ker majhen train set
+python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --mti 1500           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
@@ -163,7 +79,7 @@ python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"         
     #                     help='iter_possible_stop An optional positional argument with a default value of 1e9')
     # parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
 
-    
+
     # # With action='store_true' these args store True if the flag is present and False otherwise.
     # # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
     # # So --pbop False would still give True to the pbop field.
@@ -185,14 +101,14 @@ python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"         
     # parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
     # parser.add_argument('--nept', type=int, default=1,
     #                     help='Number of epochs per training iteration')
-    
+
     # parser.add_argument('--pbop', action='store_true',
     #                     help='Prune by original percent, otherwise by number of filters')
     # parser.add_argument('--nftp', type=int, default=1,
     #                     help="""
     #                     !!! ONLY APPLIES IF --pbop IS FALSE !!!
     #                     Number of filters to prune in one pruning""")
-    
+
     # parser.add_argument('--pnkao', type=int, default=20, help="""
     #                     !!! THIS IS OVERRIDDEN IF --ifn IS 0 OR 1 !!!
     #                     It becomes 1. Because we need the new importances to be calculated after every pruning.
@@ -228,10 +144,13 @@ python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"         
 
     #                     """)
     # parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    # parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
+    # parser.add_argument('--ptp', type=float, default=0.01, help="""Proportion of original {resource_name} to prune - actually, we don't just prune by this percent, because that get's us bad results.
+    #                     Every time we prune, we prune e.g. 1 percent. Because of pnkao we overshoot by a little. So next time, if we prune by 1 percent again, we will overshoot by a little again, and the overshoots compound.
+    #                     So we will instead prune in this way: get in which bracket of this percent we are so far (eg, we have 79.9 percent of original weights), then we will prune to 79 percent and pnkao will overshoot a little.
+    #                     """)
 
 
-    
+
     # def custom_type_conversion(value):
     #     try:
     #         # Try to convert to int
