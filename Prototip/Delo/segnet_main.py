@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
     parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
-    parser.add_argument("--lr", type=str, help="Learning rate", default=1e-3)
+    parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
 
 
 
@@ -262,12 +262,110 @@ save_path = osp.join(".", SAVE_DIR)
 main_save_path = osp.join(save_path, "saved_main")
 
 
+# Get cpu, gpu or mps device for training.
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+# self.device = "cpu" # for debugging purposes
+print(f"Device: {device}")
+
+
+
+
+
+
+
+
+
+# In PyTorch, the automatic differentiation system, autograd, works by tracking operations on tensors to build a computational graph. 
+# Each operation on a tensor creates a new node in this graph, and each node knows how to compute the gradient of the operation it represents. 
+# This is facilitated by the grad_fn attribute, which points to a Function object that knows how to perform the backward pass for that operation.
+# When you define a custom loss function in PyTorch, you typically use PyTorch tensor operations. 
+# As long as you stick to these operations, PyTorch will automatically handle the differentiation for you. 
+# This is because each PyTorch operation is designed to be differentiable and is part of the computational graph.
+
+
+# Dice Loss is a smooth variation of IoU
+
+
+class MultiClassDiceLoss(nn.Module):
+    def __init__(self, smooth=1):
+        super(MultiClassDiceLoss, self).__init__()
+        self.smooth = smooth
+
+    def forward(self, inputs, targets):
+
+        try:
+
+
+            if len(inputs.shape) == 3:
+                inputs = inputs.unsqueeze(0)
+
+
+            # Apply softmax to inputs if they are logits
+            inputs = torch.softmax(inputs, dim=1) # Apply softmax across the class dimension
+
+
+            # Initialize Dice Loss
+            dice_loss = 0.0
+            
+            # Iterate over each class
+            for c in range(inputs.shape[1]):
+                
+                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+                if c == 0:
+                    continue
+
+                input_to_be_flat = inputs[:,c,:,:].squeeze(1)
+
+                input_flat = input_to_be_flat.reshape(-1)
+                
+                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 0s and 1s
+                target_flat = target_to_be_flat.reshape(-1)
+
+                # Compute intersection
+                intersection = (input_flat * target_flat)
+                intersection = intersection.sum()
+                
+                # Compute Dice Coefficient for this class
+                dice = (2. * intersection + self.smooth) / (input_flat.sum() + target_flat.sum() + self.smooth)
+                
+                # Accumulate Dice Loss
+                dice_loss += 1 - dice
+            
+            # Average over all classes
+            return dice_loss / inputs.shape[0]
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER)
+            raise e
+
+
+
+
+# There are 65000 pixels in the image. Only like 700 are 1s. 
+# So to make 0s and 1s equally important, we would have to roughly [0.1, 6.5]
+# And even then - we should give more priority to the 1s, because they are more important. 
+# And we really want to increase how much we decide on 1s.
+
+# The mean of the weights should be 1.0, so that loss remains more interpretable and graphable
+# CE loss is between 0 and 1 in the 2 class case if the model is remotely okay. 
+# The weights multyply the error for each class, so if the mean is 1, i think the loss is between 0 and 1.
+
+# class_weights = torch.tensor([0.1, 6.5])
+class_weights = torch.tensor([0.1, 50.0])
+class_weights = class_weights / class_weights.mean() # to make the loss more interpretable and graphable
+class_weights = class_weights.to(device)
 
 
 learning_parameters = {
     "learning_rate" : LEARNING_RATE,
-    "loss_fn" : nn.CrossEntropyLoss(),
-    "optimizer_class" : torch.optim.SGD
+    "loss_fn" : MultiClassDiceLoss(), # nn.CrossEntropyLoss(weight=class_weights),
+    "optimizer_class" : torch.optim.Adam
 }
 
 
@@ -833,7 +931,7 @@ if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path)
+    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device)
 
     # Go see model graph to help you choose the right layers to prune.
     # model_wrapper.model_graph()

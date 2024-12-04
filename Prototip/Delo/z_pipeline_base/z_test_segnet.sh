@@ -6,4 +6,4 @@
 # bs=$3
 # nodw=$4
 
-bash z_pipeline_base/z1_test_basic.sh segnet_main.py test_SegNet 56 64
+bash z_pipeline_base/z1_test_basic.sh segnet_main.py test_SegNet 56 48

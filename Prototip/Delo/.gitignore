@@ -53,15 +53,9 @@ y_*
 SegNet_*/
 UNet_*/
 
-x_out_0.txt
-x_out_1.txt
-x_out_2.txt
-x_out_3.txt
+x*out*.txt
 
-y_run_me_0.sbatch
-y_run_me_1.sbatch
-y_run_me_2.sbatch
-y_run_me_3.sbatch
+y*run_me*.sbatch
 
 x0_out.txt
 x1_out.txt

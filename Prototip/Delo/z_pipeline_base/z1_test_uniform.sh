@@ -22,7 +22,7 @@
 source z_pipeline_base/z0_bash_saver.sh
 
 
-# Creates temp files save_and_stop, results_and_stop, and graph_and_stop
+# Creates temp files save_and_stop, results_and_stop, and graph_and_stop, resource_graph_and_stop
 source z_pipeline_base/z0_temp_inputs.sh
 
 
@@ -61,40 +61,43 @@ if [ -d "$folder_name" ]; then
 fi
 mkdir "$folder_name"
 
+
+
 python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --nftp 10 --map 2 --pnkao 999 --rn flops_num  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+python3 ${main_name} --tp  --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data -t --pruning_phase --pbop --map 1 --pnkao 2 --rn flops_num --ptp 0.0009  --ifn 1           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$results_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$resource_graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 

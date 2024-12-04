@@ -35,7 +35,7 @@ from model_vizualization import model_graph
 class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device):
 
         self.model_class = model_class
         
@@ -70,16 +70,7 @@ class ModelWrapper:
 
 
 
-        # Get cpu, gpu or mps device for training.
-        device = (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-        # self.device = "cpu" # for debugging purposes
-        print(f"Device: {device}")
+        
 
 
 
