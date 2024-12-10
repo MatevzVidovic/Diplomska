@@ -9,7 +9,8 @@ scp*/
 PrunedModels*/
 DonePrunedModels*/
 
-# On the fly output and sbatch files:
+# Some utput and sbatch files:
+x_*.txt
 x[0-9]*_out*.txt
 y[0-9]*_run_me*.sbatch
 
