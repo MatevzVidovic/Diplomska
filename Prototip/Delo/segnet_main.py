@@ -150,7 +150,44 @@ if __name__ == "__main__":
                         This makes it so all the conv layers have 0.999999 as their limit for weights. 
                         MIND THAT input slice pruning also affects the weights - so this generally means each layer will get one kernel OR one input slice pruned.
                         The uniform pruning starts at CURR_PRUNING_IX - so if you want the other half of layers to have their kernels pruned, just change that to 1.""")
+    parser.add_argument('--optim', type=str, default="Adam", help='Optimizer used. Adam, SGD, LBFGS')
+    parser.add_argument("--loss_fn_name", type=str, default="Default", help="""Loss function used. Default (MCDL), 
+                        MCDL for MultiClassDiceLoss, CE for CrossEntropyLoss,
+                        CEHW for CrossEntropyLoss_hardcode_weighted,
+                        MCDL_CEHW_W for MultiClassDiceLoss and CrossEntropyLoss_hardcode_weighted in a weighted pairing of both losses,
+                        MCDLW for MultiClassDiceLoss with background adjustment,
+                        """)
 
+    def isfloat(s):
+        """
+        Checks if a string represents a valid float number.
+        
+        Args:
+            s (str): The input string to check.
+        
+        Returns:
+            bool: True if the string represents a valid float, False otherwise.
+        """
+        # Remove leading and trailing whitespace
+        s = s.strip()
+        
+        # Handle empty string
+        if not s:
+            return False
+        
+        # Allow for negative sign
+        if s.startswith('-'):
+            s = s[1:]
+        
+        # Check if the remaining part is either a digit or a single decimal point
+        return s.replace('.', '', 1).isdigit()
+
+    def list_conversion(list_str):
+        if isfloat(list_str):
+            return [float(list_str)]
+        return ast.literal_eval(list_str)
+    
+    parser.add_argument("--alphas", type=list_conversion, default=[], help="Alphas used in loss_fn. Currently only one is used. If there is just one alpha, you can just pass a float as an arg, like: 0.8.")
 
 
 
@@ -184,6 +221,10 @@ if __name__ == "__main__":
 
     TEST_PRUNING = args.tp
     IMPORTANCE_FN_DEFINER = args.ifn
+
+    optimizer = args.optim
+    loss_fn_name = args.loss_fn_name
+    alphas = args.alphas
 
 
     if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
@@ -293,14 +334,14 @@ print(f"Device: {device}")
 
 
 class MultiClassDiceLoss(nn.Module):
-    def __init__(self, smooth=1):
+    def __init__(self, smooth=1, background_adjustment=None):
         super(MultiClassDiceLoss, self).__init__()
         self.smooth = smooth
+        self.background_adjustment = background_adjustment
 
     def forward(self, inputs, targets):
 
         try:
-
 
             if len(inputs.shape) == 3:
                 inputs = inputs.unsqueeze(0)
@@ -312,20 +353,52 @@ class MultiClassDiceLoss(nn.Module):
 
             # Initialize Dice Loss
             dice_loss = 0.0
+
+
+
+            if self.background_adjustment is not None:
+                is_background = (targets == 0).bool() # same size tensor of bools
+                is_background_flat = is_background.reshape(-1)
             
+
             # Iterate over each class
             for c in range(inputs.shape[1]):
                 
                 # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+                # So in the return we also divide with one less.
                 if c == 0:
                     continue
 
                 input_to_be_flat = inputs[:,c,:,:].squeeze(1)
-
                 input_flat = input_to_be_flat.reshape(-1)
                 
-                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 0s and 1s
+                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
                 target_flat = target_to_be_flat.reshape(-1)
+
+
+
+                # Adjust background missprediction weights
+                # Where the target is 0, we don't want the loss to be as severe as when the target is 1.
+                # This is because the background is much more common than the other classes, so it is too safe of a bet to just predict background.
+                # So the model doesn't want to move towards predicting classes, because it is too safe to just predict background.
+
+                # We want to keep our loss between 0 and 1, so we can interpret it better and it is nicely graphable.
+                # The reason dice loss is between 0 and 1 is because at each pixel, input_flat is between 0 and 1, and target_flat is 0 or 1.
+                # This per pixel quality should stay the same.
+
+                # We should simply pretend that our input_to_be_flat was closer to 0 than it actually was, when the target is 0.
+                # This way, we don't discourage predictions of some actual class in the background spots.
+                # We don't punish it as much.  
+                
+                if self.background_adjustment is not None:
+                    background_distanes = input_flat.clone()
+                    # The distances to zero are simply the values.
+                    background_distanes[is_background_flat] = 0
+                    # We then decide what percentage of these distances we would like to help the model with.
+                    background_distanes = background_distanes * self.background_adjustment
+                    # Then we actually go and adjust the input_flat, so the model will be penalised less for those.
+                    input_flat = input_flat - background_distanes
+
 
                 # Compute intersection
                 intersection = (input_flat * target_flat)
@@ -338,7 +411,44 @@ class MultiClassDiceLoss(nn.Module):
                 dice_loss += 1 - dice
             
             # Average over all classes
-            return dice_loss / inputs.shape[0]
+            dice_loss =  dice_loss / (inputs.shape[1] - 1) # -1 because we skip the background class
+
+            return dice_loss
+
+
+
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER)
+            raise e
+        
+
+
+
+
+class WeightedLosses(nn.Module):
+    def __init__(self, losses_list, weights_list=[]):
+        # super(MultiClassDiceLoss, self).__init__()
+        self.losses_list = losses_list
+
+        # if no weights are given, we will use equal weights
+        if len(weights_list) == 0:
+            self.weights_list = [(1/len(weights_list)) for _ in range(len(losses_list))]
+        else:
+            if len(weights_list) != len(losses_list):
+                raise ValueError("The number of losses and weights must be the same.")
+            self.weights_list = weights_list
+
+
+    def forward(self, inputs, targets):
+
+        try:
+            
+            computed_losses = [loss(inputs, targets) for loss in self.losses_list]
+            weighted_losses = [computed_losses[i] * self.weights_list[i] for i in range(len(computed_losses))]
+            total_loss = sum(weighted_losses)
+            return total_loss
 
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER)
@@ -346,26 +456,75 @@ class MultiClassDiceLoss(nn.Module):
 
 
 
+# we would like the loss to be weighted:
+# Because there are many more 0s than 1s there is an imbalance and the model will be biased towards predicting 0s.
+# We would like to give more importance to the 1s.
+# So basically, we could just make a new criterion that is more focused on the 1s, and weight it with dice_loss.
+# The aux loss should be between 0 and 1, so we can keep it in thiss range for graphing and interpretation and comperability across models.
 
-# There are 65000 pixels in the image. Only like 700 are 1s. 
-# So to make 0s and 1s equally important, we would have to roughly [0.1, 6.5]
-# And even then - we should give more priority to the 1s, because they are more important. 
-# And we really want to increase how much we decide on 1s.
 
-# The mean of the weights should be 1.0, so that loss remains more interpretable and graphable
-# CE loss is between 0 and 1 in the 2 class case if the model is remotely okay. 
-# The weights multyply the error for each class, so if the mean is 1, i think the loss is between 0 and 1.
 
-# class_weights = torch.tensor([0.1, 6.5])
-class_weights = torch.tensor([0.1, 50.0])
-class_weights = class_weights / class_weights.mean() # to make the loss more interpretable and graphable
-class_weights = class_weights.to(device)
+
+
+
+# CE_weights = torch.tensor([0.1, 6.5])
+CE_weights = torch.tensor([0.1, 50.0])
+CE_weights = CE_weights / CE_weights.mean() # to make the loss more interpretable and graphable
+CE_weights = CE_weights.to(device)
+
+
+
+if loss_fn_name == "Default":
+    loss_fn_name = "MCDL"
+
+if loss_fn_name == "MCDL":
+    loss_fn = MultiClassDiceLoss()
+elif loss_fn_name == "CE":
+    loss_fn = nn.CrossEntropyLoss()
+
+elif loss_fn_name == "CEHW":
+
+    # There are 65000 pixels in the image. Only like 700 are 1s. 
+    # So to make 0s and 1s equally important, we would have to roughly [0.1, 6.5]
+    # And even then - we should give more priority to the 1s, because they are more important. 
+    # And we really want to increase how much we decide on 1s.
+
+    # The mean of the weights should be 1.0, so that loss remains more interpretable and graphable
+    # CE loss is between 0 and 1 in the 2 class case if the model is remotely okay. 
+    # The weights multiply the error for each class, so if the mean is 1, i think the loss is between 0 and 1.
+
+    loss_fn = nn.CrossEntropyLoss(weight=CE_weights)
+
+elif loss_fn_name == "MCDL_CEHW_W":
+    losses = [MultiClassDiceLoss(), nn.CrossEntropyLoss(weight=CE_weights)]
+    weights = [0.5, 0.5]
+    loss_fn = WeightedLosses(losses, weights)
+
+elif loss_fn_name == "MCDLW":
+    loss_fn = MultiClassDiceLoss(background_adjustment=alphas[0])
+
+else:
+    raise ValueError("Loss function not recognized.")
+
+
+
+
+
+if optimizer == "Adam":
+    optimizer = torch.optim.Adam
+elif optimizer == "SGD":
+    optimizer = torch.optim.SGD
+elif optimizer == "LBFGS":
+    raise NotImplementedError("LBFGS is not implemented.")
+    optimizer = torch.optim.LBFGS
+else:
+    raise ValueError("Optimizer not recognized.")
 
 
 learning_parameters = {
     "learning_rate" : LEARNING_RATE,
-    "loss_fn" : MultiClassDiceLoss(), # nn.CrossEntropyLoss(weight=class_weights),
-    "optimizer_class" : torch.optim.Adam
+    "loss_fn" : loss_fn,
+    "optimizer_class" : optimizer
 }
 
 

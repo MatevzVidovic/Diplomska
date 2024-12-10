@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=unet
+#SBATCH --time=0-12:00:00
+
+#SBATCH -p frida
+#SBATCH -c 48
+#SBATCH --gpus=A100
+#SBATCH --output=x_unet.txt
 
 
 # main_name=$1
@@ -6,7 +13,7 @@
 # bs=$3
 # nodw=$4
 # pnkao=$5
-
+# ptd=$6
 
 
 # -c 64, ampak pomoje to nic ne spremeni
@@ -21,12 +28,12 @@
 
 # Za pruning se uporablja vein, ki itak ne preseže 90 primerkov,torej nas ne rabi skrbet pruning del.
 
-# bash z_pipeline_base/z1_test_main.sh main.py test_UNet_main 105 64 80
+# srun bash z_pipeline_base/z1_test_main.sh main.py test_UNet_main 105 64 80
 
 
 
 
 
-bash z_pipeline_base/z1_standard_main.sh main.py UNet_main 105 64 80
+srun bash z_pipeline_base/zz_standard_main.sh main.py unet 105 64 80 ./vein_sclera_data
 
 

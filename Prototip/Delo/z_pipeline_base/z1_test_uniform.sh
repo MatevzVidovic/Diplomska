@@ -35,6 +35,15 @@ bs=$3
 nodw=$4
 
 
+param_num=4
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
+    exit 1
+fi
+
+
+
 
 
 

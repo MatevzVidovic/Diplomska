@@ -176,6 +176,8 @@ class SegNet(nn.Module):
         x = F.relu(self.BNDe12(self.ConvDe12(x)))
         x = self.ConvDe11(x)
 
-        x = F.softmax(x, dim=1)
+        # This is wrong! Loss functions expect logits (unnormalized scores) and they do the softmax internally.
+        # Doing softmax twice introduces numerical instability and a bunc of problems.
+        # x = F.softmax(x, dim=1)
 
         return x

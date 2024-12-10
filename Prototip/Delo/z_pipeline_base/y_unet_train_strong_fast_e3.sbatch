@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=utsfe3
+#SBATCH --time=0-12:00:00
+
+#SBATCH -p frida
+#SBATCH -c 48
+#SBATCH --gpus=A100
+#SBATCH --output=x_unet_train_strong_fast_e3.txt
 
 
 # main_name=$1
@@ -7,9 +14,10 @@
 # nodw=$4
 # pnkao=$5
 # lr=$6
+# ptd=$7
 
 
-
+# These experiments were on ./sclera_data (because vein_sclera_data only has 89 training examples, so bs can at most be that)
 
 # Using torch.optim.SGD (uses less params than ADAM)
 # -c 64 pri teh testih, ampak pomoje to nic ne spremeni
@@ -22,12 +30,12 @@
 
 # Za pruning se uporablja vein, ki itak ne preseže 90 primerkov,torej nas ne rabi skrbet pruning del.
 
-# bash z_pipeline_base/z1_test_main.sh main.py test_UNet_main 105 64 80
+# srun bash z_pipeline_base/z1_test_main.sh main.py test_UNet_main 105 64 80
 
 
 
 
 
-bash z_pipeline_base/z1_strong_fast_training_main.sh main.py UNet_fast_e4 90 48 80 1e-4
+srun bash z_pipeline_base/z1_strong_fast_training_main.sh main.py unet_train_strong_fast_e3 90 48 80 1e-3 ./vein_sclera_data
 
 

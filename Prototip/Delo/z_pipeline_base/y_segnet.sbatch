@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=segnet
+#SBATCH --time=0-12:00:00
+
+#SBATCH -p frida
+#SBATCH -c 48
+#SBATCH --gpus=A100
+#SBATCH --output=x_segnet.txt
 
 
 
@@ -7,7 +14,11 @@
 # bs=$3
 # nodw=$4
 # pnkao=$5
+# ptd=$6
 
+
+
+# These experiments were on ./sclera_data (because vein_sclera_data only has 89 training examples, so bs can at most be that)
 
 # -c 64, ampak pomoje to nic ne spremeni
 
@@ -25,11 +36,11 @@
 
 
 
-# bash z_pipeline_base/z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
+# srun bash z_pipeline_base/z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
 
 
 
 
 
-bash z_pipeline_base/z1_standard_main.sh segnet_main.py SegNet_main 210 64 80
+srun bash z_pipeline_base/zz_standard_main.sh segnet_main.py segnet 210 64 80 ./vein_sclera_data
 
