@@ -39,7 +39,23 @@ from model_eval_graphs import resource_graph, show_results
 
 
 
+def save_plt_fig(fig, save_path, filename, formats={"svg", "png", "pkl"}):
+    
+    if fig is None:
+        print("save_plt_fig: fig is None")
+        return
 
+    os.makedirs(save_path, exist_ok=True)
+
+    if "png" in formats:
+        fig.savefig(osp.join(save_path, f"{filename}.svg"), format="svg")
+    
+    if "svg" in formats:
+        fig.savefig(osp.join(save_path, f"{filename}.png"), format="png")
+    
+    if "pkl" in formats:
+        with open(osp.join(save_path, f"{filename}.pkl"), "wb") as f:
+            pickle.dump(fig, f)
 
 
 
@@ -499,9 +515,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             if inp == "resource_graph":
                 fig, _, res_dict = resource_graph(main_save_path, model_wrapper.save_path)
-                fig.savefig(osp.join(main_save_path, f"{train_iter}_resource_graph.png"))
-                with open(osp.join(main_save_path, f"{train_iter}_resource_graph.pkl"), "wb") as f:
-                    pickle.dump(fig, f)
+                
+                save_plt_fig(fig, main_save_path, f"{train_iter}_resource_graph")
                 with open(osp.join(main_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
                     pickle.dump(res_dict, f)
                 inp = input(f"""
@@ -532,9 +547,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             if inp == "g":
                 fig, _ = model_wrapper.model_graph()
-                fig.savefig(osp.join(main_save_path, f"{train_iter}_model_graph.png"))
-                with open(osp.join(main_save_path, f"{train_iter}_model_graph.pkl"), "wb") as f:
-                    pickle.dump(fig, f)
+                save_plt_fig(fig, main_save_path, f"{train_iter}_model_graph")
                 inp = input("""
                         Enter r to trigger show_results() and re-ask for input.
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
@@ -545,9 +558,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             if inp == "r":
                 fig, _ = show_results(main_save_path)
                 if fig is not None:
-                    fig.savefig(osp.join(main_save_path, f"{train_iter}_show_results.png"))
-                    with open(osp.join(main_save_path, f"{train_iter}_show_results.pkl"), "wb") as f:
-                        pickle.dump(fig, f)
+                    save_plt_fig(fig, main_save_path, f"{train_iter}_show_results")
                 inp = input("""
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
                         Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
@@ -597,9 +608,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
             if inp == "g":
                 fig, _ = model_wrapper.model_graph()
-                fig.savefig(osp.join(main_save_path, f"{train_iter}_model_graph_later.png"))
-                with open(osp.join(main_save_path, f"{train_iter}_model_graph_later.pkl"), "wb") as f:
-                    pickle.dump(fig, f)
+                save_plt_fig(fig, main_save_path, f"{train_iter}_model_graph_later")
                 inp = input("""
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")

@@ -1,68 +1,76 @@
 
 
+# symlinks to data
 /sclera_data
 /vein_sclera_data
 
-
-saved/
-saved_main/
-UNet/
-UNet_main/
-Unet/
-unet/
-ResNet/
-SegNet/
-SegNet_main/
-bash_results/
-test_SegNet/
-test_SegNet_main/
-test_SegNet_pruned/
-test_UNet/
-test_UNet_main/
-test_UNet_pruned/
-test_UNet_pruning/
-test_uniform_SegNet_pruning/
-test_SegNet_pruning/
-
-
+# Usual scp transfer folders:
+scp*/
 PrunedModels*/
 DonePrunedModels*/
-z_pipeline_SegNet*/
-z_pipeline_UNet*/
-SegNet_*.sh
-UNet_*.sh
-SegNet_*.sbatch
-UNet_*.sbatch
-SegNet_*_out.txt
-UNet_*_out.txt
+
+# On the fly output and sbatch files:
+x[0-9]*_out*.txt
+y[0-9]*_run_me*.sbatch
+
+Model folder names:
+test_*/
+unet_*/
+segnet_*/
 
 
-
-
-
+# Folder for scp fig showing:
 for_fig_shower/
 
-DonePrunedModels/
-PrunedModels/
+# Folder for saving of shell scripts that are run (for posterity and later bug fixes):
+bash_results/
 
-scp*/
 
-z_general.sh
 
-y_*
+# Older model folder names:
 SegNet_*/
 UNet_*/
 
-x*out*.txt
 
-y*run_me*.sbatch
 
-x0_out.txt
-x1_out.txt
-x2_out.txt
-x3_out.txt
 
-y0_run_me.sbatch
-y1_run_me.sbatch
-y2_run_me.sbatch
-y3_run_me.sbatch
+
+# Probs not needed anymore:
+# saved/
+# saved_main/
+# UNet/
+# UNet_main/
+# Unet/
+# unet/
+# ResNet/
+# SegNet/
+# SegNet_main/
+# test_SegNet/
+# test_SegNet_main/
+# test_SegNet_pruned/
+# test_UNet/
+# test_UNet_main/
+# test_UNet_pruned/
+# test_UNet_pruning/
+# test_uniform_SegNet_pruning/
+# test_SegNet_pruning/
+
+
+# z_pipeline_SegNet*/
+# z_pipeline_UNet*/
+
+# SegNet_*.sh
+# UNet_*.sh
+# SegNet_*.sbatch
+# UNet_*.sbatch
+# SegNet_*_out.txt
+# UNet_*_out.txt
+
+
+
+
+
+
+
+
+

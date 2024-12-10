@@ -667,10 +667,10 @@ class TrainingWrapper:
                             plt.gca().set_title('Ground truth')
                             plt.imshow(y[i].cpu().numpy())
                             plt.subplot(2, 2, 3)
-                            plt.gca().set_title('Binary predictions (sclera > bg)')
+                            plt.gca().set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
                             plt.imshow(pred_binary_cpu_np, cmap='gray')
                             plt.subplot(2, 2, 4)
-                            plt.gca().set_title('Sclera - bg, min-max normed')
+                            plt.gca().set_title('pred[1] - pred[0], min-max normed')
                             plt.imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
                             plt.show(block=False)
 

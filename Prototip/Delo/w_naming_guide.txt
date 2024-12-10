@@ -1,19 +1,176 @@
 
-I have:
 
-x_out.txt for the current out file.
-y_run_me.sbatch for the script that runs on FRIDA
 
-And then i have the shell scripts.
 
-z_ are the ones I actually run.
 
-I have z_general.sh
-Here, write anything the moment requires.
-It should be gitignored so this doesn't keep making needles changes.
 
-z_0 - z_9 are levels of calling.
-z_0 don't saurce anything.
-z_1 source some from z_0. And so on.
+With running programs with many different sets of parameters, as is necessary in training ML models,
+and with running pipelines of programs, where there might be different parameters at each step of the pipeline, 
+as is often the case in more complex ML designs (e.g. iteratively pruning the model and then retraining models from different levels of prunedness),
+shell pipelines are absolutely necessary.
 
+You might think you can do these things by hand, but it's actually much harder than programming.
+It's a constant brain teaser of making sure every parameter you pass is actually correct.
+And everything is correct. Until you find out you actually messed up and overlooked something, which you did, and now 10h of training are invalid.
+
+
+So do bash pipelines.
+This is better, but the same sea of parameters still haunts you.
+
+Here is some advice: naming files and folders in a very descriptive way is even more important than variable naming in programming!!!!!
+Because you keep looking if files and parameters and everything is okay.
+And so it is like you are constantly debugging this code.
+It should be extremely obvious what everything means.
+
+
+
+For naming, I suggest this schema:
+
+Scripts you actually call:
+y_something_something.sh  or .sbatch
+These generally simply call one script (eg a z1_ script) while passing some parameters.
+They set filenames for stdin and stdout, and set the working folder (folders of program state data (like saved model weights and logs and such)).
+
+
+Outfiles:
+x_something_something.txt
+These store the outputs of y scripts.
+I implore you to have their name the same as the y_files's.
+So y_image_done.sh  should have x_image_done.txt
+
+This makes everything much easier. When you have a bunch of these files, it is so much easier to keep track of what came from where.
+
+Scripts:
+z0_ - z9_ are levels of calling.
+z0_ don't source anything.
+z1_ source some from z0_. And so on.
 zz_ are the old scripts.
+
+Have:
+y0_ to, possibly, y9_
+Gitignore them.
+These should be for rapid prototyping, so you change them frequently.
+
+Working folders:
+Name working folders (folders of program state data (like saved model weights and logs and such)) the same way as its y_ script.
+This makes things a lot easier to understand and make (in y_ scripts you just keep pasting the name for x_ and for the folders, 
+and so you don't get typing errors and you don't have to be in constant anxiety)
+
+
+
+
+Name hierarchy:
+
+Name your y_, z0_, z1_ files with a name hierarchy.
+y_unet_sclera_pruning_uniform 
+is much better than
+y_uniform_pruning_unet_sclera
+Because you want similar stuff to be clumped predictably together.
+So things are easy to find, and so that when you are working on something, you mostly move in the same area of files.
+
+Unet defines this the most - i want it completely separated from segnet files, because when they are close mistakes happen fast. 
+You want to change for unet but you change for segnet and don't even notice and it's all bad.
+I have _unet, _segnet, and _test  signifiers at this level, and nothing else.
+This is so so so important for finding things clearly.
+
+I then have sclera, because it is the second most error prone. I have a normal version y_unet_pruning_uniform, which works on sclera veins.
+It is far too easy to get confused and change the wrong file, because their contents look almost the same.
+So you want them as separate as possible.
+
+And then I have pruning_uniform. I want pruning scripts to be together (as opposed to _train scripts.)
+And _uniform is only a specification of pruning.
+I also have _train_strong, and _train_strong_fast, where this specification pattern applies.
+
+It probably feels like I am really nitpicking here and obsessing over pointless stuff.
+But believe me,
+this is so so so so so important.
+
+
+
+
+
+I don't use stdin files, so their name isn't considered in this guide.
+I simply use temporary files for this, because I have short inputs:
+resource_graph_and_stop=$(mktemp)
+printf "resource_graph\nstop\n" > "$resource_graph_and_stop"
+I like it. I recommend.
+
+
+
+
+
+!!!!!! Handling parameters:
+Your script, main.py offers a bunch of parameters. Most of these parameters have a default value.
+Most of the time most parameters are okay in their default value. So a z1_ script calling this only needs to set a few parameters.
+
+Some of those parameters are hyperparameters of training. You want to be able to change them and rapidly find out what works and what not.
+You might also want to change the dataset folder, as this program might work on differesnt datasets.
+So this z1_ script should take these parameters.
+It is still setting some parameters of main.py without the y_ script needing to pass them, and thus providing some abstraction. 
+
+In the z1_ script you should read the parameters into variables in one place:
+
+main_name=$1
+folder_name=$2
+bs=$3
+nodw=$4
+pnkao=$5
+ptd=$6
+ntibp=$7
+
+Your first z1 script will probably have all main.py parameters hardcoded. But then you start to make more and more sh parameters.
+So you simply keep adding to this list.
+
+
+You should then always check that the num of parameters is correct.
+
+Older y_ scripts will only set some of these params, because we have expanded them since their use.
+So this way you find out they are outdated before they mess up the working folder you maybe set up for them beforehand.
+
+It is also possible you pass too many params, because a parameter became hardcoded again. 
+And then when looking at the y_ script you are changing something, but you really aren't. And you want to pull your hair out.
+
+It is simply very nice and easy to check:
+
+main_name=$1
+folder_name=$2
+bs=$3
+nodw=$4
+
+param_num=4
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
+    exit 1
+fi
+
+
+
+
+Parameter legibility:
+
+In your y_ script, copy the parameters from the z1_ script and comment them out.
+This way it is always easy to see what exactly you are setting.
+
+# main_name=$1
+# older_name=$2
+# bs=$3
+# nodw=$4
+# pnkao=$5
+# ptd=$6
+# ntibp=$7
+
+
+
+
+In your z1_ scripts paste to the bottom the parameter definitions of your main.py file and comment them out.
+Also helps with legibility. 
+
+
+
+
+
+Sbatch job-name suggestion:
+Sometimes you need to cancel a specific job because you realise you've made a mistake. It's a pain when they aren't labeled nicely.
+Just make job-name the acronym of the sbatch filename:
+y_unet_train_strong_fast_e4    -->    utsfe4

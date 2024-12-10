@@ -39,12 +39,21 @@ main_name=$1
 folder_name=$2
 bs=$3
 nodw=$4
+ptd=$5
+ntibp=$6
+
+param_num=6
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct."
+    exit 1
+fi
 
 
 # YOU GIVE THIS SCRIPT THE ALREADY TRAINED MODEL FROM THE MAIN TRAINING (The pretraining and training commands already done.)
 
 
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${folder_name} --ptd ./vein_sclera_data --pruning_phase --pbop --map 15 --rn flops_num  --ptp 0.05 --ifn 1          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp ${ntibp} --sd ${folder_name} --ptd ${ptd} --pruning_phase --pbop --map 70 --rn flops_num  --ptp 0.01 --ifn 1          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

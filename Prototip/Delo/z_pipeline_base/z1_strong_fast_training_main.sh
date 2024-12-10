@@ -35,7 +35,14 @@ bs=$3
 nodw=$4
 pnkao=$5
 lr=$6
+ptd=$7
 
+param_num=7
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct."
+    exit 1
+fi
 
 
 # additional use of z_bash_saver.sh
@@ -55,12 +62,8 @@ cat "${main_name}" > "${program_content_file}"
 
 # Main training:
 
-# ogromen dataset, ne rabis veliko trainingov
-# python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./sclera_data --mti 10          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# po stevilu datapointov je 1 epoch tu 13 epochov na vein_sclera_data
-
 # te so itak hitri, ker majhen train set
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --mti 1500 --lr ${lr}           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ${ptd} --mti 1500 --lr ${lr}           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

@@ -26,6 +26,25 @@ source z_pipeline_base/z0_bash_saver.sh
 source z_pipeline_base/z0_temp_inputs.sh
 
 
+
+
+
+main_name=$1
+folder_name=$2
+bs=$3
+nodw=$4
+pnkao=$5
+ptd=$6
+
+param_num=6
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct."
+    exit 1
+fi
+
+
+
 # additional use of z_bash_saver.sh
 program_content_file="${results_folder_name}/curr/program_code_${curr_bash_ix}.py"
 cat "${main_name}" > "${program_content_file}"
@@ -35,32 +54,23 @@ cat "${main_name}" > "${program_content_file}"
 
 
 
-main_name=$1
-folder_name=$2
-bs=$3
-nodw=$4
-
-
-# YOU GIVE THIS SCRIPT THE ALREADY TRAINED MODEL FROM THE MAIN TRAINING (The pretraining and training commands already done.)
-
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${folder_name} --ptd ./vein_sclera_data --pruning_phase --pbop --map 15 --rn flops_num  --ptp 0.05 --ifn 0          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
 
 
 
+# Main training:
 
-
+python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ${ptd} --mti 150 --optim Adam --loss_fn_name MCDLW --alphas 0.99               2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
     # # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
-    # parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
-    # parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
-    # parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
+    # parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
+    # parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
+    # parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
     # parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
     # parser.add_argument("--lr", type=str, help="Learning rate", default=1e-3)
 
@@ -72,7 +82,7 @@ python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${fol
     #                     help='iter_possible_stop An optional positional argument with a default value of 1e9')
     # parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
 
-    
+
     # # With action='store_true' these args store True if the flag is present and False otherwise.
     # # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
     # # So --pbop False would still give True to the pbop field.
@@ -94,14 +104,14 @@ python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${fol
     # parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
     # parser.add_argument('--nept', type=int, default=1,
     #                     help='Number of epochs per training iteration')
-    
+
     # parser.add_argument('--pbop', action='store_true',
     #                     help='Prune by original percent, otherwise by number of filters')
     # parser.add_argument('--nftp', type=int, default=1,
     #                     help="""
     #                     !!! ONLY APPLIES IF --pbop IS FALSE !!!
     #                     Number of filters to prune in one pruning""")
-    
+
     # parser.add_argument('--pnkao', type=int, default=20, help="""
     #                     !!! THIS IS OVERRIDDEN IF --ifn IS 0 OR 1 !!!
     #                     It becomes 1. Because we need the new importances to be calculated after every pruning.
@@ -137,7 +147,11 @@ python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${fol
 
     #                     """)
     # parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    # parser.add_argument('--ptp', type=float, default=0.01, help='Proportion of original {resource_name} to prune')
+    # parser.add_argument('--ptp', type=float, default=0.01, help="""Proportion of original {resource_name} to prune - actually, we don't just prune by this percent, because that get's us bad results.
+    #                     Every time we prune, we prune e.g. 1 percent. Because of pnkao we overshoot by a little. So next time, if we prune by 1 percent again, we will overshoot by a little again, and the overshoots compound.
+    #                     So we will instead prune in this way: get in which bracket of this percent we are so far (eg, we have 79.9 percent of original weights), then we will prune to 79 percent and pnkao will overshoot a little.
+    #                     """)
+
 
 
     # def custom_type_conversion(value):

@@ -36,6 +36,18 @@ nodw=$4
 pnkao=$5
 
 
+param_num=5
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct."
+    exit 1
+fi
+
+
+
+
+
+
 
 # additional use of z_bash_saver.sh
 program_content_file="${results_folder_name}/curr/program_code_${curr_bash_ix}.py"

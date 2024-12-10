@@ -34,7 +34,15 @@ folder_name=$2
 bs=$3
 nodw=$4
 pnkao=$5
+ptd=$6
+ntibp=$7
 
+param_num=7
+
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct."
+    exit 1
+fi
 
 
 # additional use of z_bash_saver.sh
@@ -49,22 +57,12 @@ cat "${main_name}" > "${program_content_file}"
 
 
 
+# torej (ntibp tr + k epoch passov) * map = število passov
+# Pri pnkao 100 ima en pruning recimo da 7 epoch passov.
 
+# torej (20 tr + 7 epoch passov) * 15 = 405 passov
 
-
-# Main training:
-
-# ogromen dataset, ne rabis veliko trainingov
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./sclera_data --mti 10          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-# te so itak hitri, ker majhen train set
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-# torej (2 tr + k epoch passov) * 15 = 45 epochov
-# 4 tr * 15 = 60 trainingov
-# vsak pruning pa ima vsakih 100 kernelov en epoch pass
-# Rezimo torej še 7 epoch passov
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 4 --sd ${folder_name} --ptd ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao ${pnkao} --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp ${ntibp} --sd ${folder_name} --ptd ${ptd} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

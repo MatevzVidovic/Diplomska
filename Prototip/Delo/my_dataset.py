@@ -715,6 +715,8 @@ def scale(img, mask, max_scale_percent=0.2, scale_type="only_zoom", prob=0.2):
     if scale_type == "only_zoom":
         scale_percent = abs(scale_percent)
     elif scale_type != "zoom_and_shrink":
+        raise NotImplementedError("'zoom_and_shrink' not implemented.")
+    else:
         raise ValueError("scale_type must be 'only_zoom' or 'zoom_and_shrink'")
     
     

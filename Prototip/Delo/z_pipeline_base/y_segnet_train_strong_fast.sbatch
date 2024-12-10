@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=stsf
+#SBATCH --time=0-12:00:00
+
+#SBATCH -p frida
+#SBATCH -c 48
+#SBATCH --gpus=A100
+#SBATCH --output=x_segnet_train_strong_fast.txt
 
 
 
@@ -8,7 +15,11 @@
 # nodw=$4
 # pnkao=$5
 # lr=$6
+# ptd=$7
 
+
+
+# These experiments were on ./sclera_data (because vein_sclera_data only has 89 training examples, so bs can at most be that)
 
 # Using torch.optim.SGD (uses less params than ADAM)
 # -c 64 pri teh testih, ampak pomoje to nic ne spremeni
@@ -25,11 +36,11 @@
 
 
 
-# bash z_pipeline_base/z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
+# srun bash z_pipeline_base/z1_test_main.sh segnet_main.py test_SegNet_main 210 64 80
 
 
 
 
 
-bash z_pipeline_base/z1_strong_fast_training_main.sh segnet_main.py SegNet_fast 90 48 80 1e2
+srun bash z_pipeline_base/z1_strong_fast_training_main.sh segnet_main.py segnet_train_strong_fast 90 48 80 1e2  ./vein_sclera_data
 
