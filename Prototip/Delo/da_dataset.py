@@ -633,10 +633,101 @@ class IrisDataset(Dataset):
 
             img = Image.open(image_path).convert("RGB")
 
+            middle_resize = False
+            if middle_resize:
+                preprocessing_resize_size = (1024, 1024) # img.size # or just (1024, 1024)
+
+                img = img.resize(preprocessing_resize_size, Image.LANCZOS) #ali Image.BICUBIC ali 
+
+
+
+            # Since our data augmentation should simulate errors and changes in how the image is taken, we should do gamma correction and clahe after the augmentation.
+            # Because we should first simulate the errors, that is then what our taken img would have been,
+            # and then we do our preprocessing (correction) from there.
+            # We pretend that the data augmentations were actually pictures that we took.
+
+
+
+
             mask_path = osp.join(self.filepath,'Masks')
             file_name_no_suffix = self.list_files[idx]
             mask = self.get_mask(mask_path, file_name_no_suffix) # is of type Image.Image
             
+            if middle_resize:
+                mask = mask.resize(preprocessing_resize_size, Image.LANCZOS)
+
+
+            img = smart_conversion(img, 'Image', 'uint8')
+            mask = smart_conversion(mask, 'Image', 'uint8')
+
+
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+
+
+
+            show_testrun = False
+
+            # Testing
+            if show_testrun:
+
+                img_test = img
+                mask_test = mask
+                
+
+                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Original image")
+
+                # py_log_always_on.log_time(MY_LOGGER, "test_da")
+                img_test, mask_test = random_horizontal_flip(img_test, mask_test, prob=1.0)
+                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Horizontal flip")
+
+                # Has to be here, because at this point the img is surely still a PIL image, so .size() is correct
+                ksize = (img_test.size[0]//20)
+                ksize = ksize+1 if ksize % 2 == 0 else ksize
+                # py_log_always_on.log_time(MY_LOGGER, "test_da")
+                img_test = gaussian_blur(img_test, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=1.0)
+                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Gaussian blur")
+
+                # py_log_always_on.log_time(MY_LOGGER, "test_da")
+                img_test, mask_test = random_rotation(img_test, mask_test, max_angle=15, prob=1.0)
+                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Rotation")
+
+                # py_log_always_on.log_time(MY_LOGGER, "test_da")
+                img_test, mask_test = zoom_in_somewhere(img_test, mask_test, max_scale_percent=0.5, prob=1.0)
+                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Zoom blur")
+
+                # py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+                if True:
+                    img = img_test
+                    mask = mask_test
+
+
+
+
+
+            
+
+            if self.split == 'train':
+
+                img, mask = random_horizontal_flip(img, mask, prob=0.5)
+
+                # Has to be here, because at this point the img is surely still a PIL image, so .size() is correct
+                ksize = (img.size[0]//20)
+                ksize = ksize+1 if ksize % 2 == 0 else ksize
+                img = gaussian_blur(img, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=0.2)
+
+                img, mask = random_rotation(img, mask, max_angle=15, prob=1.0)
+
+                img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=1.0)
+
+
+
+
+
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+
+
+
 
 
 
