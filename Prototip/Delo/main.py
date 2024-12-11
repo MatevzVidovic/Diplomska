@@ -528,8 +528,8 @@ learning_parameters = {
 # In our UNet implementation the dims can be whatever you want.
 # You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
 INPUT_DIMS = {
-    "width" : 256,
-    "height" : 256,
+    "width" : 1000,
+    "height" : 700,
     "channels" : 3
 }
 
