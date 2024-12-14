@@ -18,7 +18,8 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-from type_conv_and_show_img import show_image
+from img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion
+import torch
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
@@ -39,23 +40,7 @@ from model_eval_graphs import resource_graph, show_results
 
 
 
-def save_plt_fig(fig, save_path, filename, formats={"svg", "png", "pkl"}):
-    
-    if fig is None:
-        print("save_plt_fig: fig is None")
-        return
 
-    os.makedirs(save_path, exist_ok=True)
-
-    if "png" in formats:
-        fig.savefig(osp.join(save_path, f"{filename}.svg"), format="svg")
-    
-    if "svg" in formats:
-        fig.savefig(osp.join(save_path, f"{filename}.png"), format="png")
-    
-    if "pkl" in formats:
-        with open(osp.join(save_path, f"{filename}.pkl"), "wb") as f:
-            pickle.dump(fig, f)
 
 
 
@@ -465,6 +450,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 da_dataloader = DataLoader(curr_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
                 img_ix = 0
 
+
+                quick_figs_counter = 0
                 while inp == "":
                     
                     ix = 0
@@ -479,7 +466,29 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         curr_target = y[0]
                         break
 
-                    show_image([curr_img, curr_target])
+                    combined_img = curr_img * (1 - curr_target)   # This will make all vein pixels blacked out.
+                    combined_img_2 = curr_img * curr_target       # This will make all non-vein pixels blacked out.
+                    save_img_quick_figs(combined_img, f"da_{quick_figs_counter}_img_vein_blacked_out.jpg")
+                    save_img_quick_figs(combined_img_2, f"da_{quick_figs_counter}_img_non_vein_blacked_out.jpg")
+                    
+                    
+                    
+                    fig, _ = show_image([curr_img, curr_target])
+                    save_plt_fig_quick_figs(fig, f"da_{quick_figs_counter}")
+
+                    curr_img = smart_conversion(curr_img, "ndarray", "uint8")
+                    save_img_quick_figs(curr_img, f"da_{quick_figs_counter}_img.jpg")
+                    
+
+                    # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img_quick_figs()
+                    # will make it 0s and 255s.
+                    curr_target = curr_target.to(torch.float32)
+                    save_img_quick_figs(curr_target, f"da_{quick_figs_counter}_target.png")
+
+
+
+
+                    quick_figs_counter += 1
 
                     inp = input("""Press Enter to get the next data augmentation. Enter a number to swith to img with that ix in the dataset as the subject of this data augmentation test.
                                 Enter anything to stop with the data augmentation testing.\n""")

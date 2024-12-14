@@ -3,6 +3,8 @@
 # symlinks to data
 /sclera_data
 /vein_sclera_data
+/preaug_vein_sclera_data
+/partial_preaug_vein_sclera_data
 
 # Usual scp transfer folders:
 scp*/
@@ -14,19 +16,21 @@ x_*.txt
 x[0-9]*_out*.txt
 y[0-9]*_run_me*.sbatch
 
-Model folder names:
+# Model folder names:
 test_*/
 unet_*/
 segnet_*/
 
 
-# Folder for scp fig showing:
+# Folder for (scp) fig showing:
 for_fig_shower/
+quick_figs/
 
 # Folder for saving of shell scripts that are run (for posterity and later bug fixes):
 bash_results/
 
-
+# Slurm outputs:
+slurm-*.out
 
 # Older model folder names:
 SegNet_*/

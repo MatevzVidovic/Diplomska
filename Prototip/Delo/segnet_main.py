@@ -23,15 +23,11 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from SegNet import SegNet
-
-# from dataset import IrisDataset, transform
-from my_dataset import IrisDataset, transform
-
 from min_resource_percentage import min_resource_percentage
 from ModelWrapper import ModelWrapper
 
-from training_support import *
+from training_support import train_automatically, TrainingLogs, PruningLogs
+from losses import MultiClassDiceLoss, WeightedLosses
 
 import ast
 
@@ -48,12 +44,24 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
+    parser.add_argument("-m", "--model", type=str, default="SegNet_256_256", help='Model to use. Options: SegNet_256_256, SegNet_3000_2000')
     parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
     parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
     parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
     parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
+    parser.add_argument('--iw', type=int, default=256, help='Input width')
+    parser.add_argument('--ih', type=int, default=256, help='Input height')
+    parser.add_argument('--ic', type=int, default=3, help='Input channels')
+    parser.add_argument('--oc', type=int, default=2, help='Output channels')
+    parser.add_argument('--ds', type=str, default="standard", help='Dataset option. Options: augment, preaugmented, partially_preaugmented.')
+    parser.add_argument('--tesl', type=int, default=1e9, help=f"""TRAIN_EPOCH_SIZE_LIMIT. If we have 1500 images in the training set, and we set this to 1000, 
+                        we will stop the epoch as we have trained on >= 1000 images.
+                        We should watch out to use shuffle=True in the DataLoader, because otherwise we will always only train on the first 1000 images in the Dataset's ordering.
 
+                        This is useful if we want to do rapid prototyping, and we don't want to wait for the whole epoch to finish.
+                        Or if one epoch is too huge so it just makes more sense to train on a few smaller ones.
+                        """)
 
 
     # General arguments
@@ -190,15 +198,20 @@ if __name__ == "__main__":
     parser.add_argument("--alphas", type=list_conversion, default=[], help="Alphas used in loss_fn. Currently only one is used. If there is just one alpha, you can just pass a float as an arg, like: 0.8.")
 
 
-
-
     args = parser.parse_args()
 
+    MODEL = args.model
     BATCH_SIZE = args.bs
     NUM_OF_DATALOADER_WORKERS = args.nodw
     SAVE_DIR = args.sd
     PATH_TO_DATA = args.ptd
     LEARNING_RATE = args.lr
+    INPUT_WIDTH = args.iw
+    INPUT_HEIGHT = args.ih
+    INPUT_CHANNELS = args.ic
+    OUTPUT_CHANNELS = args.oc
+    DATASET = args.ds
+    TRAIN_EPOCH_SIZE_LIMIT = args.tesl
     
 
     iter_possible_stop = args.ips
@@ -232,6 +245,15 @@ if __name__ == "__main__":
 
 
 
+
+    if DATASET == "partially_preaugmented":
+        from partial_preaug_dataset import IrisDataset, transform
+    elif DATASET == "augment":
+        from aug_dataset import IrisDataset, transform
+    elif DATASET == "preaugmented":
+        from preaug_dataset import IrisDataset, transform
+    else:
+        raise ValueError(f"DATASET not recognized: {DATASET}.")
 
 
 
@@ -322,148 +344,6 @@ print(f"Device: {device}")
 
 
 
-# In PyTorch, the automatic differentiation system, autograd, works by tracking operations on tensors to build a computational graph. 
-# Each operation on a tensor creates a new node in this graph, and each node knows how to compute the gradient of the operation it represents. 
-# This is facilitated by the grad_fn attribute, which points to a Function object that knows how to perform the backward pass for that operation.
-# When you define a custom loss function in PyTorch, you typically use PyTorch tensor operations. 
-# As long as you stick to these operations, PyTorch will automatically handle the differentiation for you. 
-# This is because each PyTorch operation is designed to be differentiable and is part of the computational graph.
-
-
-# Dice Loss is a smooth variation of IoU
-
-
-class MultiClassDiceLoss(nn.Module):
-    def __init__(self, smooth=1, background_adjustment=None):
-        super(MultiClassDiceLoss, self).__init__()
-        self.smooth = smooth
-        self.background_adjustment = background_adjustment
-
-    def forward(self, inputs, targets):
-
-        try:
-
-            if len(inputs.shape) == 3:
-                inputs = inputs.unsqueeze(0)
-
-
-            # Apply softmax to inputs if they are logits
-            inputs = torch.softmax(inputs, dim=1) # Apply softmax across the class dimension
-
-
-            # Initialize Dice Loss
-            dice_loss = 0.0
-
-
-
-            if self.background_adjustment is not None:
-                is_background = (targets == 0).bool() # same size tensor of bools
-                is_background_flat = is_background.reshape(-1)
-            
-
-            # Iterate over each class
-            for c in range(inputs.shape[1]):
-                
-                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
-                # So in the return we also divide with one less.
-                if c == 0:
-                    continue
-
-                input_to_be_flat = inputs[:,c,:,:].squeeze(1)
-                input_flat = input_to_be_flat.reshape(-1)
-                
-                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
-                target_flat = target_to_be_flat.reshape(-1)
-
-
-
-                # Adjust background missprediction weights
-                # Where the target is 0, we don't want the loss to be as severe as when the target is 1.
-                # This is because the background is much more common than the other classes, so it is too safe of a bet to just predict background.
-                # So the model doesn't want to move towards predicting classes, because it is too safe to just predict background.
-
-                # We want to keep our loss between 0 and 1, so we can interpret it better and it is nicely graphable.
-                # The reason dice loss is between 0 and 1 is because at each pixel, input_flat is between 0 and 1, and target_flat is 0 or 1.
-                # This per pixel quality should stay the same.
-
-                # We should simply pretend that our input_to_be_flat was closer to 0 than it actually was, when the target is 0.
-                # This way, we don't discourage predictions of some actual class in the background spots.
-                # We don't punish it as much.  
-                
-                if self.background_adjustment is not None:
-                    background_distanes = input_flat.clone()
-                    # The distances to zero are simply the values.
-                    background_distanes[is_background_flat] = 0
-                    # We then decide what percentage of these distances we would like to help the model with.
-                    background_distanes = background_distanes * self.background_adjustment
-                    # Then we actually go and adjust the input_flat, so the model will be penalised less for those.
-                    input_flat = input_flat - background_distanes
-
-
-                # Compute intersection
-                intersection = (input_flat * target_flat)
-                intersection = intersection.sum()
-                
-                # Compute Dice Coefficient for this class
-                dice = (2. * intersection + self.smooth) / (input_flat.sum() + target_flat.sum() + self.smooth)
-                
-                # Accumulate Dice Loss
-                dice_loss += 1 - dice
-            
-            # Average over all classes
-            dice_loss =  dice_loss / (inputs.shape[1] - 1) # -1 because we skip the background class
-
-            return dice_loss
-
-
-
-
-
-        except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
-            raise e
-        
-
-
-
-
-class WeightedLosses(nn.Module):
-    def __init__(self, losses_list, weights_list=[]):
-        # super(MultiClassDiceLoss, self).__init__()
-        self.losses_list = losses_list
-
-        # if no weights are given, we will use equal weights
-        if len(weights_list) == 0:
-            self.weights_list = [(1/len(weights_list)) for _ in range(len(losses_list))]
-        else:
-            if len(weights_list) != len(losses_list):
-                raise ValueError("The number of losses and weights must be the same.")
-            self.weights_list = weights_list
-
-
-    def forward(self, inputs, targets):
-
-        try:
-            
-            computed_losses = [loss(inputs, targets) for loss in self.losses_list]
-            weighted_losses = [computed_losses[i] * self.weights_list[i] for i in range(len(computed_losses))]
-            total_loss = sum(weighted_losses)
-            return total_loss
-
-        except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
-            raise e
-
-
-
-# we would like the loss to be weighted:
-# Because there are many more 0s than 1s there is an imbalance and the model will be biased towards predicting 0s.
-# We would like to give more importance to the 1s.
-# So basically, we could just make a new criterion that is more focused on the 1s, and weight it with dice_loss.
-# The aux loss should be between 0 and 1, so we can keep it in thiss range for graphing and interpretation and comperability across models.
-
-
-
 
 
 
@@ -471,8 +351,6 @@ class WeightedLosses(nn.Module):
 CE_weights = torch.tensor([0.1, 50.0])
 CE_weights = CE_weights / CE_weights.mean() # to make the loss more interpretable and graphable
 CE_weights = CE_weights.to(device)
-
-
 
 if loss_fn_name == "Default":
     loss_fn_name = "MCDL"
@@ -524,23 +402,24 @@ else:
 learning_parameters = {
     "learning_rate" : LEARNING_RATE,
     "loss_fn" : loss_fn,
-    "optimizer_class" : optimizer
+    "optimizer_class" : optimizer,
+    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT
 }
 
 
-# In our UNet implementation the dims can be whatever you want.
+# In our SegNet implementation the dims can be whatever you want.
 # You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
 INPUT_DIMS = {
-    "width" : 256,
-    "height" : 256,
-    "channels" : 3
+    "width" : INPUT_WIDTH,
+    "height" : INPUT_HEIGHT,
+    "channels" : INPUT_CHANNELS
 }
 
-# In our UNet he output width and height have to be the same as the input width and height. 
+# In our SegNet the output width and height have to be the same as the input width and height. 
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
-    "channels" : 2
+    "channels" : OUTPUT_CHANNELS
 }
 
 
@@ -583,7 +462,7 @@ def get_data_loaders(**dataloading_args):
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
@@ -618,12 +497,34 @@ dataloader_dict = {
 
 
 
-model_parameters = {
-    # layer sizes
-    "in_chn" : INPUT_DIMS["channels"],
-    "out_chn" : OUTPUT_DIMS["channels"],
-    "BN_momentum" : 0.5
-  }
+
+
+
+if MODEL == "SegNet_256_256":
+    from SegNet import SegNet
+
+    model_parameters = {
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
+
+elif MODEL == "SegNet_3000_2000":
+    from SegNet_3000_2000 import SegNet
+
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 1.3,
+        "starting_kernels" : 5,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
+
+else:
+    raise ValueError(f"MODEL not recognized: {MODEL}.")
+
+
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
 
