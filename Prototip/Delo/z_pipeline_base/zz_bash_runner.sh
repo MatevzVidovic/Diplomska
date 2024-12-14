@@ -66,40 +66,37 @@ printf "s\nstop\n" > "$save_and_stop"
 
 
 
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
-# python3 main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-
-# python3 main.py 999999 4 10 1 UNet ./sclera_data --pruning_phase --pbop --map 12 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
-
-# python3 main.py 999999 4 10 1 UNet ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
+# python3 unet_main.py 999999 4 10 1 UNet ./sclera_data --pruning_phase --pbop --map 12 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-# python3 main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-
-# python3 main.py 999999 4 10 1 UNet ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 999999 4 10 1 UNet ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
 
-
-# python3 main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-# python3 main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop" 2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
+# python3 unet_main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
+# python3 unet_main.py 999999 4 10 1 UNet ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop"          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+
+
+
+
+# python3 unet_main.py 999999 4 10 1 UNet ./sclera_data --mti 2          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+# python3 unet_main.py 0 4 10 1 UNet ./sclera_data --mti 2 < "$save_and_stop" 2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
@@ -110,11 +107,14 @@ printf "s\nstop\n" > "$save_and_stop"
 
 
 
-# python3 main.py 999999 4 10 1 UNet ./sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-python3 main.py 999999 4 10 1 UNet ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
-# python3 main.py 999999 4 10 1 UNet ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+# python3 unet_main.py 999999 4 10 1 UNet ./sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+python3 unet_main.py 999999 4 10 1 UNet ./vein_sclera_data --mti 50          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+
+# python3 unet_main.py 999999 4 10 1 UNet ./vein_sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

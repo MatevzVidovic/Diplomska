@@ -17,4 +17,4 @@
 # ptd=$5
 # ntibp=$6
 
-srun bash z_pipeline_base/z1_pruning_uniform.sh main.py unet_sclera_pruning_uniform 90 48 ./sclera_data 5
+srun bash z_pipeline_base/z1_pruning_uniform.sh unet_main.py unet_sclera_pruning_uniform 90 48 ./sclera_data 5

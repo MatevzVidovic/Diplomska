@@ -7,7 +7,7 @@ import ast
 import os
 import os.path as osp
 
-import json_handler as jh
+import helper_json_handler as jh
 
 
 
@@ -27,11 +27,11 @@ import sys
 
 # python3 model_eval_graphs.py --msp ./scp_1/UNet_random_main_60/saved_main --smp ./scp_1/UNet_random_main_60/saved_model_wrapper
 # [(63, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
-# python3 porter.py --sp scp_1/UNet_random_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid random_main --main main.py --gti 140
+# python3 porter.py --sp scp_1/UNet_random_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid random_main --main unet_main.py --gti 140
 
 # python3 model_eval_graphs.py --msp ./scp_1/UNet_uniform_main_60/saved_main --smp ./scp_1/UNet_uniform_main_60/saved_model_wrapper
 # [(63, ""), (80, "after_pruning"), (100, "after_pruning") (116, "after_pruning")]
-# python3 porter.py --sp scp_1/UNet_uniform_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid uniform_main --main main.py --gti 140
+# python3 porter.py --sp scp_1/UNet_uniform_main_60 -m "[(63, \"\"), (80, \"after_pruning\"), (100, \"after_pruning\"), (116, \"after_pruning\")]" --mn UNet --fid uniform_main --main unet_main.py --gti 140
 
 
 

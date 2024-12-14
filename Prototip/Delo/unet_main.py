@@ -23,8 +23,8 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from min_resource_percentage import min_resource_percentage
-from ModelWrapper import ModelWrapper
+from min_resource_percentage import MinResourcePercentage
+from model_wrapper import ModelWrapper
 
 from training_support import *
 
@@ -246,11 +246,11 @@ if __name__ == "__main__":
 
 
     if DATASET == "partially_preaugmented":
-        from partial_preaug_dataset import IrisDataset, transform
+        from dataset_partial_preaug import IrisDataset, transform
     elif DATASET == "augment":
-        from aug_dataset import IrisDataset, transform
+        from dataset_aug import IrisDataset, transform
     elif DATASET == "preaugmented":
-        from preaug_dataset import IrisDataset, transform
+        from dataset_preaug import IrisDataset, transform
     else:
         raise ValueError(f"DATASET not recognized: {DATASET}.")
 
@@ -653,7 +653,7 @@ if MODEL == "UNet_256_256":
     }
 
 elif MODEL == "UNet_3000_2000":
-    from unet_3000_2000 import UNet
+    from unet import UNet
 
     model_parameters = {
         # layer sizes
@@ -668,7 +668,7 @@ elif MODEL == "UNet_3000_2000":
     }
 
 elif MODEL == "UNet_3000_2000_input_skip_conn":
-    from unet_3000_2000_input_skip_conn import UNet
+    from unet_reinput import UNet
 
     model_parameters = {
         # layer sizes
@@ -1278,7 +1278,7 @@ if __name__ == "__main__":
     # Because otherwise your num of classes of the output (pred) will change.
     # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    generally_disallowed = min_resource_percentage(tree_ix_2_name)
+    generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
     disallowed_dict = {
         model_wrapper.conv_tree_ixs[18] : 1.1
@@ -1290,7 +1290,7 @@ if __name__ == "__main__":
 
     # Choice disallowing:
     # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-    choice_disallowed = min_resource_percentage(tree_ix_2_name)
+    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
     
     # For segnet:
     # conv_tree_ixs = model_wrapper.conv_tree_ixs
@@ -1320,7 +1320,7 @@ if __name__ == "__main__":
 
 
 
-    FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
 
     tree_ix_2_percentage_dict = {
@@ -1335,7 +1335,7 @@ if __name__ == "__main__":
 
 
 
-    weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
     if TEST_PRUNING:

@@ -7,11 +7,11 @@
 
 
 
-# python3 main_resnet.py 999999 2 10 1 ResNet ./sclera_data --mti 50 > resnet_sclera_50.txt
-python3 main_resnet.py 999999 2 10 1 ResNet ./sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05 > resnet_sclera_15_20_flops_num_0.05.txt
+# python3 resnet_main.py 999999 2 10 1 ResNet ./sclera_data --mti 50 > resnet_sclera_50.txt
+python3 resnet_main.py 999999 2 10 1 ResNet ./sclera_data --pruning_phase --pbop --map 15 --pnkao 50 --rn flops_num --ptp 0.05 > resnet_sclera_15_20_flops_num_0.05.txt
 
-# python3 main.py 999999 2 10 2 UNet ./sclera_data --mti 50 > unet_sclera_50.txt
-# python3 main.py 999999 2 10 2 UNet ./sclera_data --pruning_phase --pbop --map 15 --pnkao 20 --rn flops_num --ptp 0.05 > unet_sclera_15_20_flops_num_0.05.txt
+# python3 unet_main.py 999999 2 10 2 UNet ./sclera_data --mti 50 > unet_sclera_50.txt
+# python3 unet_main.py 999999 2 10 2 UNet ./sclera_data --pruning_phase --pbop --map 15 --pnkao 20 --rn flops_num --ptp 0.05 > unet_sclera_15_20_flops_num_0.05.txt
 
 
 

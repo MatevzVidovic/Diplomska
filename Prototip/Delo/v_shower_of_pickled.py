@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 import argparse
 
-from ConvResourceCalc import ConvResourceCalc
+from conv_resource_calc import ConvResourceCalc
 
 
 

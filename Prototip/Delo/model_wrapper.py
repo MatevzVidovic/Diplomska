@@ -16,13 +16,13 @@ import torch
 import pickle
 import shutil
 
-import json_handler as jh
+import helper_json_handler as jh
 
 
-from TrainingWrapper import TrainingWrapper
-from ConvResourceCalc import ConvResourceCalc
-from pruner import pruner
-from model_vizualization import model_graph
+from training_wrapper import TrainingWrapper
+from conv_resource_calc import ConvResourceCalc
+from pruner import Pruner
+from helper_model_vizualization import model_graph
 
 
 
@@ -146,7 +146,7 @@ class ModelWrapper:
                 # We need to load this, if the user changed it between the two runs.
                 self.pruner_instance.pruning_disallowments = pruning_disallowments
         else:
-            self.pruner_instance = pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
+            self.pruner_instance = Pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
 
         self.get_importance_dict_fn = get_importance_dict_fn
 

@@ -9,24 +9,69 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+
+from helper_padding import pad_to_larger, pad_or_resize_to_second_arg, pad_or_resize_to_dims
+
+
+
 class UNet(nn.Module):
-	def __init__(self, n_channels=1, n_classes=4, bilinear=True, pretrained=False):
+	def __init__(self, output_y, output_x, n_channels=1, n_classes=4, bilinear=True, pretrained=False, expansion=2, starting_kernels=64):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.n_classes = n_classes
 		self.bilinear = bilinear
 
-		self.inc = DoubleConv(n_channels, 64)
-		self.down1 = Down(64, 128)
-		self.down2 = Down(128, 256)
-		self.down3 = Down(256, 512)
+
+
+		
+		in_chans = [n_channels]
+		kernels = [starting_kernels]
+		
+		self.inc = DoubleConv(in_chans[-1], kernels[-1])
+
+
+		in_chans.append(kernels[-1]); kernels.append(int(expansion*kernels[-1]))
+		self.down1 = Down(in_chans[-1], kernels[-1])
+		
+		in_chans.append(kernels[-1]); kernels.append(int(expansion*kernels[-1]))
+		self.down2 = Down(in_chans[-1], kernels[-1])
+		
+		in_chans.append(kernels[-1]); kernels.append(int(expansion*kernels[-1]))
+		self.down3 = Down(in_chans[-1], kernels[-1])
+		
+
+		# if bilinear, then a simple parameterless bilinear upsampling is happening.
+		# If not, a conv layer is used for the upsampling. 
 		factor = 2 if bilinear else 1
-		self.down4 = Down(512, 1024 // factor)
-		self.up1 = Up(1024, 512 // factor, bilinear)
-		self.up2 = Up(512, 256 // factor, bilinear)
-		self.up3 = Up(256, 128 // factor, bilinear)
-		self.up4 = Up(128, 64, bilinear)
-		self.outc = OutConv(64, n_classes)
+		
+		in_chans.append(kernels[-1]); kernels.append(kernels[3])
+		self.down4 = Down(in_chans[-1], kernels[-1])
+		
+		# kernels == 1024
+
+		# We would like to have the same number of input channels from the previous layer as we get from skip connections.
+		# Just to rougly keep things balanced.
+		# So we should simply define the number of kernels in the Up path as is the 
+		# number of kernels of the next layer's skip connection Down layer.
+
+		# Just look at the pattern below and it will be clear.
+
+		# kernels[-1] + kernels[3] because it concats the outputs of self.down4 and self.down3
+		in_chans.append(kernels[-1] + kernels[3]); kernels.append(kernels[2])
+		self.up1 = Up(in_chans[-1], kernels[-1], bilinear, expansion)
+		
+		in_chans.append(kernels[-1] + kernels[2]); kernels.append(kernels[1])
+		self.up2 = Up(in_chans[-1], kernels[-1], bilinear, expansion)
+		
+		in_chans.append(kernels[-1] + kernels[1]); kernels.append(kernels[0])
+		self.up3 = Up(in_chans[-1], kernels[-1], bilinear, expansion)
+		
+		# here we could have any number of kernels, so we choose a number that will have us have roughly the same number of flops in this layer as in the previous
+		in_chans.append(kernels[-1] + kernels[0]); kernels.append(int(kernels[0] / expansion))
+		self.up4 = Up(in_chans[-1], kernels[-1], bilinear, expansion)
+		
+		in_chans.append(kernels[-1]); kernels.append(n_classes)
+		self.outc = OutConv(in_chans[-1], kernels[-1], output_y, output_x)
 
 		if pretrained:
 			pretrained_state = torch.hub.load('milesial/Pytorch-UNet', 'unet_carvana').state_dict()
@@ -87,26 +132,24 @@ class Down(nn.Module):
 class Up(nn.Module):
 	"""Upscaling then double conv"""
 
-	def __init__(self, in_channels, out_channels, bilinear=True):
+	def __init__(self, in_channels, out_channels, bilinear=True, expansion=2):
 		super().__init__()
 
 		# if bilinear, use the normal convolutions to reduce the number of channels
 		if bilinear:
-			self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-			self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
+			self.up = nn.Upsample(scale_factor=expansion, mode='bilinear', align_corners=True)
+			self.conv = DoubleConv(in_channels, out_channels)
 		else:
-			self.up = nn.ConvTranspose2d(in_channels , in_channels // 2, kernel_size=2, stride=2)
+			self.up = nn.ConvTranspose2d(in_channels , int(in_channels // expansion), kernel_size=2, stride=2)
 			self.conv = DoubleConv(in_channels, out_channels)
 
 
 	def forward(self, x1, x2):
 		x1 = self.up(x1)
 		# input is CHW
-		diffY = x2.size()[2] - x1.size()[2]
-		diffX = x2.size()[3] - x1.size()[3]
 
-		x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
-						diffY // 2, diffY - diffY // 2])
+		x1, x2 = pad_to_larger(x1, x2)
+		
 		# if you have padding issues, see
 		# https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
 		# https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
@@ -115,9 +158,12 @@ class Up(nn.Module):
 
 
 class OutConv(nn.Module):
-	def __init__(self, in_channels, out_channels):
+	def __init__(self, in_channels, out_channels, output_y, output_x):
 		super(OutConv, self).__init__()
+		self.output_y = output_y
+		self.output_x = output_x
 		self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
 	def forward(self, x):
+		x = pad_or_resize_to_dims(x, self.output_y, self.output_x)
 		return self.conv(x)

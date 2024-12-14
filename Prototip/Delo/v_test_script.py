@@ -24,7 +24,7 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 
 
 
-import json_handler as jh
+import helper_json_handler as jh
 
 curr_initial_train_iter = 8
 j_path = os.path.join(os.path.dirname(__file__), "initial_train_iters.json")

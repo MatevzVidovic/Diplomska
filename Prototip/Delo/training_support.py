@@ -18,18 +18,18 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-from img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion
+from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion
 import torch
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
 import pickle
 
-import json_handler as jh
+import helper_json_handler as jh
 
-from ModelWrapper import ModelWrapper
+from model_wrapper import ModelWrapper
 
-from model_eval_graphs import resource_graph, show_results
+from helper_model_eval_graphs import resource_graph, show_results
 
 
 

@@ -22,7 +22,7 @@ import torch
 from timeit import default_timer as timer
 import gc
 
-from img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img_quick_figs
+from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img_quick_figs
 
 
 

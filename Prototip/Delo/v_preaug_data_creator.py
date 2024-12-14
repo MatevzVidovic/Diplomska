@@ -40,7 +40,7 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path, ad
 from albumentations import Compose, ShiftScaleRotate
 
 
-from img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_img
+from helper_img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_img
 
 from enum import Enum
 

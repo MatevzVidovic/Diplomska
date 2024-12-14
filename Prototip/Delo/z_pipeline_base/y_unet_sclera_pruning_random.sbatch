@@ -20,4 +20,4 @@
 
 
 
-srun bash z_pipeline_base/z1_pruning_random.sh main.py unet_sclera_pruning_random 90 48 ./sclera_data 5
+srun bash z_pipeline_base/z1_pruning_random.sh unet_main.py unet_sclera_pruning_random 90 48 ./sclera_data 5

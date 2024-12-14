@@ -10,10 +10,10 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-from model_sorting import sort_tree_ixs
+from helper_model_sorting import sort_tree_ixs
 
 
-class min_resource_percentage:
+class MinResourcePercentage:
 
     @py_log.log(passed_logger=MY_LOGGER)
     def __init__(self, tree_ix_2_name_dict):

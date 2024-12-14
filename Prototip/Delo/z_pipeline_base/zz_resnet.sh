@@ -3,18 +3,18 @@
 
 
 
-# python3 main_resnet.py 2 10 999999 ResNet ./sclera_data -t --mti 1 > resnet_sclera_50.txt
-# python3 main_resnet.py 2 10 999999 ResNet ./vein_sclera_data -t --mti 1 > resnet_vein_sclera_150.txt
-# python3 main_resnet.py 2 10 999999 ResNet ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 20 --rn flops_num --ptp 0.01 > resnet_vein_sclera_75_20_flops_num_0.01.txt
+# python3 resnet_main.py 2 10 999999 ResNet ./sclera_data -t --mti 1 > resnet_sclera_50.txt
+# python3 resnet_main.py 2 10 999999 ResNet ./vein_sclera_data -t --mti 1 > resnet_vein_sclera_150.txt
+# python3 resnet_main.py 2 10 999999 ResNet ./vein_sclera_data -t --pruning_phase --pbop --map 2 --pnkao 20 --rn flops_num --ptp 0.01 > resnet_vein_sclera_75_20_flops_num_0.01.txt
 
-python3 main_resnet.py 2 10 999999 ResNet ./sclera_data --mti 50 > resnet_sclera_50.txt
-python3 main_resnet.py 2 10 999999 ResNet ./vein_sclera_data --mti 150 > resnet_vein_sclera_150.txt
-python3 main_resnet.py 2 10 999999 ResNet ./vein_sclera_data --pruning_phase --pbop --map 75 --pnkao 20 --rn flops_num --ptp 0.01 > resnet_vein_sclera_75_20_flops_num_0.01.txt
+python3 resnet_main.py 2 10 999999 ResNet ./sclera_data --mti 50 > resnet_sclera_50.txt
+python3 resnet_main.py 2 10 999999 ResNet ./vein_sclera_data --mti 150 > resnet_vein_sclera_150.txt
+python3 resnet_main.py 2 10 999999 ResNet ./vein_sclera_data --pruning_phase --pbop --map 75 --pnkao 20 --rn flops_num --ptp 0.01 > resnet_vein_sclera_75_20_flops_num_0.01.txt
 
 
-python3 main.py 4 10 999999 UNet ./sclera_data --mti 50 > unet_sclera_50.txt
-python3 main.py 4 10 999999 UNet ./vein_sclera_data --mti 150 > unet_vein_sclera_150.txt
-python3 main.py 4 10 999999 UNet ./vein_sclera_data --pruning_phase --pbop --map 75 --pnkao 20 --rn flops_num --ptp 0.01 > unet_vein_sclera_75_20_flops_num_0.01.txt
+python3 unet_main.py 4 10 999999 UNet ./sclera_data --mti 50 > unet_sclera_50.txt
+python3 unet_main.py 4 10 999999 UNet ./vein_sclera_data --mti 150 > unet_vein_sclera_150.txt
+python3 unet_main.py 4 10 999999 UNet ./vein_sclera_data --pruning_phase --pbop --map 75 --pnkao 20 --rn flops_num --ptp 0.01 > unet_vein_sclera_75_20_flops_num_0.01.txt
 
 
 

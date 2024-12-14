@@ -29,12 +29,12 @@
 
 # Za pruning se uporablja vein, ki itak ne preseže 90 primerkov,torej nas ne rabi skrbet pruning del.
 
-# srun bash z_pipeline_base/z1_test_main.sh main.py test_UNet_main 105 64 80
+# srun bash z_pipeline_base/z1_test_main.sh unet_main.py test_UNet_main 105 64 80
 
 
 
 
 
-srun bash z_pipeline_base/z1_main_sclera_MCDL.sh main.py unet_sclera_MCDL 90 48 80 1e-3 ./sclera_data
+srun bash z_pipeline_base/z1_main_sclera_MCDL.sh unet_main.py unet_sclera_MCDL 90 48 80 1e-3 ./sclera_data
 
 

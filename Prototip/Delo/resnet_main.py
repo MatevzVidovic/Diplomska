@@ -13,7 +13,7 @@ python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
 handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
 
 
-from ResNet import ResNet, Bottleneck
+from resnet import ResNet, Bottleneck
 
 import torch
 from torch import nn
@@ -24,8 +24,8 @@ import argparse
 # from dataset import IrisDataset, transform
 from my_dataset import IrisDataset, transform
 
-from min_resource_percentage import min_resource_percentage
-from ModelWrapper import ModelWrapper
+from min_resource_percentage import MinResourcePercentage
+from model_wrapper import ModelWrapper
 
 from training_support import *
 
@@ -854,7 +854,7 @@ if __name__ == "__main__":
     # If you change FLOPS_min_res_percents and weights_min_res_percents between runnings of main, 
     # the new onew will be used. So you can have an effect on your training by doing this.
 
-    FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
     # FLOPS_min_res_percents.set_by_name("Conv2d", 0.9999) # for testing of the pruning mechanism having nothing to prune anymore
 
@@ -915,7 +915,7 @@ if __name__ == "__main__":
 
 
 
-    weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
     model_wrapper.initialize_pruning(get_importance_dict, resnet_input_slice_connection_fn, resnet_kernel_connection_fn, FLOPS_min_res_percents, weights_min_res_percents)

@@ -23,8 +23,8 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from min_resource_percentage import min_resource_percentage
-from ModelWrapper import ModelWrapper
+from min_resource_percentage import MinResourcePercentage
+from model_wrapper import ModelWrapper
 
 from training_support import train_automatically, TrainingLogs, PruningLogs
 from losses import MultiClassDiceLoss, WeightedLosses
@@ -247,11 +247,11 @@ if __name__ == "__main__":
 
 
     if DATASET == "partially_preaugmented":
-        from partial_preaug_dataset import IrisDataset, transform
+        from dataset_partial_preaug import IrisDataset, transform
     elif DATASET == "augment":
-        from aug_dataset import IrisDataset, transform
+        from dataset_aug import IrisDataset, transform
     elif DATASET == "preaugmented":
-        from preaug_dataset import IrisDataset, transform
+        from dataset_preaug import IrisDataset, transform
     else:
         raise ValueError(f"DATASET not recognized: {DATASET}.")
 
@@ -501,7 +501,7 @@ dataloader_dict = {
 
 
 if MODEL == "SegNet_256_256":
-    from SegNet import SegNet
+    from segnet import SegNet
 
     model_parameters = {
         "in_chn" : INPUT_DIMS["channels"],
@@ -509,7 +509,7 @@ if MODEL == "SegNet_256_256":
     }
 
 elif MODEL == "SegNet_3000_2000":
-    from SegNet_3000_2000 import SegNet
+    from segnet import SegNet
 
     model_parameters = {
         # layer sizes
@@ -1026,7 +1026,7 @@ if __name__ == "__main__":
     # Because otherwise your num of classes of the output (pred) will change.
     # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    generally_disallowed = min_resource_percentage(tree_ix_2_name)
+    generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
     disallowed_dict = {
         model_wrapper.conv_tree_ixs[25] : 1.1
@@ -1052,7 +1052,7 @@ if __name__ == "__main__":
     # 6 18
     # 9 15
     """
-    choice_disallowed = min_resource_percentage(tree_ix_2_name)
+    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
 
     for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
         disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
@@ -1069,7 +1069,7 @@ if __name__ == "__main__":
 
 
 
-    FLOPS_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
 
     tree_ix_2_percentage_dict = {
@@ -1084,7 +1084,7 @@ if __name__ == "__main__":
 
 
 
-    weights_min_res_percents = min_resource_percentage(tree_ix_2_name)
+    weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
     weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
     if TEST_PRUNING:
