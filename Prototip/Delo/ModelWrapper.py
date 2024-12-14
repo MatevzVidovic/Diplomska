@@ -96,6 +96,7 @@ class ModelWrapper:
 
         new_learning_dict = {
             "loss_fn": learning_dict["loss_fn"],
+            "train_epoch_size_limit": learning_dict["train_epoch_size_limit"],
         }
 
         self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict, device)

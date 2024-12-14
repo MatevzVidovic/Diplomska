@@ -22,7 +22,7 @@ import torch
 from timeit import default_timer as timer
 import gc
 
-from type_conv_and_show_img import show_image
+from img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img_quick_figs
 
 
 
@@ -430,6 +430,7 @@ class TrainingWrapper:
             # self.epochs = learning_parameters["epochs"]
     
             self.loss_fn = learning_parameters["loss_fn"]
+            self.train_epoch_size_limit = learning_parameters["train_epoch_size_limit"]
 
             # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
             # self.gradient_clip_value = learning_parameters["gradient_clip_value"]
@@ -454,7 +455,10 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict["train"]
         
-            size = len(dataloader.dataset)
+            size = int(min(self.train_epoch_size_limit, len(dataloader.dataset)))
+            
+            size_so_far = 0
+
             self.model.train()
 
             start = timer()
@@ -476,13 +480,19 @@ class TrainingWrapper:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
+                size_so_far += len(X)
+
                 if batch % 1 == 0:
                     end = timer()
                     train_times.append(end - start)
                     start = timer()
                     loss = loss.item()
-                    current = (batch + 1) * len(X)
-                    print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                    print(f"loss: {loss:>7f}  [{size_so_far:>5d}/{size:>5d}]")
+                
+                if size_so_far >= size:
+                    break
+                
+
                 
                 # print_cuda_memory()
 
@@ -611,6 +621,7 @@ class TrainingWrapper:
 
             self.model.eval()
             test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
+            quick_figs_counter = 0
             with torch.no_grad():
                 for X, y in dataloader:
                         X, y = X.to(self.device), y.to(self.device)
@@ -660,22 +671,40 @@ class TrainingWrapper:
                             # print("num of zeros in Ground truth:", torch.sum(y[i] == 0).item())
                             # print("num of all elements in Ground truth:", y[i].numel())
 
-                            plt.subplot(2, 2, 1)
-                            plt.gca().set_title('Original image')
-                            plt.imshow(image_np)
-                            plt.subplot(2, 2, 2)
-                            plt.gca().set_title('Ground truth')
-                            plt.imshow(y[i].cpu().numpy())
-                            plt.subplot(2, 2, 3)
-                            plt.gca().set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
-                            plt.imshow(pred_binary_cpu_np, cmap='gray')
-                            plt.subplot(2, 2, 4)
-                            plt.gca().set_title('pred[1] - pred[0], min-max normed')
-                            plt.imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
+                            gt = y[i].cpu().numpy()
+                            fig, ax = plt.subplots(2, 2)
+                            
+                            ax[0, 0].set_title('Original image')
+                            ax[0, 0].imshow(image_np)
+
+                            ax[0, 1].set_title('Ground truth')
+                            ax[0, 1].imshow(gt)
+
+                            ax[1, 0].set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
+                            ax[1, 0].imshow(pred_binary_cpu_np, cmap='gray')
+
+                            ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
+                            ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
                             plt.show(block=False)
 
 
+                            save_plt_fig_quick_figs(fig, f"ts_{quick_figs_counter}")
+                            save_img_quick_figs(image_np, f"ts_img_{quick_figs_counter}.jpg")
+
+                            # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img_quick_figs()
+                            # will make it 0s and 255s.
+                            gt = gt.astype(np.float32)
+                            save_img_quick_figs(gt, f"ts_gt_{quick_figs_counter}.png")
+                            
+                            # Here we actually have bool, surprisingly. Again, lets just multiply by 255
+                            pred_binary_cpu_np = pred_binary_cpu_np.astype(np.uint8)
+                            pred_binary_cpu_np = pred_binary_cpu_np * 255
+                            save_img_quick_figs(pred_binary_cpu_np, f"ts_pred_{quick_figs_counter}.png")
+                            save_img_quick_figs(pred_grayscale_mask_min_max_normed, f"ts_pred_grayscale_{quick_figs_counter}.png")
+
                             plt.pause(1.0)
+
+                            quick_figs_counter += 1
 
 
                             inp = input("Enter anything to stop. Press Enter to continue...")

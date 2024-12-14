@@ -23,11 +23,6 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from unet import UNet
-
-# from dataset import IrisDataset, transform
-from my_dataset import IrisDataset, transform
-
 from min_resource_percentage import min_resource_percentage
 from ModelWrapper import ModelWrapper
 
@@ -39,11 +34,8 @@ import ast
 
 
 
-
-
 if __name__ == "__main__":
 
-    
     parser = argparse.ArgumentParser(description="Process arguments that can change between trainings.")
     
 
@@ -51,12 +43,24 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
+    parser.add_argument("-m", "--model", type=str, default="UNet_256_256", help='Model to use. Options: UNet_256_256, UNet_3000_2000')
     parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
     parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
     parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
     parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
+    parser.add_argument('--iw', type=int, default=256, help='Input width')
+    parser.add_argument('--ih', type=int, default=256, help='Input height')
+    parser.add_argument('--ic', type=int, default=3, help='Input channels')
+    parser.add_argument('--oc', type=int, default=2, help='Output channels')
+    parser.add_argument('--ds', type=str, default="augment", help='Dataset option. Options: augment, preaugmented, partially_preaugmented.')
+    parser.add_argument('--tesl', type=int, default=1e9, help=f"""TRAIN_EPOCH_SIZE_LIMIT. If we have 1500 images in the training set, and we set this to 1000, 
+                        we will stop the epoch as we have trained on >= 1000 images.
+                        We should watch out to use shuffle=True in the DataLoader, because otherwise we will always only train on the first 1000 images in the Dataset's ordering.
 
+                        This is useful if we want to do rapid prototyping, and we don't want to wait for the whole epoch to finish.
+                        Or if one epoch is too huge so it just makes more sense to train on a few smaller ones.
+                        """)
 
 
     # General arguments
@@ -195,11 +199,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    MODEL = args.model
     BATCH_SIZE = args.bs
     NUM_OF_DATALOADER_WORKERS = args.nodw
     SAVE_DIR = args.sd
     PATH_TO_DATA = args.ptd
     LEARNING_RATE = args.lr
+    INPUT_WIDTH = args.iw
+    INPUT_HEIGHT = args.ih
+    INPUT_CHANNELS = args.ic
+    OUTPUT_CHANNELS = args.oc
+    DATASET = args.ds
+    TRAIN_EPOCH_SIZE_LIMIT = args.tesl
     
 
     iter_possible_stop = args.ips
@@ -231,6 +242,17 @@ if __name__ == "__main__":
     if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
         prune_n_kernels_at_once = 1
 
+
+
+
+    if DATASET == "partially_preaugmented":
+        from partial_preaug_dataset import IrisDataset, transform
+    elif DATASET == "augment":
+        from aug_dataset import IrisDataset, transform
+    elif DATASET == "preaugmented":
+        from preaug_dataset import IrisDataset, transform
+    else:
+        raise ValueError(f"DATASET not recognized: {DATASET}.")
 
 
 
@@ -521,23 +543,24 @@ else:
 learning_parameters = {
     "learning_rate" : LEARNING_RATE,
     "loss_fn" : loss_fn,
-    "optimizer_class" : optimizer
+    "optimizer_class" : optimizer,
+    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT
 }
 
 
 # In our UNet implementation the dims can be whatever you want.
 # You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
 INPUT_DIMS = {
-    "width" : 1000,
-    "height" : 700,
-    "channels" : 3
+    "width" : INPUT_WIDTH,
+    "height" : INPUT_HEIGHT,
+    "channels" : INPUT_CHANNELS
 }
 
-# In our UNet he output width and height have to be the same as the input width and height. 
+# In our UNet the output width and height have to be the same as the input width and height. 
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
-    "channels" : 2
+    "channels" : OUTPUT_CHANNELS
 }
 
 
@@ -580,7 +603,7 @@ def get_data_loaders(**dataloading_args):
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"])
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
@@ -615,13 +638,54 @@ dataloader_dict = {
 
 
 
-model_parameters = {
-    # layer sizes
-    "n_channels" : INPUT_DIMS["channels"],
-    "n_classes" : OUTPUT_DIMS["channels"],
-    "bilinear" : True,
-    "pretrained" : False,
-  }
+
+
+
+if MODEL == "UNet_256_256":
+    from unet import UNet
+
+    model_parameters = {
+        # layer sizes
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "bilinear" : True,
+        "pretrained" : False,
+    }
+
+elif MODEL == "UNet_3000_2000":
+    from unet_3000_2000 import UNet
+
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 1.3,
+        "starting_kernels" : 5,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "bilinear" : True,
+        "pretrained" : False,
+    }
+
+elif MODEL == "UNet_3000_2000_input_skip_conn":
+    from unet_3000_2000_input_skip_conn import UNet
+
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 1.3,
+        "starting_kernels" : 5,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "bilinear" : True,
+        "pretrained" : False,
+    }
+
+else:
+    raise ValueError(f"MODEL not recognized: {MODEL}.")
+
+
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
 

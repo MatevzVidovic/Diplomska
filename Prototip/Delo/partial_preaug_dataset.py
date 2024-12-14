@@ -36,7 +36,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 from albumentations import Compose, ShiftScaleRotate
 
 
-from type_conv_and_show_img import smart_conversion, show_image
+from img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs
 
 import numpy as np
 import torch
@@ -560,8 +560,6 @@ class IrisDataset(Dataset):
         self.transform = transform
         self.filepath= osp.join(filepath, split)
         
-        self.input_width = kwargs['input_width']
-        self.input_height = kwargs['input_height']
         self.output_width = kwargs['output_width']
         self.output_height = kwargs['output_height']
 
@@ -633,10 +631,86 @@ class IrisDataset(Dataset):
 
             img = Image.open(image_path).convert("RGB")
 
+
+
+
+            # Since our data augmentation should simulate errors and changes in how the image is taken, we should do gamma correction and clahe after the augmentation.
+            # Because we should first simulate the errors, that is then what our taken img would have been,
+            # and then we do our preprocessing (correction) from there.
+            # We pretend that the data augmentations were actually pictures that we took.
+
+
+
+
             mask_path = osp.join(self.filepath,'Masks')
             file_name_no_suffix = self.list_files[idx]
             mask = self.get_mask(mask_path, file_name_no_suffix) # is of type Image.Image
             
+
+            #save_img_quick_figs(mask, "before_augmentation.png")
+
+            img = smart_conversion(img, 'Image', 'uint8')
+            mask = smart_conversion(mask, 'Image', 'uint8')
+
+            #save_img_quick_figs(mask, "before_augmentation2.png")
+
+
+
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+
+
+
+            # show_testrun = False
+
+            # # Testing
+            # if show_testrun:
+
+            #     img_test = img
+            #     mask_test = mask
+                
+
+                
+            #     if curr_rand < 0.4:
+            #         img, mask = random_rotation(img, mask, max_angle=3, prob=1.0)
+            #     elif curr_rand < 1.0:
+            #         img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=1.0)
+
+            #     if True:
+            #         img = img_test
+            #         mask = mask_test
+
+
+
+
+
+            
+
+            if self.split == 'train':
+
+
+                curr_rand = np.random.random()
+
+                # This gives 10% chance for random rotation and 40% chance for zoom in somewhere.
+                # The rotation chance is small, because we already have major rotations in the partially augmented dataset.
+
+                # The reason we don't allow both the augmentations to happen is practical - they both take around 1.5 seconds. 
+                # So when making a batch of 40 with 40 workers, we don't want to wait 3 seconds for the slowest one.
+
+                if curr_rand < 0.1:
+                    img, mask = random_rotation(img, mask, max_angle=3, prob=1.0)
+                elif curr_rand < 0.5:
+                    img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=1.0)
+
+
+            #save_img_quick_figs(mask, f"after_augmentation{curr_rand}.png")
+
+
+
+
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+
+
+
 
 
 
@@ -644,16 +718,24 @@ class IrisDataset(Dataset):
             img = smart_conversion(img, 'ndarray', 'uint8')
             mask = smart_conversion(mask, 'ndarray', 'uint8')
 
+            #save_img_quick_figs(mask, "after_augmentation2.png")
+
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
             # performing the necessary resizing
-            img = cv2.resize(img, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4)
+            img = cv2.resize(img, (self.output_width, self.output_height), interpolation=cv2.INTER_LANCZOS4)
             mask = cv2.resize(mask, (self.output_width, self.output_height), interpolation=cv2.INTER_LANCZOS4)
+
+            #save_img_quick_figs(mask, "after_augmentation3.png")
+
             
             # Making the mask binary, as it is meant to be.
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask[mask < 127] = 0
             mask[mask >= 127] = 1
+
+            #save_img_quick_figs(mask, "after_augmentation4.png")
+
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
 
@@ -662,10 +744,16 @@ class IrisDataset(Dataset):
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             mask = smart_conversion(mask, 'tensor', "uint8").long() # converts to int64
 
+
+            #save_img_quick_figs(mask, "after_augmentation5.png")
+
+
             # mask mustn't have channels. It is a target, not an image.
             # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
             # So here we need to return (height, width) mask, not (height, width, 1) mask.
             mask = mask.squeeze() # This function removes all dimensions of size 1 from the tensor
+
+            #save_img_quick_figs(mask, "after_augmentation6.png")
 
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
