@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from padding import pad_or_resize_to_dims
+from helper_padding import pad_or_resize_to_dims
 
 
 

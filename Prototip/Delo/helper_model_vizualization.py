@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 
-from model_sorting import sort_tree_ixs, denest_tuple
-from ConvResourceCalc import ConvResourceCalc
+from helper_model_sorting import sort_tree_ixs, denest_tuple
+from conv_resource_calc import ConvResourceCalc
 
 
 

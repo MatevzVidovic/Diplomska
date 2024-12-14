@@ -7,7 +7,7 @@ import os.path as osp
 
 import argparse
 
-from model_eval_graphs import show_results, resource_graph
+from helper_model_eval_graphs import show_results, resource_graph
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--mp", type=str, default=None, help="Model path. e.g. ./test_uniform_SegNet_pruning/      Used if msp and smwp are standard and trivial (saved_main and saved_model_wrapper)")

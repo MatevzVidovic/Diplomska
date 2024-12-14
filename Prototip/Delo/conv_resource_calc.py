@@ -14,7 +14,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 import torch.nn as nn
 import copy
 
-from model_sorting import sort_tree_ixs
+from helper_model_sorting import sort_tree_ixs
 
 
 

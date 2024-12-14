@@ -10,18 +10,18 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import torch
-from ConvResourceCalc import ConvResourceCalc
+from conv_resource_calc import ConvResourceCalc
 
-from model_vizualization import model_graph
+from helper_model_vizualization import model_graph
 
-from TrainingWrapper import TrainingWrapper
-
-
+from training_wrapper import TrainingWrapper
 
 
 
 
-class pruner:
+
+
+class Pruner:
 
 
 

@@ -36,7 +36,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 from albumentations import Compose, ShiftScaleRotate
 
 
-from img_and_fig_tools import smart_conversion, show_image
+from helper_img_and_fig_tools import smart_conversion, show_image
 
 import numpy as np
 import torch

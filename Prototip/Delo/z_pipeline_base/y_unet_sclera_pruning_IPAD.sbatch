@@ -22,4 +22,4 @@
 # ntibp=$7
 
 
-srun bash z_pipeline_base/z1_pruning_strong_main.sh main.py unet_sclera_pruning_IPAD 90 48 80 ./sclera_data 5
+srun bash z_pipeline_base/z1_pruning_strong_main.sh unet_main.py unet_sclera_pruning_IPAD 90 48 80 ./sclera_data 5
