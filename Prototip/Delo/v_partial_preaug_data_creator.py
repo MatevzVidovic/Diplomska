@@ -588,15 +588,31 @@ def get_mask(mask_folder_path, file_name_no_suffix) -> np.array:
 import argparse
 
 if __name__ == "__main__":
+
+
+    # Suggested plan:
+    # In my dataset script, 40% of the time I do a zoom between 0.0 and 0.2.
+    # This means that I take 1.0 to 0.8 of the image in each dimension.
+
+    # I would like it that when I take the image from my partially augmented dataset, and then I do a zoom,
+    # and then I resize to the final dimensions, that this final resizing isn't trying to increase the size of the image.
+    # Because resizing in the increasing direction is bad. It tries to make up information.
+
+    # So, since the maximum retention is 0.8, the minimum of the dimension after zoom is  x*0.8.
+    # I have decided to have the final dimensions that the model uses to be 2048x1024
+    # So the partial augmentation width should be:    x * 0.8 = 2480 ==>   2048 / 0.8 = 2560
+    # And for height: 1024 / 0.8 = 1280
     
 
+    # cores probs help because of C vectorization in numpy operations
+    # srun -c 30 --gpus=A100  python3 v_partial_preaug_data_creator.py --ow 1500 --oh 1000
 
     parser = argparse.ArgumentParser(description='Data Augmentation for Vein Sclera Segmentation')
+    parser.add_argument('--ow', type=int, default=2560, help='Output width of the image')
+    parser.add_argument('--oh', type=int, default=1280, help='Output height of the image')
     parser.add_argument('--fp', type=str, default='./vein_sclera_data', help='Folder path of the dataset')
-    parser.add_argument('--dafp', type=str, default='./partial_preaug_vein_sclera_data', help='Data augmented folderpath. Folder path of the augmented dataset')
+    parser.add_argument('--dafp', type=str, default='./vein_sclera_data_partial_preaug', help='Augmented data folderpath. To this name the ow and oh get appended.')
     parser.add_argument('--split', type=str, default='train', help='Split of the dataset')
-    parser.add_argument('--ow', type=int, default=512, help='Output width of the image')
-    parser.add_argument('--oh', type=int, default=512, help='Output height of the image')
 
     args = parser.parse_args()
     
@@ -606,6 +622,8 @@ if __name__ == "__main__":
     
     output_width = args.ow
     output_height = args.oh
+
+    da_folderpath = f"{da_folderpath}_{output_width}x{output_height}"
 
         
     images_without_mask = []

@@ -712,11 +712,11 @@ class IrisDataset(Dataset):
                 # Has to be here, because at this point the img is surely still a PIL image, so .size() is correct
                 ksize = (img.size[0]//20)
                 ksize = ksize+1 if ksize % 2 == 0 else ksize
-                img = gaussian_blur(img, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=0.2)
+                img = gaussian_blur(img, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=0.1)
 
-                img, mask = random_rotation(img, mask, max_angle=15, prob=1.0)
+                img, mask = random_rotation(img, mask, max_angle=15, prob=0.4)
 
-                img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=1.0)
+                img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=0.4)
 
 
 

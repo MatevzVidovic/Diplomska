@@ -49,85 +49,48 @@ class UNet(nn.Module):
 		# Now when passing this to the next up layer the upsampling will reduce the number of kernels by expansion and the symetry will be preserved. 
 
 
-		# But if in upsampling we use bilinear or unpool, then the num of channels stays the same in the upsampling.
-		# So we need to manually adjust things to retain the simetry.
-		# - Down4:
-		# We need to make down4 not increase the number of kernels by expansion. This way for level 3 (down3, up1) 
-		# in the skip connection will receive (k) instead of (k*expansion//expansion) which is cool.
-		# - Up:
-		# Up channels now correcly receive 2*k channels. But in the normal version they would output k, and for the next up level, this would go to (k//expansion)
-		# Since this doesn't happen, instead of Conv(2*k, k) and Conv(k, k), we should have Conv(2*k, k) and Conv(k, k//expansion).
-
-
-		# In this way we can then use unpool or upsample (bilinear), or we can use convtranspose that retains the num of kernels instead of reducing them.
-
-		# Of these methods, I would suggest unpooling. It is the same as segnet uses. It seems to make more sense then bilinear upsampling.
-		# And if you would be using convtranspose, you might as well do the reduction.
-
-
-
-		# This implementation will focus on doing UNet without the reduction of kernels in the upsampling.
-		# If you want to use the reduction, go look for another file in this project.
-		# It seems needless to mesh these two concepts together.
-		# It would just create complexity and not make further use any easier to have it in just one file.
-
 
 
 
 
 
 		# Example: depth == 3, in_chans = 3, starting kernels = 4, expansion = 2
-		# kernels == [4, 8, 16]
+		# kernels == [4, 8, 16, 32]
 		# self.inc == DoubleConv(3, 4)
-		# self.downs == [Down(4, 8), Down(8, 16)]
-		# self.last_down = Down(16, 16)
-		# self.ups == [Up(32, 16, 8), Up(16, 8, 4)]
-		# self.last_up = Up(8, 4, 4)
+		# self.downs == [Down(4, 8), Down(8, 16), Down(16, 32)]
+		# self.ups == [Up(32, 16), Up(16, 8), Up(8, 4)]
 		# self.outc = OutConv(4, 2)
 
 		# Or this example written more generally:
 		# Example: depth == 3, in_chans = 3, starting kernels = 4, expansion = 2
-		# kernels == [4, 8, 16]
+		# kernels == [4, 8, 16, 32]
 		# self.inc == DoubleConv(in_chan, kernels[0])
-		# self.downs == [Down(kernels[0], kernels[1]), Down(kernels[1], kernels[2])]
-		# self.last_down = Down(kernels[2], kernels[2])
-		# self.ups == [Up(2*kernels[2], kernels[2], kernels[1]), Up(2*kernels[1], kernels[1], kernels[0])]
-		# self.last_up = Up(2*kernels[0], kernels[0], kernels[0])
+		# self.downs == [Down(kernels[0], kernels[1]), Down(kernels[1], kernels[2]), Down(kernels[2], kernels[3])]
+		# self.ups == [Up(2*kernels[2], kernels[2]), Up(2*kernels[1], kernels[1]), Up(2*kernels[0], kernels[0])]
 		# self.outc = OutConv(kernels[0], out_chan)
-
-		# Or better for programming in terms of indexing:
-		# Example: depth == 3, in_chans = 3, starting kernels = 4, expansion = 2
-		# kernels == [4, 8, 16]
-		# self.inc == DoubleConv(in_chan, kernels[0])
-		# self.downs == [Down(kernels[0], kernels[1]), Down(kernels[1], kernels[2])]
-		# self.last_down = Down(kernels[2], kernels[2])
-		# self.ups == [Up(2*kernels[-1], kernels[-1], kernels[-2]), Up(2*kernels[-2], kernels[-2], kernels[-3])]
-		# self.last_up = Up(2*kernels[-3], kernels[-3], kernels[-3])
-		# self.outc = OutConv(kernels[-3], out_chan)
-
 
 
 
 		kernels = []
-		for i in range(depth):
+		for i in range(depth+1):
 			kernels.append(int(starting_kernels * (expansion**i)))
+
 
 		self.inc = DoubleConv(n_channels, kernels[0], kernels[0])
 
 		downs = []
-		for i in range(depth - 1):
+		for i in range(depth):
 			downs.append(Down(kernels[i], kernels[i+1]))
 		self.downs = nn.ModuleList(downs)
 		
-		
-		self.last_down = Down(kernels[-1], kernels[-1])
-		
 		ups = []
-		for i in range(depth - 1):
-			ups.append(Up(2*kernels[-1-i], kernels[-1-i], kernels[-1-i-1], mode))
+		for i in range(depth):
+			# levels_in_channels is then ** in Up()
+			# But the reason we give levels_in_channels instead of just 2*kernels[i] is because of the unpooling.
+			# Unpooling has to take what we got from the previous layer (had kernels[i+1] channels) and reduce that to levels_in_channels.
+			# So we would rather just pass levels_in_channels and *2 in the layer itself.
+			ups.insert(0, Up(levels_in_channels=kernels[i], out_channels=kernels[i], prev_out_channels=kernels[i+1]))
 		self.ups = nn.ModuleList(ups)
-
-		self.last_up = Up(2*kernels[0], kernels[0], kernels[0], mode)
 
 		self.outc = OutConv(kernels[0], n_classes, output_y, output_x)
 
@@ -141,27 +104,24 @@ class UNet(nn.Module):
 			pretrained_state = {k: v for k, v in pretrained_state.items() if k in new_state and 'inc.' not in k and 'outc.' not in k}
 			new_state.update()
 			self.load_state_dict(new_state)
+			
 
 	def forward(self, x):
 		past_xs = []
-		past_inds = []
 		
 		x = self.inc(x)
 		past_xs.append(x)
 
 		for down in self.downs:
-			x, inds = down(x)
+			x = down(x)
 			past_xs.append(x)
-			past_inds.append(inds)
 		
-		x, inds = self.last_down(x)
-		past_inds.append(inds)
+		# The past_xs of the last down should never be used. It is simply used as the variable x.
+		# This is why we have -2 in the next for loop.
 
 		for i, up in enumerate(self.ups):
-			x = up(x, past_xs[-1-i], past_inds[-1-i])
+			x = up(x, past_xs[-2-i])
 		
-		x = self.last_up(x, past_xs[0], past_inds[0])
-
 		logits = self.outc(x)
 		return logits
 
@@ -193,43 +153,33 @@ class Down(nn.Module):
 	def __init__(self, in_channels, out_channels):
 		super().__init__()
 		
-		self.mp = nn.MaxPool2d(2, stride=2, return_indices=True)
+		self.mp = nn.MaxPool2d(2, stride=2, return_indices=False)
 		self.dc = DoubleConv(in_channels, out_channels, out_channels)
 		
 	def forward(self, x):
-		x, inds = self.mp(x)
+		x= self.mp(x)
 		x = self.dc(x)
-		return x, inds
+		return x
 	
 
 class Up(nn.Module):
 	"""Upscaling then double conv"""
 
-	def __init__(self, in_channels, mid_channels, out_channels, mode="unpool"):
+	def __init__(self, levels_in_channels, out_channels, prev_out_channels):
 		super().__init__()
-
-		self.mode = mode
-
 		
-		if mode == "unpool":
-			self.up = nn.MaxUnpool2d(2, stride=2)
-		elif mode == "bilinear":
-			self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-		elif mode == "convtranspose":
-			self.up = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)
-		else:
-			raise NotImplementedError(f"Mode not implemented: {mode}")
-
-		self.conv = DoubleConv(in_channels, mid_channels, out_channels)
+		self.up = nn.ConvTranspose2d(prev_out_channels, levels_in_channels, kernel_size=2, stride=2)
+		self.conv = DoubleConv(2*levels_in_channels, out_channels, out_channels)
 
 
 
-	def forward(self, x1, x2, maxpool_inds=None):
+	def forward(self, x1, x2):
+
+		# print(f"{x1.shape=}, {x2.shape=}")
 		
-		if self.mode == "unpool":
-			x1 = self.up(x1, maxpool_inds)
-		else:
-			x1 = self.up(x1)
+		x1 = self.up(x1)
+
+		# print(f"{x1.shape=}")
 
 		x1, x2 = pad_to_larger(x1, x2)
 		
