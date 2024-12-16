@@ -80,6 +80,6 @@
 
 
 
-srun --output=x_unet_partial_preaug_MCDL${1}.txt  bash z_pipeline_base/z1_main_MCDL.sh unet_main.py unet_partial_preaug_MCDL${1} 5 7 80 1e-3 ./vein_sclera_data 2048 1024 augment UNet_original_2048x1024 400
+srun --output=x_unet_partial_preaug_MCDL${1}.txt  bash z_pipeline_base/z1_main_MCDL.sh unet_main.py unet_partial_preaug_MCDL${1} 2 7 80 1e-5 ./vein_sclera_data 2048 1024 augment UNet_original_64_2_6 400
 
 
