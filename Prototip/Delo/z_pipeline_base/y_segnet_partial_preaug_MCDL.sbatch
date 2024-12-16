@@ -32,10 +32,10 @@
 
 
 
-# Pri 3000 2000, unet_3000_2000, starting kernels 5, expansion 1.3,
+# Pri 3000 2000, SegNet_3000x2000, starting kernels 5, expansion 1.3,
 # Za 15 dela. Za 20 nedela. Zdej se pa pejt. Bojan ma že 1 tedn vse nodee.
 
 
-srun --output=x_segnet_partial_preaug_MCDL${1}.txt  bash z_pipeline_base/z1_main_MCDL.sh segnet_main.py segnet_partial_preaug_MCDL${1} 17 18 80 1e-2 ./partial_preaug_vein_sclera_data 3000 2000 partially_preaugmented SegNet_3000_2000 50
+srun --output=x_segnet_partial_preaug_MCDL${1}.txt  bash z_pipeline_base/z1_main_MCDL.sh segnet_main.py segnet_partial_preaug_MCDL${1} 17 18 80 1e-2 ./partial_preaug_vein_sclera_data 3000 2000 partially_preaugmented SegNet_3000x2000 50
 
 

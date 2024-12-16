@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
-    parser.add_argument("-m", "--model", type=str, default="SegNet_256_256", help='Model to use. Options: SegNet_256_256, SegNet_3000_2000')
+    parser.add_argument("-m", "--model", type=str, default="SegNet_256x256", help='Model to use. Options: SegNet_256x256, SegNet_3000x2000')
     parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
     parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
@@ -500,7 +500,7 @@ dataloader_dict = {
 
 
 
-if MODEL == "SegNet_256_256":
+if MODEL == "SegNet_256x256":
     from segnet import SegNet
 
     model_parameters = {
@@ -508,7 +508,7 @@ if MODEL == "SegNet_256_256":
         "out_chn" : OUTPUT_DIMS["channels"],
     }
 
-elif MODEL == "SegNet_3000_2000":
+elif MODEL == "SegNet_3000x2000":
     from segnet import SegNet
 
     model_parameters = {

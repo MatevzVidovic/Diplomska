@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
-    parser.add_argument("-m", "--model", type=str, default="UNet_256_256", help='Model to use. Options: UNet_256_256, UNet_3000_2000')
+    parser.add_argument("-m", "--model", type=str, default="UNet_256x256", help='Model to use. Options: UNet_256x256, UNet_3000x2000')
     parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
     parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
@@ -641,20 +641,67 @@ dataloader_dict = {
 
 
 
-if MODEL == "UNet_256_256":
+if MODEL == "UNet_256x256":
     from unet import UNet
 
     model_parameters = {
         # layer sizes
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
-        "bilinear" : True,
+        
         "pretrained" : False,
     }
 
-elif MODEL == "UNet_3000_2000":
+elif MODEL == "UNet_1500x1000":
     from unet import UNet
 
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 2,
+        "starting_kernels" : 16,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        
+        "pretrained" : False,
+    }
+
+elif MODEL == "UNet_2048x1024":
+    from unet import UNet
+
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 2,
+        "starting_kernels" : 16,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "pretrained" : False,
+    }
+
+elif MODEL == "UNet_original_2048x1024":
+    from unet_original import UNet
+
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 2,
+        "starting_kernels" : 64,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "pretrained" : False,
+    }
+
+elif MODEL == "UNet_3000x2000":
+
+
+    from unet import UNet
+
+
+    # max bs on A100 is 17
     model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
@@ -663,13 +710,15 @@ elif MODEL == "UNet_3000_2000":
         "starting_kernels" : 5,
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
-        "bilinear" : True,
+        
         "pretrained" : False,
     }
 
-elif MODEL == "UNet_3000_2000_input_skip_conn":
+elif MODEL == "UNet_3000x2000_input_skip_conn":
     from unet_reinput import UNet
 
+
+    # max bs on A100 is 13
     model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
@@ -678,7 +727,7 @@ elif MODEL == "UNet_3000_2000_input_skip_conn":
         "starting_kernels" : 5,
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
-        "bilinear" : True,
+        
         "pretrained" : False,
     }
 
