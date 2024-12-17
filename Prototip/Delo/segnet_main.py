@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--ih', type=int, default=256, help='Input height')
     parser.add_argument('--ic', type=int, default=3, help='Input channels')
     parser.add_argument('--oc', type=int, default=2, help='Output channels')
-    parser.add_argument('--ds', type=str, default="standard", help='Dataset option. Options: augment, preaugmented, partially_preaugmented.')
+    parser.add_argument('--ds', type=str, default="standard", help='Dataset option. Options: augment, pass_through, partially_preaugmented.')
     parser.add_argument('--tesl', type=int, default=1e9, help=f"""TRAIN_EPOCH_SIZE_LIMIT. If we have 1500 images in the training set, and we set this to 1000, 
                         we will stop the epoch as we have trained on >= 1000 images.
                         We should watch out to use shuffle=True in the DataLoader, because otherwise we will always only train on the first 1000 images in the Dataset's ordering.
@@ -250,8 +250,8 @@ if __name__ == "__main__":
         from dataset_partial_preaug import IrisDataset, transform
     elif DATASET == "augment":
         from dataset_aug import IrisDataset, transform
-    elif DATASET == "preaugmented":
-        from dataset_preaug import IrisDataset, transform
+    elif DATASET == "pass_through":
+        from dataset_pass_through import IrisDataset, transform
     else:
         raise ValueError(f"DATASET not recognized: {DATASET}.")
 

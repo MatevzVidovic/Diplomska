@@ -49,10 +49,10 @@ def save_plt_fig(fig, save_path, filename, formats={"svg", "png", "pkl"}, dpi=10
     os.makedirs(save_path, exist_ok=True)
 
     if "png" in formats:
-        fig.savefig(osp.join(save_path, f"{filename}.svg"), format="svg")
+        fig.savefig(osp.join(save_path, f"{filename}.png"), format="png", dpi=dpi)
     
     if "svg" in formats:
-        fig.savefig(osp.join(save_path, f"{filename}.png"), format="png", dpi=dpi)
+        fig.savefig(osp.join(save_path, f"{filename}.svg"), format="svg")
     
     if "pkl" in formats:
         with open(osp.join(save_path, f"{filename}.pkl"), "wb") as f:

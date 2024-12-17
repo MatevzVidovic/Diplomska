@@ -468,8 +468,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
                     combined_img = curr_img * (1 - curr_target)   # This will make all vein pixels blacked out.
                     combined_img_2 = curr_img * curr_target       # This will make all non-vein pixels blacked out.
-                    save_img_quick_figs(combined_img, f"da_{quick_figs_counter}_img_vein_blacked_out.jpg")
-                    save_img_quick_figs(combined_img_2, f"da_{quick_figs_counter}_img_non_vein_blacked_out.jpg")
+                    save_img_quick_figs(combined_img, f"da_{quick_figs_counter}_img_vein_blacked_out.png")
+                    save_img_quick_figs(combined_img_2, f"da_{quick_figs_counter}_img_non_vein_blacked_out.png")
                     
                     
                     
@@ -477,7 +477,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                     save_plt_fig_quick_figs(fig, f"da_{quick_figs_counter}")
 
                     curr_img = smart_conversion(curr_img, "ndarray", "uint8")
-                    save_img_quick_figs(curr_img, f"da_{quick_figs_counter}_img.jpg")
+                    save_img_quick_figs(curr_img, f"da_{quick_figs_counter}_img.png")
                     
 
                     # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img_quick_figs()

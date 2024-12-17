@@ -285,9 +285,9 @@ def get_IoU_from_predictions(predictions, targets, num_classes=2):
     try:
 
         confusion_matrix = get_conf_matrix(predictions, targets, num_classes)
-        IoU = conf_matrix_to_IoU(confusion_matrix, num_classes)
+        IoU, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes)
 
-        return IoU
+        return IoU, where_is_union_zero
     
 
     except Exception as e:
@@ -311,14 +311,21 @@ def conf_matrix_to_IoU(confusion_matrix, n_classes):
             print(confusion_matrix.shape)
             raise NotImplementedError()
 
-        IoU = np.diag(confusion_matrix) / (
+        unions = (
                 np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
                 np.diag(confusion_matrix))
+        
+        where_is_union_zero = unions == 0
+        unions[where_is_union_zero] = 1  # to make the division not fail
+
+        IoU = np.diag(confusion_matrix) / unions
+
+        IoU[where_is_union_zero] = np.nan  # if union is 0, then IoU is undefined
         
         # print("Conf matrix:", confusion_matrix)
         # print("IoU diag:", IoU)
 
-        return IoU
+        return IoU, where_is_union_zero
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
@@ -536,7 +543,8 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict[dataloader_name]
 
-            size = len(dataloader.dataset)
+            approx_IoU_size = 0
+            IoU_size = 0
             num_batches = len(dataloader)
 
             self.model.eval()
@@ -560,7 +568,10 @@ class TrainingWrapper:
                         pred_binary = pred[:, 1] > pred[:, 0]
 
                         F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoU += get_IoU_from_predictions(pred_binary, y).item(1) # only IoU for sclera (not background)
+                        approx_IoUs, where_is_union_zero = get_IoU_from_predictions(pred_binary, y)
+                        if where_is_union_zero[1] == False:
+                            approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
+                            approx_IoU_size += 1
 
 
                         # X and y are tensors of a batch, so we have to go over them all
@@ -569,17 +580,19 @@ class TrainingWrapper:
                             pred_binary = pred[i][1] > pred[i][0]
 
 
-                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i]).item(1) # only IoU for sclera (not background)
+                            curr_IoU, where_is_union_zero = get_IoU_from_predictions(pred_binary, y[i])
+                            if where_is_union_zero[1] == False:
+                                IoU += curr_IoU.item(1) # only IoU for sclera (not background)
+                                IoU_size += 1
                             # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                            IoU += curr_IoU
 
 
 
 
             test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
-            approx_IoU /= num_batches
+            approx_IoU /= approx_IoU_size
             F1 /= num_batches
-            IoU /= size # should be same or even more accurate as (num_batches * batch_size)
+            IoU /= IoU_size # should be same or even more accurate as (num_batches * batch_size)
 
             print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n approx_IoU: {(approx_IoU):>.6f} \n F1: {F1:>.6f} \n IoU: {IoU:>.6f}\n")
         
@@ -619,6 +632,8 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict[dataloader_name]
 
+            approx_IoU_size = 0
+            IoU_size = 0
             self.model.eval()
             test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
             quick_figs_counter = 0
@@ -641,8 +656,10 @@ class TrainingWrapper:
                         pred_binary = pred[:, 1] > pred[:, 0]
 
                         F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoU += get_IoU_from_predictions(pred_binary, y).item(1) # only IoU for sclera (not background)
-
+                        approx_IoUs, where_is_union_zero = get_IoU_from_predictions(pred_binary, y)
+                        if where_is_union_zero[1] == False:
+                            approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
+                            approx_IoU_size += 1
 
                         # X and y are tensors of a batch, so we have to go over them all
                         for i in range(X.shape[0]):
@@ -650,9 +667,11 @@ class TrainingWrapper:
                             pred_binary = pred[i][1] > pred[i][0]
 
 
-                            curr_IoU = get_IoU_from_predictions(pred_binary, y[i]).item(1) # only IoU for sclera (not background)
+                            curr_IoU, where_is_union_zero = get_IoU_from_predictions(pred_binary, y[i])
+                            if where_is_union_zero[1] == False:
+                                IoU += curr_IoU.item(1) # only IoU for sclera (not background)
+                                IoU_size += 1
                             # print(f"This image's IoU: {curr_IoU:>.6f}%")
-                            IoU += curr_IoU
 
 
                             
