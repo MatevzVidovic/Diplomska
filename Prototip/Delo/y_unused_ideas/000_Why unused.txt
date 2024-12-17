@@ -1,0 +1,48 @@
+
+Augmentation and partial augmentation:
+There doesn't seem to be much point. I remember benchmarking every part of augmentation and 3 individual parts each being 1.7 seconds.
+But on last benchmark none was more than 0.4s. So idk if I remember it wrong or sth.
+But anyway, it does not seem worth it.
+
+
+Patchification:
+It makes no sense. I really thought it did, but it makes none.
+The idea is: 
+You cant resize 3000x2000 imgs to 128x128. The vein mask becomes blocky and unconnected. So the model can't learn anything.
+So you make the model work on 2048x1024. But now your batch size went from 100 to 4. So things are slow.
+Here Patchification comes in:
+Lets have the original resolution, just make cutouts of 128x128 areas and make our model on that.
+Identifying veins only needs local data anyway.
+Sounds good. But...
+Think about it for a sec.
+When you have a 2048x1024 model, with bs 1, the model is doing convolutions on this big image,
+and what it is doing is literally the same as if you cut up this 2048x1024 image into 128x128 tiles, so 16x8 (128) tiles,
+and put them into one big batch.
+
+You have to think about it a bit, but it's literally the same. Imagine the convolutional filters going over the image and what each one of them produces.
+They produce a new image of size 2048x1024, that you can cut up in the same way, and the output tiles are literally the same as if 
+you put the tiles individually in a big batch.
+
+Except that in the patch-wise big batch case, the tilings arent stacked in the x-y directions, but in the batch direction. And additionally,
+since convolutions retain their dimensions, probably by extrapolating with reflection on the edges of the image,
+the patch-wise method is much worse - because when we were stacking the tiles when the convolution would be reaching over the edge of the tile
+part of the kernel would be reaching over into the next tile (the next tile being the actual correct ground truth continuation).
+And then you do a maxpool and get a 1024x512 img. And again, if you make this 16x8 tiling it is exactly the same as when working with patches.
+It just doesn't make sense to work with patches like that.
+
+You could argue, tho, that when you are doing patch-wise learning, because the dataloader is shuffling the patches present in a batch,
+you get a model that is less reliant on the sequence of the data (because the sequence of the tilings in the 2048x1024 image is always the same).
+(Think to why shuffle=True is important for dataloaders when working with tabular data - there its kinda easier to imagine and visualize)
+But you'd be wrong again.
+Because the ordering of tiles in the 2048x1048 imgs isn't some artifact we have created and is not actually present in the data.
+It is literally the ground truth that the tiles fit together in this way.
+
+So by not using patchification you do have a smaller batchsize on paper, but it's actually exaclty as big as with smaller tiles, just that it's contained in the x-y dimensions.
+And by not using it, you are making it better for Conv2D layers, because they don't have to do the bullshit reflective extrapolation in between these tiles.
+
+The only sensible reasons for working with patches are:
+- if you dont have enough VRAM for even bs=1
+- if you do model robustification at test-time compute:
+In the test, you don't just tile the img and predict for each patch.
+Instead, (lets say you have a patch-size of 32x32) you apply patches with stride=4. So each pixel (not on the edges of the img) gets predicted 8 times.
+And then you go and combine those 8 predictions into one prediction. This robustification is probably worth it.
