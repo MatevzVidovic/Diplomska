@@ -29,20 +29,28 @@ source z_pipeline_base/z0_temp_inputs.sh
 
 
 
+
+
 main_name=$1
 folder_name=$2
 bs=$3
 nodw=$4
-pnkao=$5
+lr=$5
 ptd=$6
-ntibp=$7
-
-param_num=7
+iw=$7
+ih=$8
+model_name=$9
+tesl=${10}
+ntibp=${12}
+pnkao=${13}
+param_num=14
 
 if [[ $# -ne $param_num ]]; then
-    echo "Error: The number of parameters is not correct."
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
     exit 1
 fi
+
+echo $@
 
 
 # additional use of z_bash_saver.sh
@@ -52,18 +60,9 @@ cat "${main_name}" > "${program_content_file}"
 
 
 
+# Pruning:
 
-
-
-
-
-# torej (ntibp tr + k epoch passov) * map = število passov
-# Pri pnkao 100 ima en pruning recimo da 7 epoch passov.
-
-# torej (20 tr + 7 epoch passov) * 15 = 405 passov
-
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp ${ntibp} --sd ${folder_name} --ptd ${ptd} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01          2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-
+python3 ${main_name} --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --mti ${mti} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name} --ntibp ${ntibp} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

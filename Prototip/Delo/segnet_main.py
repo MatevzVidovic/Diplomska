@@ -69,14 +69,13 @@ if __name__ == "__main__":
     parser.add_argument('--ips', type=int, default=1e9,
                         help='iter_possible_stop An optional positional argument with a default value of 1e9')
     parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
-
+    parser.add_argument("--tras", type=int, default=-1, help="""Test run and size. If you pass an int, that will be the size of the dataset, and it will be in testrun. 
+                        If -1 (default), then it is not a test run.""")
     
     # With action='store_true' these args store True if the flag is present and False otherwise.
     # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
     # So --pbop False would still give True to the pbop field.
     # This is why they are implemented this way now.
-    parser.add_argument("-t", "--is_test_run", action='store_true',
-                        help='If present, enables test run')
     parser.add_argument('-p', '--pruning_phase', action='store_true',
                         help='If present, enables pruning phase (automatic pruning)')
         
@@ -216,8 +215,9 @@ if __name__ == "__main__":
 
     iter_possible_stop = args.ips
     NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+    TEST_RUN_AND_SIZE = args.tras
+    IS_TEST_RUN = TEST_RUN_AND_SIZE != -1
 
-    IS_TEST_RUN = args.is_test_run
     is_pruning_ph = args.pruning_phase
     prune_by_original_percent = args.pbop
 
@@ -427,7 +427,7 @@ dataloading_args = {
 
 
     "testrun" : IS_TEST_RUN,
-    "testrun_size" : 30,
+    "testrun_size" : TEST_RUN_AND_SIZE,
    
 
     "input_width" : INPUT_DIMS["width"],

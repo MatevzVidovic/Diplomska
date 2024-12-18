@@ -183,7 +183,7 @@ class IrisDataset(Dataset):
 
 
 
-            show_testrun = True
+            show_testrun = False
 
             # Testing
             if show_testrun:

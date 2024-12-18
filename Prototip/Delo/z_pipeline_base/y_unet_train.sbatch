@@ -6,36 +6,36 @@
 
 #SBATCH -p frida
 #SBATCH -c 7
-#SBATCH --gpus=A100_80GB
-
-#SBATCH -w ana
+#SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G 
 
+
+# #SBATCH -w ana
 
 
 # --job-name sadly cannot be changed with the passed id.
 # You can't give it as an srun param, that doesn't work.
 # But also, substituting it into SBATCH commands doesn't work.
 
+
 # main_name=$1
 # folder_name=$2
 # bs=$3
 # nodw=$4
-# pnkao=$5
-# lr=$6
-# ptd=$7
-# iw=$8
-# ih=$9
-# model_name=${10}
-# tesl=${11}
-# mti=${12}
+# lr=$5
+# ptd=$6
+# iw=$7
+# ih=$8
+# model_name=$9
+# tesl=${10}
+# mti=${11}
 
 
 # bs 4 gre, bs 6 ne gre 
 # bs 5 gre
 
 
-srun --output=x_unet_train${1}.txt  bash z_pipeline_base/z1_main.sh unet_main.py unet_train${1} ${1} 7 80 1e-4 ./vein_sclera_data 2048 1024 UNet_original_64_2_6 400 ${2} augment
+srun --output=x_unet_train${1}.txt  bash z_pipeline_base/z1_main.sh unet_main.py unet_train${1} ${1} 7 5e-5 ./vein_sclera_data 2048 1024 UNet_64_2_6 400 ${2}
 
 
 

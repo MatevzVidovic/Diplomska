@@ -28,27 +28,38 @@ source z_pipeline_base/z0_temp_inputs.sh
 
 
 
+# main_name=$1
+# folder_name=$2
+# bs=$3
+# nodw=$4
+# lr=$5
+# ptd=$6
+# iw=$7
+# ih=$8
+# model_name=$9
+# tesl=${10}
+# mti=${11}
+# tras=${12}
 
 main_name=$1
 folder_name=$2
 bs=$3
 nodw=$4
-pnkao=$5
-lr=$6
-ptd=$7
-iw=$8
-ih=$9
-model_name=${10}
-tesl=${11}
-mti=${12}
-ds=${13}
-
-param_num=13
+lr=$5
+ptd=$6
+iw=$7
+ih=$8
+model_name=$9
+tesl=${10}
+mti=${11}
+param_num=11
 
 if [[ $# -ne $param_num ]]; then
-    echo "Error: The number of parameters is not correct."
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
     exit 1
 fi
+
+echo $@
 
 
 # additional use of z_bash_saver.sh
@@ -68,7 +79,7 @@ cat "${main_name}" > "${program_content_file}"
 
 # Main training:
 
-python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --ntibp 1 --sd ${folder_name} --ptd ${ptd} --mti ${mti} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} --ds ${ds} -m ${model_name}            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --mti ${mti} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name}            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

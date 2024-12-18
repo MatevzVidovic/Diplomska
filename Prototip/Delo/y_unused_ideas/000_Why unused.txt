@@ -38,7 +38,7 @@ Because the ordering of tiles in the 2048x1048 imgs isn't some artifact we have 
 It is literally the ground truth that the tiles fit together in this way.
 
 So by not using patchification you do have a smaller batchsize on paper, but it's actually exaclty as big as with smaller tiles, just that it's contained in the x-y dimensions.
-And by not using it, you are making it better for Conv2D layers, because they don't have to do the bullshit reflective extrapolation in between these tiles.
+And by not using it, you are making it better for Conv2D layers, because they don't have to do the bulls**t reflective extrapolation in between these tiles.
 
 The only sensible reasons for working with patches are:
 - if you dont have enough VRAM for even bs=1
@@ -46,3 +46,11 @@ The only sensible reasons for working with patches are:
 In the test, you don't just tile the img and predict for each patch.
 Instead, (lets say you have a patch-size of 32x32) you apply patches with stride=4. So each pixel (not on the edges of the img) gets predicted 8 times.
 And then you go and combine those 8 predictions into one prediction. This robustification is probably worth it.
+
+
+From initial notes on patchification not working:
+Doing this on patches wont improve s**t.
+Its literally the same as doing it with large images and smaller batch size.
+Like, in the network pass for the large image, you could just imagine the patch cuttings as batch sizes.
+You could argue with patches the model then at least doesn't learn artificial patterns in data due to not shuffling the batches.
+But here's the thing - the order in large images can actually only help, it cant hurt. Because it is a real present thing.
