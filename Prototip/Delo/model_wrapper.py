@@ -1,12 +1,14 @@
 
 
 
-
 import logging
 import python_logger.log_helper_off as py_log
+import python_logger.log_helper as py_log_always_on
+
 
 MY_LOGGER = logging.getLogger("prototip")
 MY_LOGGER.setLevel(logging.DEBUG)
+
 
 
 
@@ -31,99 +33,115 @@ from helper_model_vizualization import model_graph
 
 
 
-
+@py_log_always_on.log_for_class(passed_logger=MY_LOGGER, add_class_autolog=False)
 class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device, other_zeroth_dim_LLM_ixs=[]):
 
-        self.model_class = model_class
-        
-        # self.save_path = osp.join(osp.dirname(__file__), "saved")
-        self.save_path = osp.join(save_path, "saved_model_wrapper")
-
-        os.makedirs(self.save_path, exist_ok=True)
-
-
-
-
-        j_path = osp.join(self.save_path, "previous_model_details.json")
-        j_dict = jh.load(j_path)
-
-        if j_dict is None:
-            self.prev_model_path = None
-            self.prev_pruner_path = None
-        else:
-
-            model_filename = j_dict["previous_model_filename"]
-            pruner_filename = j_dict["previous_pruner_filename"]
+        try:
+                
+            self.model_class = model_class
             
-            self.prev_model_path = osp.join(self.save_path, model_filename)
-            self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+            # self.save_path = osp.join(osp.dirname(__file__), "saved")
+            self.save_path = osp.join(save_path, "saved_model_wrapper")
+
+            os.makedirs(self.save_path, exist_ok=True)
+
+
+
+
+            j_path = osp.join(self.save_path, "previous_model_details.json")
+            j_dict = jh.load(j_path)
+
+            if j_dict is None:
+                self.prev_model_path = None
+                self.prev_pruner_path = None
+            else:
+
+                model_filename = j_dict["previous_model_filename"]
+                pruner_filename = j_dict["previous_pruner_filename"]
+                
+                self.prev_model_path = osp.join(self.save_path, model_filename)
+                self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+
+
+                
+            # To help with migration after I changed pruner.py right after the training phase 
+            # (no prunings had happened so I could just create a new pruner instance)
+            if self.prev_pruner_path == "remake_pruner":
+                self.prev_pruner_path = None
+
 
 
             
-        # To help with migration after I changed pruner.py right after the training phase 
-        # (no prunings had happened so I could just create a new pruner instance)
-        if self.prev_pruner_path == "remake_pruner":
-            self.prev_pruner_path = None
 
 
 
+            if self.prev_model_path is not None and osp.exists(self.prev_model_path):
+                print("Loaded model path: ", self.prev_model_path)
+                # you can specify the map_location parameter to map the model to the CPU. This tells PyTorch to load the model onto the CPU, even if it was originally saved on a GPU.
+                # Otherwise: RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False.
+                self.model = torch.load(self.prev_model_path, map_location=torch.device(device))
+            else:
+                self.model = self.model_class(**model_parameters)
+                print("Created new model instance.")
+            
+
+
+
+
+
+
+
+
+
+            self.learning_rate = learning_dict["learning_rate"]
+            self.optimizer_class = learning_dict["optimizer_class"]
+
+            new_learning_dict = {
+                "loss_fn": learning_dict["loss_fn"],
+                "train_epoch_size_limit": learning_dict["train_epoch_size_limit"],
+            }
+
+            self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict, device)
+
+            self.initialize_optimizer()
+
+
+
+            self.resource_calc = ConvResourceCalc(self.training_wrapper)
+
+            self.input_example = input_example
+            self.resource_calc.calculate_resources(self.input_example)
+
+            self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+            self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
+
+            batchnorm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
+            other_zeroth_dim_ixs = []
+            for ix in other_zeroth_dim_LLM_ixs:
+                other_zeroth_dim_ixs.append(self.lowest_level_modules[ix])
+            self.other_zeroth_dim_ixs = batchnorm_ixs + other_zeroth_dim_ixs
+            
+
+
+
+            initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
+            if osp.exists(osp.join(initial_resource_calc_path)):
+                with open(initial_resource_calc_path, "rb") as f:
+                    self.initial_resource_calc = pickle.load(f)
+            else:
+                # pickle resource_dict
+                with open(initial_resource_calc_path, "wb") as f:
+                    self.initial_resource_calc = self.resource_calc.get_copy_for_pickle()
+                    pickle.dump(self.initial_resource_calc, f)
         
-
-
-
-        if self.prev_model_path is not None and osp.exists(self.prev_model_path):
-            print("Loaded model path: ", self.prev_model_path)
-            # you can specify the map_location parameter to map the model to the CPU. This tells PyTorch to load the model onto the CPU, even if it was originally saved on a GPU.
-            # Otherwise: RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False.
-            self.model = torch.load(self.prev_model_path, map_location=torch.device(device))
-        else:
-            self.model = self.model_class(**model_parameters)
         
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER)
+            raise e
 
-
-
-
-
-
-
-
-
-        self.learning_rate = learning_dict["learning_rate"]
-        self.optimizer_class = learning_dict["optimizer_class"]
-
-        new_learning_dict = {
-            "loss_fn": learning_dict["loss_fn"],
-            "train_epoch_size_limit": learning_dict["train_epoch_size_limit"],
-        }
-
-        self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict, device)
-
-        self.initialize_optimizer()
-
-
-
-        self.resource_calc = ConvResourceCalc(self.training_wrapper)
-
-        self.input_example = input_example
-        self.resource_calc.calculate_resources(self.input_example)
-
-        self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-        self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
-        self.batch_norm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
-
-
-        initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
-        if osp.exists(osp.join(initial_resource_calc_path)):
-            with open(initial_resource_calc_path, "rb") as f:
-                self.initial_resource_calc = pickle.load(f)
-        else:
-            # pickle resource_dict
-            with open(initial_resource_calc_path, "wb") as f:
-                self.initial_resource_calc = self.resource_calc.get_copy_for_pickle()
-                pickle.dump(self.initial_resource_calc, f)
 
 
 
@@ -146,7 +164,7 @@ class ModelWrapper:
                 # We need to load this, if the user changed it between the two runs.
                 self.pruner_instance.pruning_disallowments = pruning_disallowments
         else:
-            self.pruner_instance = Pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.batch_norm_ixs, self.lowest_level_modules, self.input_example)
+            self.pruner_instance = Pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.other_zeroth_dim_ixs, self.lowest_level_modules, self.input_example)
 
         self.get_importance_dict_fn = get_importance_dict_fn
 

@@ -149,6 +149,17 @@ class ConvResourceCalc():
                 dict[tree_ix] = 0
 
             self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
+
+        
+        elif isinstance(layer, nn.ConvTranspose2d):
+
+
+            # Prekompleksno se to upostevat za flops.
+            for _, dict in self.resource_name_2_resource_dict.items():
+                dict[tree_ix] = 0
+
+            self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
+
         
 
         else:
