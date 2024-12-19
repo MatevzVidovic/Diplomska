@@ -1084,7 +1084,7 @@ if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device, UPCONV_LLM_IXS)
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device)
 
 
 
@@ -1196,7 +1196,7 @@ if __name__ == "__main__":
 
 
 
-    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments)
+    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
 
 
 
