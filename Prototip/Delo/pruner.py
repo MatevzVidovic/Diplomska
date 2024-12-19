@@ -26,7 +26,7 @@ class Pruner:
 
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, batch_norm_ixs, lowest_level_modules, input_example):
+    def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, other_zeroth_dim_ixs, lowest_level_modules, input_example):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.pruning_disallowments = pruning_disallowments
         self.input_slice_connection_fn = input_slice_connection_fn
@@ -37,7 +37,8 @@ class Pruner:
 
 
         self.tree_ix_2_list_of_initial_kernel_ixs = {}
-        for tree_ix in conv_tree_ixs + batch_norm_ixs:
+        # one example of other_zeroth_dim_ixs is the batchnorms
+        for tree_ix in conv_tree_ixs + other_zeroth_dim_ixs:
             # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
             # 0. dim is the number of kernels of this layer.
             # 0. dim also works for batchnorm, for which this is only needed for display of what kernels have been pruned.
@@ -55,6 +56,7 @@ class Pruner:
         self.pruning_logs = {
             "conv" : [],
             "batch_norm" : [],
+            "upconv" : [],
             "following" : []
         }
         
@@ -73,6 +75,9 @@ class Pruner:
 
             if type(module) == torch.nn.BatchNorm2d:
                 self.prune_batchnorm(tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module)
+                return
+            elif type(module) == torch.nn.ConvTranspose2d:
+                self.prune_upconvolution(tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module)
                 return
 
 
@@ -180,6 +185,58 @@ class Pruner:
 
 
 
+    @py_log.log(passed_logger=MY_LOGGER)
+    def prune_upconvolution(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
+        try:
+
+            # get the module
+            module = tree_ix_2_module[tree_ix]
+
+
+            # This has to happen before pruning, so that the initial_kernel_ix is correct.
+            initial_kernel_ix = self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]
+            self.pruning_logs["upconv"].append((tree_ix, real_kernel_ix, initial_kernel_ix))
+
+
+
+
+            # pruning convolutional layers:
+
+            old_weights = module.weight.data
+
+            # print(f"old_weights.shape: {old_weights.shape}")
+            # input()
+
+            # weight dimensions: !!!different than Conv2d!!!! [output_channels , input_channels, kernel_height, kernel_width]
+            new_weights = torch.cat([old_weights[:real_kernel_ix, :, :, :], old_weights[real_kernel_ix+1:, :, :, :]], dim=0)
+            module.weight.data = new_weights # torch.nn.Parameter(new_weights)
+
+            # apparently better to clear out between two forward-backward passes
+            # I suspect it would work without this too
+            module.weight.grad = None
+
+            # Now we have to update the list of initial kernels
+            print(f"Pruned upconv {tree_ix}, input slice ix (in code real_kernel_ix): {real_kernel_ix}, initial_kernel_ix: {initial_kernel_ix}")
+            
+            self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_kernel_ix)
+
+
+
+
+
+
+
+
+
+            py_log.log_locals(passed_logger=MY_LOGGER)
+            return
+        
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER)
+            raise e
+
+
+
 
 
 
@@ -222,6 +279,14 @@ class Pruner:
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER)
             raise e
+
+
+
+
+
+
+
+
 
 
     def _get_disallowed_tree_ixs(self, curr_conv_resource_calc: ConvResourceCalc):
@@ -402,8 +467,16 @@ class Pruner:
             # ----------TAKE REAL_KERNEL_IXS TO THE INITIAL_KERNEL_IXS----------
             # We have to take to_prune to the initial kernel_ixs, because with the current mechanism of pruning num_to_prune at once
             # once we prune a kernel, if we then also go prune a kernel in the same layer, the kernel ix is wrong.
-            to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix, _ in sortable_list]
-
+            # to_prune = [(tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix]) for tree_ix, real_kernel_ix, _ in sortable_list]
+            to_prune = []
+            for tree_ix, real_kernel_ix, _ in sortable_list:
+                try:
+                    temp = (tree_ix, self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix][real_kernel_ix])
+                    to_prune.append(temp)
+                except Exception as e:
+                    print(f"tree_ix: {tree_ix}, real_kernel_ix: {real_kernel_ix}")
+                    print(f"temp: {temp}")
+                    raise e
 
 
 

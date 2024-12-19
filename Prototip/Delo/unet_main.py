@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
-    parser.add_argument("-m", "--model", type=str, default="UNet_256x256", help='Model to use. Options: UNet_256x256, UNet_3000x2000')
+    parser.add_argument("-m", "--model", type=str, default="default", help='Model to use. Options: 64_2_6, and others')
     parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
     parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
     parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
@@ -248,10 +248,12 @@ if __name__ == "__main__":
 
 
     if DATASET == "partially_preaugmented":
+        raise NotImplementedError("partially_preaugmented dataset not in use anymore.")
         from dataset_partial_preaug import IrisDataset, transform
     elif DATASET == "augment":
         from dataset_aug import IrisDataset, transform
     elif DATASET == "pass_through":
+        raise NotImplementedError("pass_through dataset not in use anymore.")
         from dataset_pass_through import IrisDataset, transform
     else:
         raise ValueError(f"DATASET not recognized: {DATASET}.")
@@ -498,10 +500,10 @@ dataloader_dict = {
 
 
 
+from unet import UNet
 
-if MODEL == "UNet_default":
-    from unet import UNet
-
+if MODEL == "default":
+    
     model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
@@ -510,9 +512,8 @@ if MODEL == "UNet_default":
         "n_classes" : OUTPUT_DIMS["channels"],
     }
 
-elif MODEL == "UNet_2_16_4":
-    from unet import UNet
-
+elif MODEL == "2_16_4":
+    
     model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
@@ -524,8 +525,7 @@ elif MODEL == "UNet_2_16_4":
         "depth" : 4,
     }
 
-elif MODEL == "UNet_2_16_5":
-    from unet import UNet
+elif MODEL == "2_16_5":
 
     model_parameters = {
         # layer sizes
@@ -538,8 +538,7 @@ elif MODEL == "UNet_2_16_5":
         "depth" : 5,
     }
 
-elif MODEL == "UNet_original_64_2_4":
-    from unet_original import UNet
+elif MODEL == "64_2_4":
 
     model_parameters = {
         # layer sizes
@@ -552,8 +551,7 @@ elif MODEL == "UNet_original_64_2_4":
         "depth" : 4,
     }
 
-elif MODEL == "UNet_original_64_2_6":
-    from unet_original import UNet
+elif MODEL == "64_2_6":
 
     model_parameters = {
         # layer sizes
@@ -566,31 +564,17 @@ elif MODEL == "UNet_original_64_2_6":
         "depth" : 6,
     }
 
-elif MODEL == "UNet_64_2_6":
-    from unet import UNet
+elif MODEL == "5_1.3_4":
 
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-    }
-
-elif MODEL == "UNet_3000x2000":
-
-    from unet import UNet
 
     # max bs on A100 is 17
     model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
         "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.3,
         "starting_kernels" : 5,
+        "expansion" : 1.3,
+        "depth" : 4,
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
         

@@ -34,8 +34,10 @@
 # bs 4 gre, bs 6 ne gre 
 # bs 5 gre
 
+srun --output=x_unet_train${1}.txt  bash z_pipeline_base/z1_main.sh unet_original_training_main.py unet_train${1} ${1} 7 5e-5 ./vein_sclera_data 2048 1024 64_2_6 400 ${2}
 
-srun --output=x_unet_train${1}.txt  bash z_pipeline_base/z1_main.sh unet_main.py unet_train${1} ${1} 7 5e-5 ./vein_sclera_data 2048 1024 UNet_64_2_6 400 ${2}
+
+# srun --output=x_unet_train${1}.txt  bash z_pipeline_base/z1_main.sh unet_main.py unet_train${1} ${1} 7 5e-5 ./vein_sclera_data 2048 1024 UNet_64_2_6 400 ${2}
 
 
 

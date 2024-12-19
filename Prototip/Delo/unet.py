@@ -225,6 +225,33 @@ class Up(nn.Module):
 
 
 	def forward(self, x1, x2, maxpool_inds=None):
+
+
+		print(f"""
+		From unet.py, line 231 - forward method of Up class:
+		# Theres a problem with unpooling. If the conv right before unpooling is pruned, then x1 will have e.g. 511 chans, and indices will have 512 chans.
+		# And if the conv on the same level in the down path is pruned, then x2 will have 511 chans.
+		# So we have to  make sure that if either of those two convs are pruned, the other is also.
+
+		# But since this will not be used, I leave it for later.
+		""")
+
+		# Theres a problem with unpooling. If the conv right before unpooling is pruned, then x1 will have e.g. 511 chans, and indices will have 512 chans.
+		# And if the conv on the same level in the down path is pruned, then x2 will have 511 chans.
+		# So we have to  make sure that if either of those two convs are pruned, the other is also.
+
+		# But since this will not be used, I leave it for later.
+
+
+		# Why cant be done otherwise:
+		# or we can just do a resizing of inds to match x1. And we do a NEAREST method resizing. 
+		# And this will give us the most likely positioning that corresponds to the maxpooling indices.
+
+		# But this cant work. Because maxpool indices array isn't an array of true and false with the size of the input of maxpool.
+		# It is an array with int tuples that are indices regarding the input, and the tensor is the size of the output.
+
+		# So instead what we could do is, we could resize x1 to indices (along batch dimensions). Then do a maxunpool. 
+		# And then resize it back to the num of channels that it had.		
 		
 		if self.mode == "unpool":
 			x1 = self.up(x1, maxpool_inds)

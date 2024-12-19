@@ -26,7 +26,7 @@ import argparse
 from min_resource_percentage import MinResourcePercentage
 from model_wrapper import ModelWrapper
 
-from training_support import train_automatically, TrainingLogs, PruningLogs
+from training_support import *
 from losses import MultiClassDiceLoss, WeightedLosses
 
 import ast
@@ -44,17 +44,11 @@ if __name__ == "__main__":
 
     # Model specific arguments (because of default being different between different models you can't just copy them between models)
 
-    parser.add_argument("-m", "--model", type=str, default="default", help='Model to use. Options: 64_2_6, and others')
-    parser.add_argument("--bs", type=int, default=16, help='BATCH_SIZE')
-    parser.add_argument("--nodw", type=int, default=10, help='NUM_OF_DATALOADER_WORKERS')
-    parser.add_argument("--sd", type=str, default="SegNet", help='SAVE_DIR')
+    parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
+    parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
+    parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
     parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
     parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
-    parser.add_argument('--iw', type=int, default=256, help='Input width')
-    parser.add_argument('--ih', type=int, default=256, help='Input height')
-    parser.add_argument('--ic', type=int, default=3, help='Input channels')
-    parser.add_argument('--oc', type=int, default=2, help='Output channels')
-    parser.add_argument('--ds', type=str, default="standard", help='Dataset option. Options: augment, pass_through, partially_preaugmented.')
     parser.add_argument('--tesl', type=int, default=1e9, help=f"""TRAIN_EPOCH_SIZE_LIMIT. If we have 1500 images in the training set, and we set this to 1000, 
                         we will stop the epoch as we have trained on >= 1000 images.
                         We should watch out to use shuffle=True in the DataLoader, because otherwise we will always only train on the first 1000 images in the Dataset's ordering.
@@ -71,6 +65,7 @@ if __name__ == "__main__":
     parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
     parser.add_argument("--tras", type=int, default=-1, help="""Test run and size. If you pass an int, that will be the size of the dataset, and it will be in testrun. 
                         If -1 (default), then it is not a test run.""")
+
     
     # With action='store_true' these args store True if the flag is present and False otherwise.
     # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
@@ -152,11 +147,31 @@ if __name__ == "__main__":
             except (ValueError, SyntaxError):
                 raise argparse.ArgumentTypeError(f"Invalid value: {value}")
     parser.add_argument("--ifn", type=custom_type_conversion, default=(0.5, 0.5, 0.5), help="Importance func. If 0, random pruning. If 1, uniform pruning. If tuple, we get IPAD with those 3 alphas.")
-
     parser.add_argument("--tp", action="store_true", help="""test pruning. 
                         This makes it so all the conv layers have 0.999999 as their limit for weights. 
                         MIND THAT input slice pruning also affects the weights - so this generally means each layer will get one kernel OR one input slice pruned.
                         The uniform pruning starts at CURR_PRUNING_IX - so if you want the other half of layers to have their kernels pruned, just change that to 1.""")
+
+
+
+
+
+
+
+    #  Left here because of legacy:
+    # I used them in the scripts where i did both trianing and pruning.
+    # But none of these are actually used in the current script. But I want to keep them here so that the scripts that set these parameters still work.
+
+    # All of these things are hardcoded and without choice for pruning.
+
+    # But we need to check the person actually used the right things in here so they don't set these params to something else and think something actually changed.
+
+    parser.add_argument("-m", "--model", type=str, default="64_2_6", help='Model to use. Options: 64_2_6, ')
+    parser.add_argument('--iw', type=int, default=2048, help='Input width')
+    parser.add_argument('--ih', type=int, default=1024, help='Input height')
+    parser.add_argument('--ic', type=int, default=3, help='Input channels')
+    parser.add_argument('--oc', type=int, default=2, help='Output channels')
+    parser.add_argument('--ds', type=str, default="augment", help='Dataset option. Options: augment, pass_through, partially_preaugmented.')
     parser.add_argument('--optim', type=str, default="Adam", help='Optimizer used. Adam, SGD, LBFGS')
     parser.add_argument("--loss_fn_name", type=str, default="Default", help="""Loss function used. Default (MCDL), 
                         MCDL for MultiClassDiceLoss, CE for CrossEntropyLoss,
@@ -197,19 +212,17 @@ if __name__ == "__main__":
     parser.add_argument("--alphas", type=list_conversion, default=[], help="Alphas used in loss_fn. Currently only one is used. If there is just one alpha, you can just pass a float as an arg, like: 0.8.")
 
 
+
+
+
+
     args = parser.parse_args()
 
-    MODEL = args.model
     BATCH_SIZE = args.bs
     NUM_OF_DATALOADER_WORKERS = args.nodw
     SAVE_DIR = args.sd
     PATH_TO_DATA = args.ptd
     LEARNING_RATE = args.lr
-    INPUT_WIDTH = args.iw
-    INPUT_HEIGHT = args.ih
-    INPUT_CHANNELS = args.ic
-    OUTPUT_CHANNELS = args.oc
-    DATASET = args.ds
     TRAIN_EPOCH_SIZE_LIMIT = args.tesl
     
 
@@ -235,10 +248,6 @@ if __name__ == "__main__":
     TEST_PRUNING = args.tp
     IMPORTANCE_FN_DEFINER = args.ifn
 
-    optimizer = args.optim
-    loss_fn_name = args.loss_fn_name
-    alphas = args.alphas
-
 
     if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
         prune_n_kernels_at_once = 1
@@ -246,16 +255,28 @@ if __name__ == "__main__":
 
 
 
-    if DATASET == "partially_preaugmented":
-        raise NotImplementedError("partially_preaugmented dataset not in use anymore.")
-        from dataset_partial_preaug import IrisDataset, transform
-    elif DATASET == "augment":
-        from dataset_aug import IrisDataset, transform
-    elif DATASET == "pass_through":
-        raise NotImplementedError("pass_through dataset not in use anymore.")
-        from dataset_pass_through import IrisDataset, transform
-    else:
-        raise ValueError(f"DATASET not recognized: {DATASET}.")
+
+
+
+    MODEL = args.model
+    INPUT_WIDTH = args.iw
+    INPUT_HEIGHT = args.ih
+    INPUT_CHANNELS = args.ic
+    OUTPUT_CHANNELS = args.oc
+    DATASET = args.ds
+    optimizer = args.optim
+    loss_fn_name = args.loss_fn_name
+    alphas = args.alphas
+
+
+    sth_wrong = MODEL != "64_2_6" or INPUT_WIDTH != 2048 or INPUT_HEIGHT != 1024 or INPUT_CHANNELS != 3 or OUTPUT_CHANNELS != 2 or DATASET != "augment" or optimizer != "Adam" or loss_fn_name != "Default" or alphas != []
+    if sth_wrong:
+        print(f"MODEL: {MODEL}, should be 64_2_6, INPUT_WIDTH: {INPUT_WIDTH}, should be 2048, INPUT_HEIGHT: {INPUT_HEIGHT}, should be 1024, INPUT_CHANNELS: {INPUT_CHANNELS}, should be 3, OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, DATASET: {DATASET}, should be augment, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, should be Default, alphas: {alphas}, should be [].")
+        raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
+
+
+
+
 
 
 
@@ -286,32 +307,6 @@ if __name__ == "__main__":
     print(f"Validation phase: {is_pruning_ph}")
     print(args)
 
-
-
-# # main changable parameters between trainings:
-# SAVE_DIR = "UNet"
-# IS_TEST_RUN = True
-# PATH_TO_DATA = "./vein_sclera_data"
-# NUM_OF_DATALOADER_WORKERS = 1
-# BATCH_SIZE = 4
-
-
-# program args that could be hardcoded here:
-
-# IS_PRUNING_PH = True
-# MAX_TRAIN_ITERS = 100 # change this to 10e9 when doing the pruning phase
-# MAX_AUTO_PRUNINGS = 70 # to get to 70 percent of the starting flops
-
-# # IS_PRUNING_PH to PROPORTION_TO_PRUNE are actually args you can pass.
-# # But they are hardcoded here for the sake of the experiment. Just makes it less room for error.
-
-# # Main parameeters you don't change after training.
-
-# PRUNE_BY_ORIGINAL_PERCENT = True
-# ERR_IX = 3
-# RESOURCE_NAME = "flops_num"
-# PRUNE_N_KERNELS_AT_ONCE = 20
-# PROPORTION_TO_PRUNE = 0.01
 
 
 
@@ -345,60 +340,13 @@ print(f"Device: {device}")
 
 
 
+from dataset_aug import IrisDataset, transform
+
+loss_fn = MultiClassDiceLoss()
+
+optimizer = torch.optim.Adam
 
 
-
-
-# CE_weights = torch.tensor([0.1, 6.5])
-CE_weights = torch.tensor([0.1, 50.0])
-CE_weights = CE_weights / CE_weights.mean() # to make the loss more interpretable and graphable
-CE_weights = CE_weights.to(device)
-
-if loss_fn_name == "Default":
-    loss_fn_name = "MCDL"
-
-if loss_fn_name == "MCDL":
-    loss_fn = MultiClassDiceLoss()
-elif loss_fn_name == "CE":
-    loss_fn = nn.CrossEntropyLoss()
-
-elif loss_fn_name == "CEHW":
-
-    # There are 65000 pixels in the image. Only like 700 are 1s. 
-    # So to make 0s and 1s equally important, we would have to roughly [0.1, 6.5]
-    # And even then - we should give more priority to the 1s, because they are more important. 
-    # And we really want to increase how much we decide on 1s.
-
-    # The mean of the weights should be 1.0, so that loss remains more interpretable and graphable
-    # CE loss is between 0 and 1 in the 2 class case if the model is remotely okay. 
-    # The weights multiply the error for each class, so if the mean is 1, i think the loss is between 0 and 1.
-
-    loss_fn = nn.CrossEntropyLoss(weight=CE_weights)
-
-elif loss_fn_name == "MCDL_CEHW_W":
-    losses = [MultiClassDiceLoss(), nn.CrossEntropyLoss(weight=CE_weights)]
-    weights = [0.5, 0.5]
-    loss_fn = WeightedLosses(losses, weights)
-
-elif loss_fn_name == "MCDLW":
-    loss_fn = MultiClassDiceLoss(background_adjustment=alphas[0])
-
-else:
-    raise ValueError("Loss function not recognized.")
-
-
-
-
-
-if optimizer == "Adam":
-    optimizer = torch.optim.Adam
-elif optimizer == "SGD":
-    optimizer = torch.optim.SGD
-elif optimizer == "LBFGS":
-    raise NotImplementedError("LBFGS is not implemented.")
-    optimizer = torch.optim.LBFGS
-else:
-    raise ValueError("Optimizer not recognized.")
 
 
 learning_parameters = {
@@ -409,20 +357,43 @@ learning_parameters = {
 }
 
 
-# In our SegNet implementation the dims can be whatever you want.
+# In our UNet implementation the dims can be whatever you want.
 # You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
 INPUT_DIMS = {
-    "width" : INPUT_WIDTH,
-    "height" : INPUT_HEIGHT,
-    "channels" : INPUT_CHANNELS
+    "width" : 2048,
+    "height" : 1024,
+    "channels" : 3
 }
 
-# In our SegNet the output width and height have to be the same as the input width and height. 
+# In our UNet the output width and height have to be the same as the input width and height. 
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
-    "channels" : OUTPUT_CHANNELS
+    "channels" : 2
 }
+
+
+
+
+from unet_original import UNet
+
+model_parameters = {
+    # layer sizes
+    "output_y" : OUTPUT_DIMS["height"],
+    "output_x" : OUTPUT_DIMS["width"],
+    "n_channels" : INPUT_DIMS["channels"],
+    "n_classes" : OUTPUT_DIMS["channels"],
+    "starting_kernels" : 64,
+    "expansion" : 2,
+    "depth" : 6,
+    }
+
+
+
+
+
+
+
 
 
 dataloading_args = {
@@ -501,49 +472,95 @@ dataloader_dict = {
 
 
 
-from segnet import SegNet
-
-if MODEL == "default":
-
-    model_parameters = {
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif MODEL == "64_2_6":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-    }
-
-elif MODEL == "5_1.3_4":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.3,
-        "starting_kernels" : 5,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-else:
-    raise ValueError(f"MODEL not recognized: {MODEL}.")
-
-
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
 
 
 
+
+
+
+
+
+
+
+
+# Since using 2dConvTransopse (upconvolutions) instead of simple upsampling, a few things have changed:
+    # The upconvolution is a channel buffer,
+    # so when the previous layer in the Up path is pruned, you have to prune the in-channels of the upconvolution, but you then mustn't
+    # prune the actual next conv layer.
+
+    # But the thing is, upconvs have weights like: (in_channels, out_channels, kernel_height, kernel_width)
+    # So it's easier to fit them in as if they were batchnorms and have them prning in the kernel pruning function, even though we are pruning the input slice.
+    
+    # Bad idea:
+    # But it makes more sense to do this: also prune the out-channels of the up-convolution and prune the in-channels of the next conv layer (as is done already).
+    # But, the up-convolution is taking 2k channels to k channels.
+    # So it doesn't make sense to just always also prune the up-convolution. Also, which channel would you even prune?!?
+
+    # So let's just do the input slice pruning, and lets just remove the input slice pruning of the next conv layer.
+
+UPCONV_LLM_IXS = [48, 55, 62, 69, 76, 83]
+
+
+
+
+
+
+
+# Go see model graph to help you construct these connection functions.
+# model_wrapper.model_graph()
+
+
+def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
+    #    tree_ix -> skip_conn_starting_index
+
+    # It could be done programatically, however:
+    # Assuming the layers that have skip connections have only one source of them,
+    # we could calculate how many inputs come from the previous layer.
+    # That is then the starting ix of skip connections.
+
+    # To make this function, go look in the drawn matplotlib graph.
+    # On the upstream, just look at the convolution's weight dimensions.
+    # They are: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+    # (output_dimensions - input_dimensions) is the ix of the first skip connection
+
+
+
+    # Oh, I see. This is easily programmable.
+    # Just use "initial_conv_resource_calc.pkl" and use 
+    # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
+    # And that's it haha.
+
+    conv_ix = None
+    if tree_ix in conv_tree_ixs:
+        conv_ix = conv_tree_ixs.index(tree_ix)
+
+        if conv_ix == 24:
+            
+            return 64
+        elif conv_ix == 22:
+            
+            return 128
+        elif conv_ix == 20:
+            
+            return 256
+        elif conv_ix == 18:
+            
+            return 512
+
+        elif conv_ix == 16:
+            
+            return 1024
+        
+        elif conv_ix == 14:
+            return 2048
+
+
+    else:
+        
+        return None
+    
 
 
 
@@ -557,10 +574,7 @@ It is very early stage.
 
 
 
-
-
-
-def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+def unet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
     # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
 
     # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
@@ -570,6 +584,7 @@ def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_l
     # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
 
 
+
     conn_destinations = []
 
     # we kind of only care about convolutional modules.
@@ -577,25 +592,116 @@ def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_l
     # So it would make sense to transform the tree_ix to the ordinal number of 
     # the convolutional module, and work with that ix instead.
 
-
-
-    # doesn't have skip connections, so we only need to prunte the input slice of the following layer
-
     conv_ix = None
     if tree_ix in conv_tree_ixs:
         conv_ix = conv_tree_ixs.index(tree_ix)
         conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
+    
+    # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
+    # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
+    # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
+    # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
+    # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
 
+    # So here we just prevent the wrong input slice connection pruning:
+    if conv_ix in [13, 15, 17, 19, 21, 23]:
+        conn_destinations = []
+
+
+
+
+
+    # We made it so that for conv layers who receive as input the previous layer and a skip connection
+    # the first inpute slices are of the previous layer. This makes the line above as elegant as it is.
+    # We will, however, have to deal with more trouble with skip connections. 
+
+    
+    # (however, we included in a different way, because it is more elegant and makes more sense that way) 
+    # For the more general option (e.g. to include pruning of some other affected layers)
+    # we can instead work with "lowest_level_modules" indexes.
+    # These are modules that appear the lowest in the tree, and are the ones that actually 
+    # do the work. Data passes through them. They arent just composites of less complex modules.
+    # They are the actual building blocks.
+
+    # LLM_ix = None
+    # if tree_ix in lowest_level_modules:
+    #     LLM_ix = lowest_level_modules.index(tree_ix)
+
+
+
+
+    # We already handled the regular connections for convolutional networks.
+    # Now, here come skip connections.
+    # For explanation, look at the graphic in the original U-net paper.
+    
+    # We have to know where the skip connections start.
+    # What real index is the zeroth index of the skip connections for the goal layer?
+    # In this way we can then use the tree_ix to get the base ix.
+
+    # For this, we will for now create a second function where we hardcode this.
+    # It could be done programatically, however:
+    # Assuming the layers that have skip connections have only one source of them,
+    # we could calculate how many inputs come from the previous layer.
+    # That is then the starting ix of skip connections.
+
+    # To do this, we look at the code where the skip connections of the model are defined:
+    # def forward(self, x):
+        # x1 = self.inc(x)
+        # x2 = self.down1(x1)
+        # x3 = self.down2(x2)
+        # x4 = self.down3(x3)
+        # x5 = self.down4(x4)
+        # x = self.up1(x5, x4)
+        # x = self.up2(x, x3)
+        # x = self.up3(x, x2)
+        # x = self.up4(x, x1)
+        # logits = self.outc(x)
+        # return logits
+    
+    # We then look at the graphic of our network. We see that the inc block and first three down blocks create skip connections.
+    # Therefore the last (second) convolution in those blocks will be senging the skip connection forward.
+    # This is how we identify the particular convolutional modules (LLMs) that are involved in skip connections.
+    
+
+    # if conv_ix in [1, 3, 5, 7]:
+    
+    goal_conv_ix = None
+    if conv_ix == 1:
+        goal_conv_ix = 24
+    elif conv_ix == 3:
+        goal_conv_ix = 22
+    elif conv_ix == 5:
+        goal_conv_ix = 20
+    elif conv_ix == 7:
+        goal_conv_ix = 18
+    elif conv_ix == 9:
+        goal_conv_ix = 16
+    elif conv_ix == 11:
+        goal_conv_ix = 14
+    
+    # adding the kernel ix
+    if goal_conv_ix is not None:
+        goal_input_slice_ix = kernel_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_conv_ix], conv_tree_ixs)
+        conn_destinations.append((conv_tree_ixs[goal_conv_ix], goal_input_slice_ix))
+
+
+    # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
+    # outc has no next convolution
+    # if conv_ix == 26:
+        # conn_destinations = []
     
     
     return conn_destinations
 
 
-    
 
 
 
-def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+
+
+
+
+def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
     # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
     
     # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
@@ -612,44 +718,6 @@ def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
     # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
     # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
     # There are possibly more such layers and more types of such layers, so we made this function more general.
-
-
-
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # This is the additional way that SegNet needs to be pruned besides batchnorms.
-
-    # CONV DE 12 JE TREBA INEEXTRICABLY PRUNEAT, če prunaš 0-ti conv v networku.
-    # Pač ta princip je, da mora izhod tega dela potem bit enak, da lahko unpool dela s tem.
-    # Ker unpool tu dela z incices. Ne postavi vseh zadev equally spaced in samo dela bilinear interpolacijo.
-    # Ampak postavi številke na iste pozicije kot so bile v poolingu. In potem naredi interpolacijo.
-
-    # In saj v height in width smereh mi nič ne prunamo. Tako da sam mehanizem tega nas ne rabi skrbet.
-    # Samo pač input poolinga in output poolinga imata neko število kernelov. In tako število kernelov imajo tudi indices.
-    # In zato mora vhod v unpool tudi imeti toliko kernelov.
-
-    # In zato se zgodi ta inextricable connection.
-
-
-
-    # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
-
-    # Pairs of conv ixs:
-    # 1 23
-    # 3 21
-    # 6 18
-    # 9 15
-
-
-
-
-
-
-
-
-
-
-    # doesn't have skip connections
-    # Only prune batchnorm
     
     conn_destinations = []
 
@@ -658,31 +726,42 @@ def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
         LLM_ix = lowest_level_modules.index(tree_ix)
 
 
-    # conv_ix = None
-    if tree_ix in conv_tree_ixs:
 
+
+
+    # All convolutions have batchnorms right after them and those need to be pruned.
+    conv_ix = None
+    if tree_ix in conv_tree_ixs:
         conv_ix = conv_tree_ixs.index(tree_ix)
 
-        # # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
-        # # out.conv doesn't have a batchnorm after it.
-        # if conv_ix < 18:
-
+        # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
+        # out.conv doesn't have a batchnorm after it.
+        # if conv_ix < 26:
         conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
 
-        if conv_ix == 1:
-            conn_destinations.append((conv_tree_ixs[23], kernel_ix))
-        elif conv_ix == 3:
-            conn_destinations.append((conv_tree_ixs[21], kernel_ix))
-        elif conv_ix == 6:
-            conn_destinations.append((conv_tree_ixs[18], kernel_ix))
-        elif conv_ix == 9:
-            conn_destinations.append((conv_tree_ixs[15], kernel_ix))
+
+
+
+
+
+
+    # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
+    # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
+    # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
+    # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
+    # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
+
+
+    # The upconvolutions have LLM idxs , 48, 55, 62, 69, 76, 83
+    # and corresponding in the order as the convs are listed below.
+    if conv_ix in [13, 15, 17, 19, 21, 23]:
+        ordered_ix = [13, 15, 17, 19, 21, 23].index(conv_ix)
+        conn_destinations.append((lowest_level_modules[UPCONV_LLM_IXS[ordered_ix]], kernel_ix))
+    
 
 
 
     # for batchnorm, conn_destinations is simply empty
-    
-
     
     return conn_destinations
 
@@ -866,7 +945,6 @@ def random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
 
 
 
-
 # Da imamo najmanjše importance v layerju, čigar curr_conv_ix (ix v conv_tree_ixs) je enak oziroma njabližje CURR_PRUNING_IX.
 # Znotraj layerja pa imajo kernels v V shapeu - da se vedno na sredini prunea (saj uniform pruning bi bil, da vedno 0-tega prunaš.- Ampak mi ni všeč, da se vedno the edge one prunea. Raje da vedno the middle one.)
 # Za posamezen layer določimo oddaljenost od trenutnega pruninga:
@@ -908,16 +986,14 @@ def uniform_random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs)
 
 
 
+
+
 if IMPORTANCE_FN_DEFINER == 0:
     IMPORTANCE_FN = random_pruning_importance_fn
 elif IMPORTANCE_FN_DEFINER == 1:
     IMPORTANCE_FN = uniform_random_pruning_importance_fn
 else:
     IMPORTANCE_FN = IPAD_and_weights(*IMPORTANCE_FN_DEFINER)
-
-
-
-
 
 
 
@@ -995,6 +1071,7 @@ def dummy_get_importance_dict(model_wrapper: ModelWrapper):
 
 
 
+
 GET_IMPORTANCE_DICT_FN = get_importance_dict
 if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
     GET_IMPORTANCE_DICT_FN = dummy_get_importance_dict
@@ -1002,13 +1079,13 @@ if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
 
 
 
+
+
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device)
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device, UPCONV_LLM_IXS)
 
-    # Go see model graph to help you choose the right layers to prune.
-    # model_wrapper.model_graph()
 
 
 
@@ -1043,7 +1120,7 @@ if __name__ == "__main__":
     generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
     disallowed_dict = {
-        model_wrapper.conv_tree_ixs[25] : 1.1
+        model_wrapper.conv_tree_ixs[26] : 1.1
     }
     generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
@@ -1052,31 +1129,30 @@ if __name__ == "__main__":
 
     # Choice disallowing:
     # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-    conv_tree_ixs = model_wrapper.conv_tree_ixs
-    CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
+    
+    # For segnet:
+    # conv_tree_ixs = model_wrapper.conv_tree_ixs
+    # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
     # The reasoning for this choice comes from kernel_connection_fn:
     # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
     # Because the kernel nums must match.
-    """
-    # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+    # """
+    # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
-    # Pairs of conv ixs:
-    # 1 23
-    # 3 21
-    # 6 18
-    # 9 15
-    """
-    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-
-    for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-        disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-    choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+    # # Pairs of conv ixs:
+    # # 1 23
+    # # 3 21
+    # # 6 18
+    # # 9 15
+    # """
+    
+    # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+    #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+    # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
     
     
-
-
-
 
 
 
@@ -1114,12 +1190,18 @@ if __name__ == "__main__":
         "weights" : weights_min_res_percents.min_resource_percentage_dict
     }
 
-    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, segnet_input_slice_connection_fn, segnet_kernel_connection_fn, pruning_disallowments)
+
+
+
+
+
+
+    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments)
 
 
 
     # model_wrapper.training_wrapper.test_showcase()
-    # input("Don't go past here.")
+
 
 
 

@@ -28,6 +28,18 @@ source z_pipeline_base/z0_temp_inputs.sh
 
 
 
+# main_name=$1
+# folder_name=$2
+# bs=$3
+# nodw=$4
+# lr=$5
+# ptd=$6
+# iw=$7
+# ih=$8
+# model_name=$9
+# tesl=${10}
+# ntibp=${11}
+# pnkao=${12}
 
 
 
@@ -41,9 +53,9 @@ iw=$7
 ih=$8
 model_name=$9
 tesl=${10}
-ntibp=${12}
-pnkao=${13}
-param_num=14
+ntibp=${11}
+pnkao=${12}
+param_num=12
 
 if [[ $# -ne $param_num ]]; then
     echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
@@ -62,7 +74,7 @@ cat "${main_name}" > "${program_content_file}"
 
 # Pruning:
 
-python3 ${main_name} --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --mti ${mti} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name} --ntibp ${ntibp} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name} --ntibp ${ntibp} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 
