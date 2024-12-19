@@ -37,7 +37,7 @@ from helper_model_vizualization import model_graph
 class ModelWrapper:
 
     @py_log.log(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device, other_zeroth_dim_LLM_ixs=[]):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device):
 
         try:
                 
@@ -63,7 +63,12 @@ class ModelWrapper:
                 pruner_filename = j_dict["previous_pruner_filename"]
                 
                 self.prev_model_path = osp.join(self.save_path, model_filename)
-                self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+                
+                if pruner_filename is None:
+                    self.prev_pruner_path = None
+                else:
+                    self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+            
 
 
                 
@@ -71,6 +76,9 @@ class ModelWrapper:
             # (no prunings had happened so I could just create a new pruner instance)
             if self.prev_pruner_path == "remake_pruner":
                 self.prev_pruner_path = None
+            
+            # This is None until we initialize pruning
+            self.pruner_instance = None
 
 
 
@@ -96,6 +104,10 @@ class ModelWrapper:
 
 
 
+
+
+
+
             self.learning_rate = learning_dict["learning_rate"]
             self.optimizer_class = learning_dict["optimizer_class"]
 
@@ -110,32 +122,20 @@ class ModelWrapper:
 
 
 
+
             self.resource_calc = ConvResourceCalc(self.training_wrapper)
 
             self.input_example = input_example
             self.resource_calc.calculate_resources(self.input_example)
 
+            # these two are set here because they are useful in some other tasks in the main script - such as when setting disallowed conv layers
+            # or in functions that take model_wrapper as an argument.
+            # Just ctrl f  for model_wrapper.conv_tree_ixs
             self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
             self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
 
-            batchnorm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
-            other_zeroth_dim_ixs = []
-            for ix in other_zeroth_dim_LLM_ixs:
-                other_zeroth_dim_ixs.append(self.lowest_level_modules[ix])
-            self.other_zeroth_dim_ixs = batchnorm_ixs + other_zeroth_dim_ixs
-            
 
 
-
-            initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
-            if osp.exists(osp.join(initial_resource_calc_path)):
-                with open(initial_resource_calc_path, "rb") as f:
-                    self.initial_resource_calc = pickle.load(f)
-            else:
-                # pickle resource_dict
-                with open(initial_resource_calc_path, "wb") as f:
-                    self.initial_resource_calc = self.resource_calc.get_copy_for_pickle()
-                    pickle.dump(self.initial_resource_calc, f)
         
         
         except Exception as e:
@@ -156,7 +156,29 @@ class ModelWrapper:
 
 
 
-    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments):
+    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments, other_zeroth_dim_LLM_ixs=[]):
+
+
+
+        batchnorm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
+        other_zeroth_dim_ixs = []
+        print(other_zeroth_dim_LLM_ixs)
+        for ix in other_zeroth_dim_LLM_ixs:
+            curr = self.lowest_level_modules[ix]
+            print("curr", curr)
+            other_zeroth_dim_ixs.append(curr)
+        other_zeroth_dim_ixs = batchnorm_ixs + other_zeroth_dim_ixs
+        print("other_zeroth_dim_ixs", other_zeroth_dim_ixs)
+        
+        initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
+        if osp.exists(osp.join(initial_resource_calc_path)):
+            with open(initial_resource_calc_path, "rb") as f:
+                self.initial_resource_calc = pickle.load(f)
+        else:
+            # pickle resource_dict
+            with open(initial_resource_calc_path, "wb") as f:
+                self.initial_resource_calc = self.resource_calc.get_copy_for_pickle()
+                pickle.dump(self.initial_resource_calc, f)
 
         if self.prev_pruner_path is not None:
             with open(self.prev_pruner_path, "rb") as f:
@@ -164,7 +186,7 @@ class ModelWrapper:
                 # We need to load this, if the user changed it between the two runs.
                 self.pruner_instance.pruning_disallowments = pruning_disallowments
         else:
-            self.pruner_instance = Pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, self.other_zeroth_dim_ixs, self.lowest_level_modules, self.input_example)
+            self.pruner_instance = Pruner(pruning_disallowments, self.initial_resource_calc, input_slice_connection_fn, kernel_connection_fn, self.conv_tree_ixs, other_zeroth_dim_ixs, self.lowest_level_modules, self.input_example)
 
         self.get_importance_dict_fn = get_importance_dict_fn
 
@@ -320,10 +342,13 @@ class ModelWrapper:
 
         torch.save(self.model, new_model_path)
 
-        pruner_filename = f"pruner_" + str_identifier + ".pkl"
-        new_pruner_path = osp.join(self.save_path, pruner_filename)
-        with open(new_pruner_path, "wb") as f:
-            pickle.dump(self.pruner_instance, f)
+        if self.pruner_instance is not None:
+            pruner_filename = f"pruner_" + str_identifier + ".pkl"
+            new_pruner_path = osp.join(self.save_path, pruner_filename)
+            with open(new_pruner_path, "wb") as f:
+                pickle.dump(self.pruner_instance, f)
+        else:
+            pruner_filename = None
         
 
         j_path = osp.join(self.save_path, "previous_model_details.json")

@@ -73,6 +73,7 @@ cat "${main_name}" > "${program_content_file}"
 
 
 # Pruning:
+python3 ${main_name} --ips 0 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name} --ntibp ${ntibp} --tras 2 --pruning_phase --pbop --map 1 --pnkao 1 --rn flops_num --ptp 0.00001  --ifn 1  < "$graph_and_stop"              2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 python3 ${main_name} --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ${ptd} --lr ${lr} --tesl ${tesl} --iw ${iw} --ih ${ih} -m ${model_name} --ntibp ${ntibp} --pruning_phase --pbop --map 70 --pnkao ${pnkao} --rn flops_num --ptp 0.01            2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
