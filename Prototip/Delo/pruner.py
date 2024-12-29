@@ -1,12 +1,32 @@
 
 
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
 import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
 
-MY_LOGGER = logging.getLogger("prototip")
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
+
+
 
 
 import torch
@@ -25,7 +45,7 @@ class Pruner:
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, other_zeroth_dim_ixs, lowest_level_modules, input_example):
         self.initial_conv_resource_calc = initial_conv_resource_calc
         self.pruning_disallowments = pruning_disallowments
@@ -66,7 +86,7 @@ class Pruner:
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune_current_layer(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
         try:
 
@@ -129,7 +149,7 @@ class Pruner:
             # Pomoje bo treba imet samo pač structured, ker je local, ampak zdajle ne vem zadosti.
             # pass
 
-            py_log.log_locals(passed_logger=MY_LOGGER)
+            # py_log.log_locals(passed_logger=MY_LOGGER)
             return
         
         except Exception as e:
@@ -137,7 +157,7 @@ class Pruner:
             raise e
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune_batchnorm(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
 
         try:
@@ -176,7 +196,7 @@ class Pruner:
             self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix].pop(real_input_slice_ix)
 
 
-            py_log.log_locals(passed_logger=MY_LOGGER)
+            # py_log.log_locals(passed_logger=MY_LOGGER)
             return
 
         except Exception as e:
@@ -186,7 +206,7 @@ class Pruner:
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune_upconvolution(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
         try:
 
@@ -229,7 +249,7 @@ class Pruner:
 
 
 
-            py_log.log_locals(passed_logger=MY_LOGGER)
+            # py_log.log_locals(passed_logger=MY_LOGGER)
             return
         
         except Exception as e:
@@ -243,7 +263,7 @@ class Pruner:
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune_following_layer(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
 
         try:
@@ -274,7 +294,7 @@ class Pruner:
             self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix].pop(real_input_slice_ix)
 
             
-            py_log.log_locals(passed_logger=MY_LOGGER)
+            # py_log.log_locals(passed_logger=MY_LOGGER)
             return
 
         except Exception as e:
@@ -368,7 +388,9 @@ class Pruner:
             py_log_always_on.log_stack(MY_LOGGER)
             raise e
     
-    def prune(self, num_to_prune, importance_dict, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper):
+
+    @py_log.autolog(passed_logger=MY_LOGGER)
+    def prune(self, num_to_prune, importance_dict, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, resource_limitation_dict=None):
 
         # Returns True if there are more to prune in the future, False if there are no more to prune.
 
@@ -484,6 +506,13 @@ class Pruner:
             num_pruned = 0
             for to_prune_elem in to_prune:
 
+                if resource_limitation_dict is not None:
+                    # after every call of prune_one_layer_recursive, the resources are recalculated. So we only need to read them like so:
+                    curr_res = curr_conv_resource_calc.get_resource_of_whole_model(resource_limitation_dict["resource_name"])
+                    if curr_res < resource_limitation_dict["goal_resource_value"]:
+                        return True # we simply conteptually have to say there are more to prune, so we don't break everything.
+
+
                 curr_to_prune_elem = (to_prune_elem[0], self.tree_ix_2_list_of_initial_kernel_ixs[to_prune_elem[0]].index(to_prune_elem[1]))
 
                 # this also does curr_conv_resource_calc.calculate_resources(self.input_example)
@@ -509,7 +538,7 @@ class Pruner:
         
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, check_if_disallowed=True):
         
         # to_prune is (tree_ix, real_kernel_ix)
@@ -569,7 +598,7 @@ class Pruner:
                 # (following_to_prune can always be pruned tho, because we are pruning input slices.)
                 _, disallowed_tree_ixs, _, _ = self._get_disallowed_tree_ixs(curr_conv_resource_calc)
 
-                py_log.log_locals(passed_logger=MY_LOGGER)
+                # py_log.log_locals(passed_logger=MY_LOGGER)
 
                 if to_prune[0] in disallowed_tree_ixs:
                     return False
@@ -608,7 +637,7 @@ class Pruner:
             except KeyError as e:
                 print(f"Pruning {to_prune} failed.")
                 self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]]
-                py_log.log_locals(passed_logger=MY_LOGGER)
+                # py_log.log_locals(passed_logger=MY_LOGGER)
                 raise e
             
 

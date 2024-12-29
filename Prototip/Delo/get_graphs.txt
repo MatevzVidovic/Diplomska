@@ -1,0 +1,97 @@
+sd_name: unet_prune_IPAD/
+Log file name: log_23_09-06-30_12-2024.log
+    Add print_log_file_name=False to file_handler_setup() to disable this printout.
+Args: Namespace(ptd='./vein_sclera_data', sd='unet_prune_IPAD/', mti=1000000000.0, pruning_phase=False, ifn='IPAD_eq', ips=0, tras=-1, tp=False, yaml='z_pipeline_unet/unet_original_0.yaml', ntibp=None, ptp=None, map=None)
+YAML: {'batch_size': 2, 'learning_rate': 0.0001, 'num_of_dataloader_workers': 7, 'train_epoch_size_limit': 400, 'num_epochs_per_training_iteration': 1, 'cleanup_k': 0, 'cleaning_error_ix': 0, 'dataset_option': 'augment', 'optimizer_used': 'Adam', 'loss_fn_name': 'MCDL', 'alphas': [], 'model': '64_2_6', 'input_width': 2048, 'input_height': 1024, 'input_channels': 3, 'output_channels': 2, 'num_train_iters_between_prunings': 10, 'max_auto_prunings': 70, 'proportion_to_prune': 0.01, 'prune_by_original_percent': True, 'num_filters_to_prune': 'not_applied', 'prune_n_kernels_at_once': 100, 'resource_name_to_prune_by': 'flops_num', 'importance_func': 'IPAD_eq'}
+Validation phase: False
+Namespace(ptd='./vein_sclera_data', sd='unet_prune_IPAD/', mti=1000000000.0, pruning_phase=False, ifn='IPAD_eq', ips=0, tras=-1, tp=False, yaml='z_pipeline_unet/unet_original_0.yaml', ntibp=None, ptp=None, map=None)
+Device: cuda
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 89
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 45
+val dataloader num of batches: 14
+test dataloader num of batches: 6
+Created new model instance.
+[48, 55, 62, 69, 76, 83]
+curr ((((0,), 2), 0), 0)
+curr ((((0,), 2), 1), 0)
+curr ((((0,), 2), 2), 0)
+curr ((((0,), 2), 3), 0)
+curr ((((0,), 2), 4), 0)
+curr ((((0,), 2), 5), 0)
+other_zeroth_dim_ixs [((((0,), 0), 0), 1), ((((0,), 0), 0), 4), ((((((0,), 1), 0), 1), 0), 1), ((((((0,), 1), 0), 1), 0), 4), ((((((0,), 1), 1), 1), 0), 1), ((((((0,), 1), 1), 1), 0), 4), ((((((0,), 1), 2), 1), 0), 1), ((((((0,), 1), 2), 1), 0), 4), ((((((0,), 1), 3), 1), 0), 1), ((((((0,), 1), 3), 1), 0), 4), ((((((0,), 1), 4), 1), 0), 1), ((((((0,), 1), 4), 1), 0), 4), ((((((0,), 1), 5), 1), 0), 1), ((((((0,), 1), 5), 1), 0), 4), ((((((0,), 2), 0), 1), 0), 1), ((((((0,), 2), 0), 1), 0), 4), ((((((0,), 2), 1), 1), 0), 1), ((((((0,), 2), 1), 1), 0), 4), ((((((0,), 2), 2), 1), 0), 1), ((((((0,), 2), 2), 1), 0), 4), ((((((0,), 2), 3), 1), 0), 1), ((((((0,), 2), 3), 1), 0), 4), ((((((0,), 2), 4), 1), 0), 1), ((((((0,), 2), 4), 1), 0), 4), ((((((0,), 2), 5), 1), 0), 1), ((((((0,), 2), 5), 1), 0), 4), ((((0,), 2), 0), 0), ((((0,), 2), 1), 0), ((((0,), 2), 2), 0), ((((0,), 2), 3), 0), ((((0,), 2), 4), 0), ((((0,), 2), 5), 0)]
+0 trainings have been done without error stopping.
+                        Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter ts to do a test showcase of the model and re-ask for input.
+                        Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.
+
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.
+JSON file ./unet_prune_IPAD/safety_copies/safety_copies_760_ending_save.json already exists. We made ./unet_prune_IPAD/safety_copies/safety_copies_760_ending_save_1.json instead.
+Log file name: log_23_09-07-25_12-2024.log
+    Add print_log_file_name=False to file_handler_setup() to disable this printout.
+Args: Namespace(ptd='./vein_sclera_data', sd='unet_prune_IPAD/', mti=1000000000.0, pruning_phase=False, ifn='IPAD_eq', ips=0, tras=-1, tp=False, yaml='z_pipeline_unet/unet_original_0.yaml', ntibp=None, ptp=None, map=None)
+YAML: {'batch_size': 2, 'learning_rate': 0.0001, 'num_of_dataloader_workers': 7, 'train_epoch_size_limit': 400, 'num_epochs_per_training_iteration': 1, 'cleanup_k': 0, 'cleaning_error_ix': 0, 'dataset_option': 'augment', 'optimizer_used': 'Adam', 'loss_fn_name': 'MCDL', 'alphas': [], 'model': '64_2_6', 'input_width': 2048, 'input_height': 1024, 'input_channels': 3, 'output_channels': 2, 'num_train_iters_between_prunings': 10, 'max_auto_prunings': 70, 'proportion_to_prune': 0.01, 'prune_by_original_percent': True, 'num_filters_to_prune': 'not_applied', 'prune_n_kernels_at_once': 100, 'resource_name_to_prune_by': 'flops_num', 'importance_func': 'IPAD_eq'}
+Validation phase: False
+Namespace(ptd='./vein_sclera_data', sd='unet_prune_IPAD/', mti=1000000000.0, pruning_phase=False, ifn='IPAD_eq', ips=0, tras=-1, tp=False, yaml='z_pipeline_unet/unet_original_0.yaml', ntibp=None, ptp=None, map=None)
+Device: cuda
+path to file: ./vein_sclera_data
+summary for train
+valid images: 89
+summary for val
+valid images: 27
+summary for test
+valid images: 12
+train dataset len: 89
+val dataset len: 27
+test dataset len: 12
+train dataloader num of batches: 45
+val dataloader num of batches: 14
+test dataloader num of batches: 6
+Created new model instance.
+[48, 55, 62, 69, 76, 83]
+curr ((((0,), 2), 0), 0)
+curr ((((0,), 2), 1), 0)
+curr ((((0,), 2), 2), 0)
+curr ((((0,), 2), 3), 0)
+curr ((((0,), 2), 4), 0)
+curr ((((0,), 2), 5), 0)
+other_zeroth_dim_ixs [((((0,), 0), 0), 1), ((((0,), 0), 0), 4), ((((((0,), 1), 0), 1), 0), 1), ((((((0,), 1), 0), 1), 0), 4), ((((((0,), 1), 1), 1), 0), 1), ((((((0,), 1), 1), 1), 0), 4), ((((((0,), 1), 2), 1), 0), 1), ((((((0,), 1), 2), 1), 0), 4), ((((((0,), 1), 3), 1), 0), 1), ((((((0,), 1), 3), 1), 0), 4), ((((((0,), 1), 4), 1), 0), 1), ((((((0,), 1), 4), 1), 0), 4), ((((((0,), 1), 5), 1), 0), 1), ((((((0,), 1), 5), 1), 0), 4), ((((((0,), 2), 0), 1), 0), 1), ((((((0,), 2), 0), 1), 0), 4), ((((((0,), 2), 1), 1), 0), 1), ((((((0,), 2), 1), 1), 0), 4), ((((((0,), 2), 2), 1), 0), 1), ((((((0,), 2), 2), 1), 0), 4), ((((((0,), 2), 3), 1), 0), 1), ((((((0,), 2), 3), 1), 0), 4), ((((((0,), 2), 4), 1), 0), 1), ((((((0,), 2), 4), 1), 0), 4), ((((((0,), 2), 5), 1), 0), 1), ((((((0,), 2), 5), 1), 0), 4), ((((0,), 2), 0), 0), ((((0,), 2), 1), 0), ((((0,), 2), 2), 0), ((((0,), 2), 3), 0), ((((0,), 2), 4), 0), ((((0,), 2), 5), 0)]
+0 trainings have been done without error stopping.
+                        Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter ts to do a test showcase of the model and re-ask for input.
+                        Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.
+
+                        Enter s to save the model and re-ask for input.
+                        Enter g to show the graph of the model and re-ask for input.
+                        Enter r to trigger show_results() and re-ask for input.
+                        Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                        Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                        Press Enter to continue training.
+                        Enter any other key to stop.
+JSON file ./unet_prune_IPAD/safety_copies/safety_copies_760_ending_save.json already exists. We made ./unet_prune_IPAD/safety_copies/safety_copies_760_ending_save_1.json instead.

@@ -37,7 +37,7 @@ UNet_*/
 # Pipeline folders should be ignored, so you can just copy them from ported PrunedModels.
 # But we use a negation pattern to add back the z_pipeline_base folder.
 z_pipeline_*/
-!z_pipeline_base/
+!z_pipeline_unet/
 
 
 

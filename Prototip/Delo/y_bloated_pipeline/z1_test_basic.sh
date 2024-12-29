@@ -134,7 +134,7 @@ python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} 
 python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$results_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
-python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$resources_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$resource_graph_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 python3 ${main_name} --ips 999999 --bs ${bs} --nodw ${nodw} --sd ${folder_name} --ptd ./vein_sclera_data -t --mti 2           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 python3 ${main_name} --ips 0 --sd ${folder_name}  -t < "$save_and_stop"           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))

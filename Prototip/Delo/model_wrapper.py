@@ -1,12 +1,31 @@
 
 
 
+
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
 import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
 
-MY_LOGGER = logging.getLogger("prototip")
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
+
+MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
@@ -33,10 +52,9 @@ from helper_model_vizualization import model_graph
 
 
 
-@py_log_always_on.log_for_class(passed_logger=MY_LOGGER, add_class_autolog=False)
 class ModelWrapper:
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device):
 
         try:
@@ -144,18 +162,18 @@ class ModelWrapper:
 
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def get_tree_ix_2_name(self):
         return self.resource_calc.module_tree_ix_2_name
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def initialize_optimizer(self):
         self.training_wrapper.initialize_optimizer(self.optimizer_class, self.learning_rate)
 
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments, other_zeroth_dim_LLM_ixs=[]):
 
 
@@ -196,7 +214,7 @@ class ModelWrapper:
 
 
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def train(self, epochs=1):
         for _ in range(epochs):
             self.training_wrapper.train()
@@ -210,18 +228,18 @@ class ModelWrapper:
     
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def epoch_pass(self, dataloader_name="train"):
         self.training_wrapper.epoch_pass(dataloader_name=dataloader_name)
 
 
-    
-    def _prune_n_kernels(self, n):
 
-        importance_dict = self.get_importance_dict_fn(self)
+    def _prune_n_kernels(self, n, resource_limitation_dict=None):
+
+        importance_dict = self.get_importance_dict_fn(self) # this does epoch pass in it
 
         # this already does resource_calc.calculate_resources(self.input_example)
-        are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper)
+        are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper, resource_limitation_dict)
 
         # This needs to be done so the gradient computation graph is updated.
         # Otherwise it expects gradients of the old shapes.
@@ -229,7 +247,7 @@ class ModelWrapper:
 
         return are_there_more_to_prune_in_the_future
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def prune(self, prune_n_kernels_at_once=1, prune_by_original_percent = False, num_of_prunes: int = 1, resource_name = "flops_num", original_proportion_to_prune: float = 0.1):
 
         # making sure it is correct
@@ -290,13 +308,18 @@ class ModelWrapper:
 
 
             curr_resource_value = starting_resource_value
-            
-            
 
+
+
+            resource_limitation_dict = {
+                "resource_name": resource_name,
+                "goal_resource_value": goal_resource_value,
+            }
+            
             print(f"Goal resource value: {goal_resource_value}")
             
             while curr_resource_value > goal_resource_value:
-                are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once) # this already does resource_calc.calculate_resources(self.input_example) 
+                are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once, resource_limitation_dict) # this already does resource_calc.calculate_resources(self.input_example) 
                 curr_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
                 print(f"Current resource value: {curr_resource_value}")
                 if not are_there_more_to_prune_in_the_future:
@@ -307,17 +330,16 @@ class ModelWrapper:
 
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def validation(self):
         val_results = self.training_wrapper.validation()
         return val_results
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def test(self):
         test_result = self.training_wrapper.test()
         return test_result
     
-
 
     def model_graph(self):
         fig, ax = model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance)
@@ -334,7 +356,7 @@ class ModelWrapper:
             print(f"{conv[i]}, || {batch_norm[i]} || {following[i]}")
             print("\n")
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def save(self, str_identifier: str = ""):
 
         model_filename = self.model_class.__name__ + "_" + str_identifier + ".pth"
@@ -360,7 +382,7 @@ class ModelWrapper:
         
         return (model_filename, pruner_filename)
     
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def create_safety_copy_of_existing_models(self, str_identifier: str):
 
         model_name = str(self.model_class.__name__)
@@ -402,11 +424,12 @@ class ModelWrapper:
             
             if osp.exists(j_path):
                 id = 1
-                new_j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
-                while osp.exists(new_j_path):
+                old_j_path = j_path
+                j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                while osp.exists(j_path):
                     id += 1
-                    new_j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
-                print(f"JSON file {j_path} already exists. We made {new_j_path} instead.")
+                    j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                print(f"JSON file {old_j_path} already exists. We made {j_path} instead.")
             
             
             j_dict = {"copied_filenames": copied_filenames}

@@ -1,18 +1,37 @@
 
 
-
-import os.path as osp
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
 import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
+
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
 python_logger_path = osp.join(osp.dirname(__file__), 'python_logger')
-handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
+py_log_always_on.limitations_setup(max_file_size_bytes=100 * 1024 * 1024, var_blacklist=["tree_ix_2_module", "mask_path"])
+handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
+
+
 
 
 

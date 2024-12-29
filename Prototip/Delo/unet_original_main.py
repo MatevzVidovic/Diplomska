@@ -1,18 +1,34 @@
 
 
-import os
-import os.path as osp
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
 import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
+
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
-
 python_logger_path = osp.join(osp.dirname(__file__), 'python_logger')
-handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
+py_log_always_on.limitations_setup(max_file_size_bytes=100 * 1024 * 1024, var_blacklist=["tree_ix_2_module", "mask_path"])
+handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
 
 
 
@@ -31,8 +47,10 @@ from losses import MultiClassDiceLoss, WeightedLosses
 
 import ast
 
+import helper_yaml_handler as yh
 
-
+c=5
+py_log.log_manual(MY_LOGGER, "brbr", c, a="Starting the program.", enm=c)
 
 
 if __name__ == "__main__":
@@ -41,175 +59,51 @@ if __name__ == "__main__":
     
 
 
-
-    # Model specific arguments (because of default being different between different models you can't just copy them between models)
-
-    parser.add_argument("--bs", type=int, default=4, help='BATCH_SIZE')
-    parser.add_argument("--nodw", type=int, default=4, help='NUM_OF_DATALOADER_WORKERS')
-    parser.add_argument("--sd", type=str, default="UNet", help='SAVE_DIR')
-    parser.add_argument("--ptd", type=str, default="./sclera_data", help='PATH_TO_DATA')
-    parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
-    parser.add_argument('--tesl', type=int, default=1e9, help=f"""TRAIN_EPOCH_SIZE_LIMIT. If we have 1500 images in the training set, and we set this to 1000, 
-                        we will stop the epoch as we have trained on >= 1000 images.
-                        We should watch out to use shuffle=True in the DataLoader, because otherwise we will always only train on the first 1000 images in the Dataset's ordering.
-
-                        This is useful if we want to do rapid prototyping, and we don't want to wait for the whole epoch to finish.
-                        Or if one epoch is too huge so it just makes more sense to train on a few smaller ones.
-                        """)
+    # Working with more then 5 arguments is a headache. With each argument you add the headache increases quadratically.
 
 
-    # General arguments
+    parser.add_argument("--ptd", type=str, help='PATH_TO_DATA', required=True)
+    parser.add_argument("--sd", type=str, help='SAVE_DIR', required=True)
 
-    parser.add_argument('--ips', type=int, default=1e9,
-                        help='iter_possible_stop An optional positional argument with a default value of 1e9')
-    parser.add_argument("--ntibp", type=int, default=10, help='NUM_TRAIN_ITERS_BETWEEN_PRUNINGS')
-    parser.add_argument("--tras", type=int, default=-1, help="""Test run and size. If you pass an int, that will be the size of the dataset, and it will be in testrun. 
-                        If -1 (default), then it is not a test run.""")
-
+    # To easily get the num of trainings to some nice round number.
+    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations. After how many train iterations do we stop the program.')
     
-    # With action='store_true' these args store True if the flag is present and False otherwise.
-    # Watch out with argparse and bool fields - they are always True if you give the arg a nonempty string.
-    # So --pbop False would still give True to the pbop field.
-    # This is why they are implemented this way now.
+    # To conduct pruning.
     parser.add_argument('-p', '--pruning_phase', action='store_true',
                         help='If present, enables pruning phase (automatic pruning)')
-        
-
-    # Add the optional arguments
-    # setting error_ix: ix of the loss you want in the tuple: (CE_loss, approx_IoU, F1, IoU)
-    # CE_loss only really makes sense - because if the model is a bit better, we are sure it goes down
-    # (IoU and F1 are based on binary classification, so a slightly better model might still do the same predictions, so the loss would be the same - and so you can't choose which to clean away)
-    parser.add_argument('--ce_ix', type=int, default=0,
-                        help='cleaning error ix. We takeix of the loss you want in the tuple: (CE_loss, IoU, F1, IoU_as_avg_on_matrixes)')
-    parser.add_argument("--ck", type=int, default=3, help="Cleanup k. When saving, how many models to keep. (k+1 models are kept if the current model is not in the best k - because we have to keep it to train the next one.)")
-    parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations')
-    parser.add_argument('--map', type=int, default=1e9, help='Max auto prunings')
-    parser.add_argument('--nept', type=int, default=1,
-                        help='Number of epochs per training iteration')
+    parser.add_argument('--ifn', type=str, default="IPAD_eq", help='Importance function definer. Options: IPAD_eq, uniform, random.')
     
-    parser.add_argument('--pbop', action='store_true',
-                        help='Prune by original percent, otherwise by number of filters')
-    parser.add_argument('--nftp', type=int, default=1,
-                        help="""
-                        !!! ONLY APPLIES IF --pbop IS FALSE !!!
-                        Number of filters to prune in one pruning""")
+
+    # Set this to 0 when you want to simulate input with temp file, so you e.g. save the graph of the model, or results, or ...
+    parser.add_argument('--ips', type=int, default=1e9,
+                        help="""iter_possible_stop. After this num of iters we are prompted for keyboard input. 
+                        Just use 0 if you want to simulate input with temp file. The default is 1e9 so that we never stop.""")
     
-    parser.add_argument('--pnkao', type=int, default=20, help="""
-                        !!! THIS IS OVERRIDDEN IF --ifn IS 0 OR 1 !!!
-                        It becomes 1. Because we need the new importances to be calculated after every pruning.
-
-                        Prune n kernels at once - in one pruning iteration, we:
-                        1. calculate the importance of all kernels
-                        2. prune n kernels based on these importances
-                        3. calculate the importances based on the new pruned model
-                        4. prune n kernels based on these new importances
-                        5. ...
-                        Repeat until we have pruned the desired amount of kernels.
-
-                        Then we go back to training the model until it is time for another pruning iteration.
-
-
-                        In theory, it would be best to have --pnkao at 1, because we get the most accurate importance values.
-                        However, this is very slow. And also it doesn't make that much of a difference in quality.
-                        (would be better to do an actual retraining between the prunings then, 
-                        since we are doing so many epoch passes it is basically computationally worse than retraining).
-
-                        Also, you can do epoch_pass() on the validation set, not the training set, because it is faster.
-
-                        If you are not using --pbop, then you can set --pnkao to 1e9.
-                        Because the number of kernels we actually prune is capped by --nftp.
-                        It will look like this:
-                        1. calculate the importance of all kernels
-                        2. prune --nftp kernels based on these importances
-                        Done.
-
-                        But if you are using --pbop, then you should set --pnkao to a number that is not too high.
-                        Because we actually prune --pnkao kernels at once. And then we check if now we meet our resource goals.
-                        So if you set it to 1e9, it will simply prune the whole model in one go.
-
-                        """)
-    parser.add_argument('--rn', type=str, default="flops_num", help='Resource name to prune by')
-    parser.add_argument('--ptp', type=float, default=0.01, help="""Proportion of original {resource_name} to prune - actually, we don't just prune by this percent, because that get's us bad results.
-                        Every time we prune, we prune e.g. 1 percent. Because of pnkao we overshoot by a little. So next time, if we prune by 1 percent again, we will overshoot by a little again, and the overshoots compound.
-                        So we will instead prune in this way: get in which bracket of this percent we are so far (eg, we have 79.9 percent of original weights), then we will prune to 79 percent and pnkao will overshoot a little.
-                        """)
-
-
-    
-    def custom_type_conversion(value):
-        try:
-            # Try to convert to int
-            return int(value)
-        except ValueError:
-            try:
-                # Try to convert to tuple using ast.literal_eval
-                return ast.literal_eval(value)
-            except (ValueError, SyntaxError):
-                raise argparse.ArgumentTypeError(f"Invalid value: {value}")
-    parser.add_argument("--ifn", type=custom_type_conversion, default=(0.5, 0.5, 0.5), help="Importance func. If 0, random pruning. If 1, uniform pruning. If tuple, we get IPAD with those 3 alphas.")
+    # Great for writing tests and making them fast (the speed of your tests is how much hair remains on your head).
+    parser.add_argument("--tras", type=int, default=-1, help="""Test run and size. If you pass an int, that will be the size of the dataset, and it will be in testrun. 
+                        If -1 (default), then it is not a test run.""")
     parser.add_argument("--tp", action="store_true", help="""test pruning. 
-                        This makes it so all the conv layers have 0.999999 as their limit for weights. 
-                        MIND THAT input slice pruning also affects the weights - so this generally means each layer will get one kernel OR one input slice pruned.
-                        The uniform pruning starts at CURR_PRUNING_IX - so if you want the other half of layers to have their kernels pruned, just change that to 1.""")
+                    This makes it so all the conv layers have 0.999999 as their limit for weights. 
+                    MIND THAT input slice pruning also affects the weights - so this generally means each layer will get one kernel OR one input slice pruned.
+                    The uniform pruning starts at CURR_PRUNING_IX - so if you want the other half of layers to have their kernels pruned, just change that to 1.""")
+
+
+    # Main batch of parameters:
+    parser.add_argument("--yaml", type=str, help="Path to YAML file with all the parameters.", required=True)
 
 
 
 
-
-
-
-    #  Left here because of legacy:
-    # I used them in the scripts where i did both trianing and pruning.
-    # But none of these are actually used in the current script. But I want to keep them here so that the scripts that set these parameters still work.
-
-    # All of these things are hardcoded and without choice for pruning.
-
-    # But we need to check the person actually used the right things in here so they don't set these params to something else and think something actually changed.
-
-    parser.add_argument("-m", "--model", type=str, default="64_2_6", help='Model to use. Options: 64_2_6, ')
-    parser.add_argument('--iw', type=int, default=2048, help='Input width')
-    parser.add_argument('--ih', type=int, default=1024, help='Input height')
-    parser.add_argument('--ic', type=int, default=3, help='Input channels')
-    parser.add_argument('--oc', type=int, default=2, help='Output channels')
-    parser.add_argument('--ds', type=str, default="augment", help='Dataset option. Options: augment, pass_through, partially_preaugmented.')
-    parser.add_argument('--optim', type=str, default="Adam", help='Optimizer used. Adam, SGD, LBFGS')
-    parser.add_argument("--loss_fn_name", type=str, default="Default", help="""Loss function used. Default (MCDL), 
-                        MCDL for MultiClassDiceLoss, CE for CrossEntropyLoss,
-                        CEHW for CrossEntropyLoss_hardcode_weighted,
-                        MCDL_CEHW_W for MultiClassDiceLoss and CrossEntropyLoss_hardcode_weighted in a weighted pairing of both losses,
-                        MCDLW for MultiClassDiceLoss with background adjustment,
-                        """)
-
-    def isfloat(s):
-        """
-        Checks if a string represents a valid float number.
-        
-        Args:
-            s (str): The input string to check.
-        
-        Returns:
-            bool: True if the string represents a valid float, False otherwise.
-        """
-        # Remove leading and trailing whitespace
-        s = s.strip()
-        
-        # Handle empty string
-        if not s:
-            return False
-        
-        # Allow for negative sign
-        if s.startswith('-'):
-            s = s[1:]
-        
-        # Check if the remaining part is either a digit or a single decimal point
-        return s.replace('.', '', 1).isdigit()
-
-    def list_conversion(list_str):
-        if isfloat(list_str):
-            return [float(list_str)]
-        return ast.literal_eval(list_str)
-    
-    parser.add_argument("--alphas", type=list_conversion, default=[], help="Alphas used in loss_fn. Currently only one is used. If there is just one alpha, you can just pass a float as an arg, like: 0.8.")
+    # Overriding the YAML parameters 
+    # For 2 uses:
+    # - tests (should be used only in tests)
+    # - exploration - when trying to find the right parameter so you'd rather be setting it in the sbatch script
+    # (so you can run multiple programs at once, and it's nice if you can have a bash argument that you just change and through the argument this value changes)
+    # e.g. parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
+    # Testing ones:
+    parser.add_argument("--ntibp", type=int, help="Number of training iterations between prunings.", default=None)
+    parser.add_argument("--ptp", type=float, help="Proportion to prune.", default=None)
+    parser.add_argument("--map", type=float, help="Max auto prunings.", default=None)
 
 
 
@@ -217,40 +111,75 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+    print(f"Args: {args}")
 
-    BATCH_SIZE = args.bs
-    NUM_OF_DATALOADER_WORKERS = args.nodw
-    SAVE_DIR = args.sd
+
     PATH_TO_DATA = args.ptd
-    LEARNING_RATE = args.lr
-    TRAIN_EPOCH_SIZE_LIMIT = args.tesl
-    
-
+    SAVE_DIR = args.sd
+    max_train_iters = args.mti
+    is_pruning_ph = args.pruning_phase
+    IMPORTANCE_FN_DEFINER = args.ifn
     iter_possible_stop = args.ips
-    NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+
     TEST_RUN_AND_SIZE = args.tras
     IS_TEST_RUN = TEST_RUN_AND_SIZE != -1
-
-    is_pruning_ph = args.pruning_phase
-    prune_by_original_percent = args.pbop
-
-    cleaning_err_ix = args.ce_ix
-    cleanup_k = args.ck
-    max_train_iters = args.mti
-    max_auto_prunings = args.map
-    num_ep_per_iter = args.nept
-
-    prune_n_kernels_at_once = args.pnkao
-    num_to_prune = args.nftp
-    resource_name = args.rn
-    proportion_to_prune = args.ptp
-
     TEST_PRUNING = args.tp
-    IMPORTANCE_FN_DEFINER = args.ifn
+
+    yaml_path = args.yaml
 
 
-    if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
+
+    yaml_dict = yh.read_yaml(yaml_path)
+    print(f"YAML: {yaml_dict}")
+
+    BATCH_SIZE = yaml_dict["batch_size"]
+    LEARNING_RATE = yaml_dict["learning_rate"]
+    NUM_OF_DATALOADER_WORKERS = yaml_dict["num_of_dataloader_workers"]
+    TRAIN_EPOCH_SIZE_LIMIT = yaml_dict["train_epoch_size_limit"]
+
+    num_ep_per_iter = yaml_dict["num_epochs_per_training_iteration"]
+    cleaning_err_ix = yaml_dict["cleaning_error_ix"]
+    cleanup_k = yaml_dict["cleanup_k"]
+    DATASET = yaml_dict["dataset_option"]
+    optimizer = yaml_dict["optimizer_used"]
+    loss_fn_name = yaml_dict["loss_fn_name"]
+    alphas = yaml_dict["alphas"]
+
+
+    MODEL = yaml_dict["model"]
+    INPUT_WIDTH = yaml_dict["input_width"]
+    INPUT_HEIGHT = yaml_dict["input_height"]
+    INPUT_CHANNELS = yaml_dict["input_channels"]
+    OUTPUT_CHANNELS = yaml_dict["output_channels"]
+
+    NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = yaml_dict["num_train_iters_between_prunings"]
+    max_auto_prunings = yaml_dict["max_auto_prunings"]
+    proportion_to_prune = yaml_dict["proportion_to_prune"]
+    
+    prune_by_original_percent = yaml_dict["prune_by_original_percent"]
+    num_to_prune = yaml_dict["num_filters_to_prune"]
+    prune_n_kernels_at_once = yaml_dict["prune_n_kernels_at_once"]
+    resource_name = yaml_dict["resource_name_to_prune_by"]
+
+
+
+    # Override yaml with args here if you want to.
+
+    # For writing tests:
+    if args.ntibp is not None:
+        NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+    if args.ptp is not None:
+        proportion_to_prune = args.ptp
+    if args.map is not None:
+        max_auto_prunings = args.map
+
+
+
+    # Parameter changes to prevent wrongness.
+
+    if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
         prune_n_kernels_at_once = 1
+    
 
 
 
@@ -258,18 +187,19 @@ if __name__ == "__main__":
 
 
 
-    MODEL = args.model
-    INPUT_WIDTH = args.iw
-    INPUT_HEIGHT = args.ih
-    INPUT_CHANNELS = args.ic
-    OUTPUT_CHANNELS = args.oc
-    DATASET = args.ds
-    optimizer = args.optim
-    loss_fn_name = args.loss_fn_name
-    alphas = args.alphas
 
 
-    sth_wrong = MODEL != "64_2_6" or INPUT_WIDTH != 2048 or INPUT_HEIGHT != 1024 or INPUT_CHANNELS != 3 or OUTPUT_CHANNELS != 2 or DATASET != "augment" or optimizer != "Adam" or loss_fn_name != "Default" or alphas != []
+
+
+
+
+
+
+    # For pruning to work the functions need to be written to some specific model. We choose to make them after the model that proved to be successful in the training phase.
+    # These are the specifications.
+    # This is how we guard against wrong callings.
+
+    sth_wrong = MODEL != "64_2_6" or INPUT_WIDTH != 2048 or INPUT_HEIGHT != 1024 or INPUT_CHANNELS != 3 or OUTPUT_CHANNELS != 2 or DATASET != "augment" or optimizer != "Adam" or loss_fn_name != "MCDL" or alphas != []
     if sth_wrong:
         print(f"MODEL: {MODEL}, should be 64_2_6, INPUT_WIDTH: {INPUT_WIDTH}, should be 2048, INPUT_HEIGHT: {INPUT_HEIGHT}, should be 1024, INPUT_CHANNELS: {INPUT_CHANNELS}, should be 3, OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, DATASET: {DATASET}, should be augment, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, should be Default, alphas: {alphas}, should be [].")
         raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
@@ -988,12 +918,14 @@ def uniform_random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs)
 
 
 
-if IMPORTANCE_FN_DEFINER == 0:
+if IMPORTANCE_FN_DEFINER == "random":
     IMPORTANCE_FN = random_pruning_importance_fn
-elif IMPORTANCE_FN_DEFINER == 1:
+elif IMPORTANCE_FN_DEFINER == "uniform":
     IMPORTANCE_FN = uniform_random_pruning_importance_fn
+elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
+    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
 else:
-    IMPORTANCE_FN = IPAD_and_weights(*IMPORTANCE_FN_DEFINER)
+    raise ValueError(f"IMPORTANCE_FN_DEFINER must be 'random', 'uniform' or 'IPAD_eq'. Was: {IMPORTANCE_FN_DEFINER}")
 
 
 
@@ -1042,9 +974,9 @@ def get_importance_dict(model_wrapper: ModelWrapper):
     model_wrapper.averaging_objects = {}
     set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
 
-    model_wrapper.epoch_pass(dataloader_name="train")
+    # model_wrapper.epoch_pass(dataloader_name="train")
     # maybe doing this on val, because it is faster and it kind of makes more sense
-    # model_wrapper.epoch_pass(dataloader_name="validation")
+    model_wrapper.epoch_pass(dataloader_name="validation")
 
     # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
     model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
@@ -1073,7 +1005,7 @@ def dummy_get_importance_dict(model_wrapper: ModelWrapper):
 
 
 GET_IMPORTANCE_DICT_FN = get_importance_dict
-if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
+if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
     GET_IMPORTANCE_DICT_FN = dummy_get_importance_dict
 
 
@@ -1208,7 +1140,7 @@ if __name__ == "__main__":
 
 
 
-
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def validation_stop(training_logs: TrainingLogs, pruning_logs: PruningLogs, curr_train_iter, initial_train_iter):
         # returns True when you should stop
 
@@ -1267,7 +1199,7 @@ if __name__ == "__main__":
 
 
     
-    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 

@@ -1,36 +1,34 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Sep  2 11:47:44 2019
-
-@author: Aayush
-
-This file contains the dataloader and the augmentations and preprocessing done
-
-Required Preprocessing for all images (test, train and validation set):
-1) Gamma correction by a factor of 0.8
-2) local Contrast limited adaptive histogram equalization algorithm with clipLimit=1.5, tileGridSize=(8,8)
-3) Normalization
-    
-Train Image Augmentation Procedure Followed 
-1) Random horizontal flip with 50% probability.
-2) Starburst pattern augmentation with 20% probability. 
-3) Random length lines augmentation around a random center with 20% probability. 
-4) Gaussian blur with kernel size (7,7) and random sigma with 20% probability. 
-5) Translation of image and masks in any direction with random factor less than 20.
-"""
 
 
-import os
-import os.path as osp
+
+
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
 import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
 
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
+
+
 
 
 
@@ -141,7 +139,7 @@ class IrisDataset(Dataset):
             self.images_without_mask.append(file_name_no_suffix)
             return None
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def __getitem__(self, idx):
 
         try:
@@ -246,7 +244,7 @@ class IrisDataset(Dataset):
 
 
 
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
 
 
 
@@ -256,6 +254,10 @@ class IrisDataset(Dataset):
             # Converting img and mask to correct dimensions, binarization, types, and removing unnecessary dimension
             img = smart_conversion(img, 'ndarray', 'uint8')
             mask = smart_conversion(mask, 'ndarray', 'uint8')
+
+
+            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
@@ -277,6 +279,9 @@ class IrisDataset(Dataset):
             # target tensor is long, because it is a classification task (in regression it would also be float32)
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             mask = smart_conversion(mask, 'tensor', "uint8").long() # converts to int64
+
+            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+
 
             # mask mustn't have channels. It is a target, not an image.
             # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
