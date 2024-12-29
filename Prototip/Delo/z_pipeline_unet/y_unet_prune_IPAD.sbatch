@@ -20,22 +20,10 @@
 
 
 
-# main_name=$1
-# folder_name=$2
-# bs=$3
-# nodw=$4
-# lr=$5
-# ptd=$6
-# iw=$7
-# ih=$8
-# model_name=$9
-# tesl=${10}
-# ntibp=${12}
-# pnkao=${13}
-
 
 # bs 4 gre, bs 6 ne gre 
 # bs 5 gre
 
-srun bash z_pipeline_base/z1_pruning_IPAD.sh unet_original_pruning_main.py unet_prune_ipad 2 7 1e-4 ./vein_sclera_data 2048 1024 64_2_6 400 20 100
+
+srun python3 unet_original_main.py --ifn IPAD_eq -p --ptd ./vein_sclera_data --sd unet_prune_IPAD --yaml z_pipeline_unet/unet_original_0.yaml
 

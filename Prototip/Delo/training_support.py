@@ -7,17 +7,35 @@
 
 
 
-import os
-import os.path as osp
 import logging
-import python_logger.log_helper_off as py_log
+import yaml
+import os.path as osp
+import python_logger.log_helper as py_log_always_on
 
+with open("active_logging_config.txt", 'r') as f:
+    yaml_path = f.read()
+
+log_config_path = osp.join(yaml_path)
+do_log = False
+if osp.exists(yaml_path):
+    with open(yaml_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+        file_log_setting = config.get(osp.basename(__file__), False)
+        if file_log_setting:
+            do_log = True
+
+print(f"{osp.basename(__file__)} do_log: {do_log}")
+if do_log:
+    import python_logger.log_helper as py_log
+else:
+    import python_logger.log_helper_off as py_log
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
+import os
 from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion
 import torch
 from torch.utils.data import DataLoader
@@ -44,7 +62,7 @@ from helper_model_eval_graphs import resource_graph, show_results
 
 
 
-
+@py_log.autolog(passed_logger=MY_LOGGER)
 def is_previous_model(model_path, model_wrapper, get_last_model_path = False):
 
     j_path = osp.join(model_wrapper.save_path, "previous_model_details.json")
@@ -68,6 +86,7 @@ class TrainingLogs:
 
     pickle_filename = "training_logs"
 
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error=None, deleted_models_errors=[]) -> None:
         
         self.tl_main_save_path = tl_main_save_path
@@ -83,6 +102,7 @@ class TrainingLogs:
         # of the form (val_error, test_error, train_iter, model_path)
         self.errors = []
 
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def add_error(self, error):
         if error is None:
             return
@@ -90,6 +110,7 @@ class TrainingLogs:
         self.last_error = error
         self.errors.append(error)
     
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def delete_error(self, error):
         self.errors.remove(error)
         self.deleted_models_errors.append(error)
@@ -102,6 +123,7 @@ class TrainingLogs:
     """
 
     @staticmethod
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error=None, deleted_models_errors=[]):
 
         os.makedirs(tl_main_save_path, exist_ok=True)
@@ -120,7 +142,7 @@ class TrainingLogs:
 
         return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error, deleted_models_errors)
 
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def pickle_training_logs(self, train_iter, unique_id):
 
         self.last_train_iter = train_iter
@@ -147,20 +169,24 @@ class TrainingLogs:
         returner += f"Number of epochs per training: {self.number_of_epochs_per_training}\n"
         returner += f"Last train iteration: {self.last_error}\n"
         returner += f"Errors: {self.errors}\n"
-        returner += f"Deleted models errors: {self.deleted_models_errors}\n"
         return returner
     
     def __repr__(self):
-        # Generate a string representation of the object
-        items = (f"{key}={value!r}" for key, value in self.__dict__.items())
-        return f"<{self.__class__.__name__}({', '.join(items)})>"
+        return self.__str__()
 
 
 
 
     # with the exception of keeping (k+1) models when one of the worse models is the last model we have 
     # (we have to keep it to continue training)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def delete_all_but_best_k_models(self, k: int, model_wrapper: ModelWrapper):
+
+        # I SUGGEST YOU ONLY DO THIS RIGHT BEFORE .perform_save()
+        # THIS WAY YOU CAN BE SURE THAT THE LATEST MODEL WILL NOT BE DELETED.
+        # I don't know how or why but there's some bug. I can't find it. I don't know what's going on.
+
+
 
         # Here, as long as we don't delete the last model, we are good.
         # We have to keep the last model, because we are going to continue training it.
@@ -228,6 +254,7 @@ class PruningLogs:
 
     pickle_filename = "pruning_logs"
 
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, pl_main_save_path, pruning_logs=[]) -> None:
         self.pl_main_save_path = pl_main_save_path
         self.pruning_logs = pruning_logs
@@ -235,6 +262,7 @@ class PruningLogs:
         self.last_unique_id = None
     
     @staticmethod
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def load_or_create_pruning_logs(pl_main_save_path, pruning_logs=[]):
         
         os.makedirs(pl_main_save_path, exist_ok=True)
@@ -253,7 +281,7 @@ class PruningLogs:
 
         return PruningLogs(pl_main_save_path, pruning_logs)
     
-    @py_log.log(passed_logger=MY_LOGGER)
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def pickle_pruning_logs(self, train_iter, unique_id):
 
         self.last_train_iter = train_iter
@@ -278,6 +306,7 @@ class PruningLogs:
     # What we pruned is already saved in pruner_istance.pruning_logs
     # We just need to keep track of the corresponding train_iter to be able to know when which pruning happened.
     # That's what this function is for.
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def log_pruning_train_iter(self, train_iter, pickleable_conv_resource_calc):
         # Append the train_iter to the list of train_iters that correspond to prunings.
         # Second value is a flag that tells us if the model was actually saved. It is False to begin with. When we save it, we set it to True.
@@ -289,6 +318,7 @@ class PruningLogs:
     # When we prune, we save the training iter of that pruning.
     # But what if we stop the training before that pruned model is actually saved?
     # This function sets the flag for the train_iter actually being confirmed.
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def confirm_last_pruning_train_iter(self):
         
                 
@@ -306,6 +336,7 @@ class PruningLogs:
     # the last train iter would have turned to true in the next saving iteration,
     # despite the fact it was never saved and has no effect.
     # That's why we have to clean it up before training.
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def clean_up_pruning_train_iters(self):
 
         
@@ -321,18 +352,19 @@ class PruningLogs:
 
     def __str__(self):
         returner = ""
-        returner += f"Pruning logs: {self.pruning_logs}\n"
+        if len(self.pruning_logs) == 0:
+            returner += "No prunings have been done yet.\n"
+        else:
+            returner += f"pruning_logs[-1]: {self.pruning_logs[-1]}\n"
         return returner
 
     def __repr__(self):
-        # Generate a string representation of the object
-        items = (f"{key}={value!r}" for key, value in self.__dict__.items())
-        return f"<{self.__class__.__name__}({', '.join(items)})>"
+        return self.__str__()
 
 
 
 
-
+@py_log.autolog(passed_logger=MY_LOGGER)
 def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PruningLogs, train_iter, unique_id, val_error=None, test_error=None):
 
     new_model_filename, _ = model_wrapper.save(f"{train_iter}_{unique_id}")
@@ -365,12 +397,15 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 
 
 
+@py_log.autolog(passed_logger=MY_LOGGER)
+def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, 
+                        max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_ix=1, 
+                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
-def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn, max_training_iters=1e9, max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_ix=1, cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
-
-
-
+    # to prevent an error I had, where even the last model would somehow get deleted (which is another error on top of that, because that should never happen)
+    if cleanup_k < 1:
+        raise ValueError("cleanup_k must be at least 1.")
 
     
     os.makedirs(main_save_path, exist_ok=True)
@@ -523,11 +558,14 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter any other key to stop.\n""")
             
             if inp == "resource_graph":
-                fig, _, res_dict = resource_graph(main_save_path, model_wrapper.save_path)
+                res = resource_graph(main_save_path, model_wrapper.save_path)
                 
-                save_plt_fig(fig, main_save_path, f"{train_iter}_resource_graph")
-                with open(osp.join(main_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
-                    pickle.dump(res_dict, f)
+                if res is not None:
+                    fig, _, res_dict = res
+                    save_plt_fig(fig, main_save_path, f"{train_iter}_resource_graph")
+                    with open(osp.join(main_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
+                        pickle.dump(res_dict, f)
+
                 inp = input(f"""
                         Enter s to save the model and re-ask for input.
                         Enter g to show the graph of the model and re-ask for input.
@@ -565,8 +603,9 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter any other key to stop.\n""")
             
             if inp == "r":
-                fig, _ = show_results(main_save_path)
-                if fig is not None:
+                res = show_results(main_save_path)
+                if res is not None:
+                    fig, _ = res
                     save_plt_fig(fig, main_save_path, f"{train_iter}_show_results")
                 inp = input("""
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
@@ -607,7 +646,6 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
                 training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "after_pruning")
                 model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_after_pruning")
-                training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
 
 
                 inp = input("""
@@ -652,8 +690,9 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
             pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
             training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "after_pruning")
+            # training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
             model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_after_pruning")
-            training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
+
 
 
             if not are_there_more_to_prune_in_the_future:
@@ -690,6 +729,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
         training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
         training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "", val_error, test_error)
+        # training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
+
 
 
 
