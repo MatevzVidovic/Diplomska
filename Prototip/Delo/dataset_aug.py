@@ -244,7 +244,7 @@ class IrisDataset(Dataset):
 
 
 
-            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
 
 
 
@@ -256,7 +256,7 @@ class IrisDataset(Dataset):
             mask = smart_conversion(mask, 'ndarray', 'uint8')
 
 
-            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
 
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
@@ -280,7 +280,7 @@ class IrisDataset(Dataset):
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             mask = smart_conversion(mask, 'tensor', "uint8").long() # converts to int64
 
-            py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
 
 
             # mask mustn't have channels. It is a target, not an image.
