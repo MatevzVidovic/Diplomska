@@ -19,6 +19,8 @@ test_*/
 unet_*/
 segnet_*/
 
+# So i can keep folders clean:
+older_folders/
 
 # Folder for (scp) fig showing:
 for_fig_shower/
@@ -40,6 +42,9 @@ z_pipeline_*/
 !z_pipeline_unet/
 
 
+multipurpose.sbatch
+pruned_models_*/
+ana_*/
 
 
 # Probs not needed anymore:
