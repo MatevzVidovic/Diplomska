@@ -40,7 +40,7 @@ import torch
 from timeit import default_timer as timer
 import gc
 
-from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img_quick_figs
+from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img
 
 
 
@@ -644,7 +644,7 @@ class TrainingWrapper:
     # this is my own function for my own specific use case
     # It is not necessary if you are implementing your own TrainingWrapper
 
-    def test_showcase(self, dataloader_name="test"):
+    def test_showcase(self, path_to_save_to, dataloader_name="test"):
 
         try:
 
@@ -709,44 +709,85 @@ class TrainingWrapper:
                             # print("num of all elements in Ground truth:", y[i].numel())
 
                             gt = y[i].cpu().numpy()
-                            fig, ax = plt.subplots(2, 2)
                             
-                            ax[0, 0].set_title('Original image')
-                            ax[0, 0].imshow(image_np)
+                            # fig, ax = plt.subplots(2, 2)
+                            
+                            # ax[0, 0].set_title('Original image')
+                            # ax[0, 0].imshow(image_np)
 
-                            ax[0, 1].set_title('Ground truth')
-                            ax[0, 1].imshow(gt)
+                            # ax[0, 1].set_title('Ground truth')
+                            # ax[0, 1].imshow(gt)
 
-                            ax[1, 0].set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
-                            ax[1, 0].imshow(pred_binary_cpu_np, cmap='gray')
+                            # ax[1, 0].set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
+                            # ax[1, 0].imshow(pred_binary_cpu_np, cmap='gray')
 
-                            ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
-                            ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
-                            plt.show(block=False)
+                            # ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
+                            # ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
+                            # plt.show(block=False)
 
 
-                            save_plt_fig_quick_figs(fig, f"ts_{quick_figs_counter}")
-                            save_img_quick_figs(image_np, f"ts_img_{quick_figs_counter}.jpg")
+                            # save_plt_fig_quick_figs(fig, f"ts_{quick_figs_counter}")
+                            save_img(image_np, path_to_save_to, f"{quick_figs_counter}_ts_img.jpg")
 
-                            # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img_quick_figs()
+                            # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img()
                             # will make it 0s and 255s.
-                            gt = gt.astype(np.float32)
-                            save_img_quick_figs(gt, f"ts_gt_{quick_figs_counter}.png")
+                            gt_float = gt.astype(np.float32)
+                            save_img(gt_float, path_to_save_to, f"{quick_figs_counter}_ts_gt.png")
                             
                             # Here we actually have bool, surprisingly. Again, lets just multiply by 255
-                            pred_binary_cpu_np = pred_binary_cpu_np.astype(np.uint8)
-                            pred_binary_cpu_np = pred_binary_cpu_np * 255
-                            save_img_quick_figs(pred_binary_cpu_np, f"ts_pred_{quick_figs_counter}.png")
-                            save_img_quick_figs(pred_grayscale_mask_min_max_normed, f"ts_pred_grayscale_{quick_figs_counter}.png")
+                            pred_binary_cpu_np_255 = pred_binary_cpu_np.astype(np.uint8)
+                            pred_binary_cpu_np_255 = pred_binary_cpu_np_255 * 255
+                            save_img(pred_binary_cpu_np_255, path_to_save_to, f"{quick_figs_counter}_ts_pred.png")
 
+
+                            # Get an image where TP is green, FP is red, FN is yellow
+                            # Initialize an RGB image with zeros (black)
+                            height, width = gt.shape
+                            pred_colormap = np.zeros((height, width, 3), dtype=np.uint8)
+                            # Green where both gt and pred are 1
+                            pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 255)] = [0, 255, 0]
+                            # Red where pred is 1 and gt is 0
+                            pred_colormap[(gt == 0) & (pred_binary_cpu_np_255 == 255)] = [255, 0, 0]
+                            # Yellow where pred is 0 and gt is 1
+                            pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 0)] = [255, 255, 0]
+
+                            save_img(pred_colormap, path_to_save_to, f"{quick_figs_counter}_ts_colormap.png")
+
+
+
+                            fp_and_fn = (gt == 1) & (pred_binary_cpu_np_255 == 0) | (gt == 0) & (pred_binary_cpu_np_255 == 255)
+                            fp_and_fn_on_image_np = image_np.copy()
+                            fp_and_fn_on_image_np[fp_and_fn] = pred_colormap[fp_and_fn]
+                            save_img(fp_and_fn_on_image_np, path_to_save_to, f"{quick_figs_counter}_ts_fp_and_fn.png")
+
+
+                            image_np_blacked_out_in_tp_and_tn = image_np.copy()
+                            tp_and_tn = (gt == 1) & (pred_binary_cpu_np_255 == 255) | (gt == 0) & (pred_binary_cpu_np_255 == 0)
+                            image_np_blacked_out_in_tp_and_tn[tp_and_tn] = 0
+                            save_img(image_np_blacked_out_in_tp_and_tn, path_to_save_to, f"{quick_figs_counter}_ts_blacked_out.png")
+
+
+
+                            
+                            # save_img(pred_grayscale_mask_min_max_normed, path_to_save_to, f"{quick_figs_counter}_ts_pred_grayscale.png")
+                            
                             plt.pause(1.0)
+
+                            
+                            # This way we will keep going after inp was 'all' once.
+                            if quick_figs_counter == 0:
+                                inp = input("Enter 'all' to go through all imgs without reasking for input. Enter anything else to stop. Press Enter to continue...")
+                            else:
+                                if inp != 'all':
+                                    inp = input("Enter 'all' to go through all imgs without reasking for input. Enter anything else to stop. Press Enter to continue...")
+                            
+
+                            if inp != "" and inp != 'all':
+                                return
 
                             quick_figs_counter += 1
 
 
-                            inp = input("Enter anything to stop. Press Enter to continue...")
-                            if inp:
-                                return
 
 
         except Exception as e:

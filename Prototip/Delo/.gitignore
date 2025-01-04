@@ -42,10 +42,10 @@ z_pipeline_*/
 !z_pipeline_unet/
 
 
-multipurpose.sbatch
+y_multipurpose.sbatch
 pruned_models_*/
 ana_*/
-
+x_*.out
 
 # Probs not needed anymore:
 # saved/
