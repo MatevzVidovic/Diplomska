@@ -6,8 +6,7 @@
 
 #SBATCH -p frida
 #SBATCH -c 7
-#SBATCH --gpus=1
-#SBATCH --constraint=A100
+#SBATCH --gpus=A100:1
 #SBATCH --mem-per-cpu=8G
 #SBATCH --output=x_test_main.txt
 
