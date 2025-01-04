@@ -80,12 +80,12 @@ class ModelWrapper:
                 model_filename = j_dict["previous_model_filename"]
                 pruner_filename = j_dict["previous_pruner_filename"]
                 
-                self.prev_model_path = osp.join(self.save_path, model_filename)
+                self.prev_model_path = osp.join(self.save_path, "models", model_filename)
                 
                 if pruner_filename is None:
                     self.prev_pruner_path = None
                 else:
-                    self.prev_pruner_path = osp.join(self.save_path, pruner_filename)
+                    self.prev_pruner_path = osp.join(self.save_path, "pruners", pruner_filename)
             
 
 
@@ -360,13 +360,16 @@ class ModelWrapper:
     def save(self, str_identifier: str = ""):
 
         model_filename = self.model_class.__name__ + "_" + str_identifier + ".pth"
-        new_model_path = osp.join(self.save_path, model_filename)
+
+        os.makedirs(osp.join(self.save_path, "models"), exist_ok=True)
+        new_model_path = osp.join(self.save_path, "models", model_filename)
 
         torch.save(self.model, new_model_path)
 
         if self.pruner_instance is not None:
             pruner_filename = f"pruner_" + str_identifier + ".pkl"
-            new_pruner_path = osp.join(self.save_path, pruner_filename)
+            os.makedirs(osp.join(self.save_path, "pruners"), exist_ok=True)
+            new_pruner_path = osp.join(self.save_path, "pruners", pruner_filename)
             with open(new_pruner_path, "wb") as f:
                 pickle.dump(self.pruner_instance, f)
         else:

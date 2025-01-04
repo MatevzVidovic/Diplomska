@@ -133,7 +133,7 @@ class TrainingLogs:
 
             j_dict = jh.load(j_path)
             tl_name = j_dict[f"prev_{TrainingLogs.pickle_filename}"]
-            tl_path = osp.join(tl_main_save_path, tl_name)
+            tl_path = osp.join(tl_main_save_path, "training_logs", tl_name)
 
             new_tl = pickle.load(open(tl_path, "rb"))
             new_tl.tl_main_save_path = tl_main_save_path
@@ -150,7 +150,8 @@ class TrainingLogs:
         str_id = f"{train_iter}_{unique_id}"
         curr_name = f"{self.pickle_filename}_{str_id}.pkl"
 
-        new_training_logs_path = osp.join(self.tl_main_save_path, curr_name)
+        os.makedirs(osp.join(self.tl_main_save_path, "training_logs"), exist_ok=True)
+        new_training_logs_path = osp.join(self.tl_main_save_path, "training_logs", curr_name)
         with open(new_training_logs_path, "wb") as f:
             pickle.dump(self, f)
 
@@ -158,8 +159,8 @@ class TrainingLogs:
         new_j_dict = {f"prev_{self.pickle_filename}": curr_name}
         jh.dump(j_path, new_j_dict)
 
-        os.makedirs(osp.join(self.tl_main_save_path, "copies"), exist_ok=True)
-        j_path_for_copy = osp.join(self.tl_main_save_path, "copies", f"prev_training_logs_name_{str_id}.json")
+        os.makedirs(osp.join(self.tl_main_save_path, "old_tl_jsons"), exist_ok=True)
+        j_path_for_copy = osp.join(self.tl_main_save_path, "old_tl_jsons", f"prev_training_logs_name_{str_id}.json")
         jh.dump(j_path_for_copy, new_j_dict)
 
 
@@ -235,7 +236,7 @@ class TrainingLogs:
 
         for error in to_delete:
             model_filename = error[3]
-            model_path = osp.join(model_wrapper.save_path, model_filename)
+            model_path = osp.join(model_wrapper.save_path, "models", model_filename)
             self.delete_error(error)
             try:
                 os.remove(model_path)
@@ -272,7 +273,7 @@ class PruningLogs:
 
             j_dict = jh.load(j_path)
             pl_name = j_dict[f"prev_{PruningLogs.pickle_filename}"]
-            pl_path = osp.join(pl_main_save_path, pl_name)
+            pl_path = osp.join(pl_main_save_path, "pruning_logs", pl_name)
 
             loaded_pl = pickle.load(open(pl_path, "rb"))
             loaded_pl.pl_main_save_path = pl_main_save_path
@@ -289,7 +290,8 @@ class PruningLogs:
         str_id = f"{train_iter}_{unique_id}"
         curr_name = f"{self.pickle_filename}_{str_id}.pkl" 
 
-        new_pruning_logs_path = osp.join(self.pl_main_save_path, curr_name)
+        os.makedirs(osp.join(self.pl_main_save_path, "pruning_logs"), exist_ok=True)
+        new_pruning_logs_path = osp.join(self.pl_main_save_path, "pruning_logs", curr_name)
         with open(new_pruning_logs_path, "wb") as f:
             pickle.dump(self, f)
         
@@ -298,8 +300,8 @@ class PruningLogs:
         j_path = osp.join(self.pl_main_save_path, "prev_pruning_logs_name.json")
         jh.dump(j_path, new_j_dict)
         
-        os.makedirs(osp.join(self.pl_main_save_path, "copies"), exist_ok=True)
-        j_path_for_copy = osp.join(self.pl_main_save_path, "copies", f"previous_pruning_logs_name_{str_id}.json")
+        os.makedirs(osp.join(self.pl_main_save_path, "old_pl_jsons"), exist_ok=True)
+        j_path_for_copy = osp.join(self.pl_main_save_path, "old_pl_jsons", f"previous_pruning_logs_name_{str_id}.json")
         jh.dump(j_path_for_copy, new_j_dict)
 
 
@@ -563,6 +565,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 if res is not None:
                     fig, _, res_dict = res
                     graph_save_path = osp.join(main_save_path, "graphs")
+                    os.makedirs(graph_save_path, exist_ok=True)
                     save_plt_fig(fig, graph_save_path, f"{train_iter}_resource_graph")
                     with open(osp.join(graph_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
                         pickle.dump(res_dict, f)

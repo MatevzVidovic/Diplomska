@@ -35,11 +35,11 @@ import sys
 
 
 
-# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_IPAD --afn unet_IPAD --gti 1200 -m "[(250, \"\"), (490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
+# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_IPAD --afn unet_IPAD --gti 1200 -m "[(490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
 
-# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_uniform --afn unet_uniform --gti 1200 -m "[(250, \"\"), (490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
+# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_uniform --afn unet_uniform --gti 1200 -m "[(490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
 
-# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_random --afn unet_random --gti 1200 -m "[(250, \"\"), (490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
+# srun --pty -p dev -c 7 --gpus=A100 python3 v_unet_porter.py --sp unet_prune_random --afn unet_random --gti 1200 -m "[(490, \"after_pruning\"), (740, \"after_pruning\"), (940, \"after_pruning\")]"
 
 
 
