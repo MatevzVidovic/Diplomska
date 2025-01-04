@@ -36,7 +36,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import os
-from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion
+from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion, save_img
 import torch
 from torch.utils.data import DataLoader
 
@@ -398,7 +398,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 
 
 @py_log.autolog(passed_logger=MY_LOGGER)
-def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, 
+def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
                         max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_ix=1, 
                         cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
@@ -485,7 +485,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 da_dataloader = DataLoader(curr_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
                 img_ix = 0
 
-
+                save_path = osp.join(main_save_path, "data_aug")
                 quick_figs_counter = 0
                 while inp == "":
                     
@@ -503,22 +503,22 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
                     combined_img = curr_img * (1 - curr_target)   # This will make all vein pixels blacked out.
                     combined_img_2 = curr_img * curr_target       # This will make all non-vein pixels blacked out.
-                    save_img_quick_figs(combined_img, f"da_{quick_figs_counter}_img_vein_blacked_out.png")
-                    save_img_quick_figs(combined_img_2, f"da_{quick_figs_counter}_img_non_vein_blacked_out.png")
+                    save_img(combined_img, save_path, f"da_{quick_figs_counter}_img_vein_blacked_out.png")
+                    save_img(combined_img_2, save_path, f"da_{quick_figs_counter}_img_non_vein_blacked_out.png")
                     
                     
                     
                     fig, _ = show_image([curr_img, curr_target])
-                    save_plt_fig_quick_figs(fig, f"da_{quick_figs_counter}")
+                    # save_plt_fig(fig, save_path, f"da_{quick_figs_counter}")
 
                     curr_img = smart_conversion(curr_img, "ndarray", "uint8")
-                    save_img_quick_figs(curr_img, f"da_{quick_figs_counter}_img.png")
+                    # save_img(curr_img, save_path, f"da_{quick_figs_counter}_img.png")
                     
 
-                    # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img_quick_figs()
+                    # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img()
                     # will make it 0s and 255s.
                     curr_target = curr_target.to(torch.float32)
-                    save_img_quick_figs(curr_target, f"da_{quick_figs_counter}_target.png")
+                    # save_img(curr_target, save_path, f"da_{quick_figs_counter}_target.png")
 
 
 
@@ -546,7 +546,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter any other key to stop.\n""")
             
             if inp == "ts":
-                model_wrapper.training_wrapper.test_showcase()
+                model_wrapper.training_wrapper.test_showcase(path_to_save_to=osp.join(main_save_path, f"{train_iter}_test_showcase"))
                 inp = input(f"""
                         Enter "resource_graph" to trigger resource_graph() and re-ask for input.
                         Enter s to save the model and re-ask for input.
@@ -562,8 +562,9 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 
                 if res is not None:
                     fig, _, res_dict = res
-                    save_plt_fig(fig, main_save_path, f"{train_iter}_resource_graph")
-                    with open(osp.join(main_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
+                    graph_save_path = osp.join(main_save_path, "graphs")
+                    save_plt_fig(fig, graph_save_path, f"{train_iter}_resource_graph")
+                    with open(osp.join(graph_save_path, f"{train_iter}_resource_dict.pkl"), "wb") as f:
                         pickle.dump(res_dict, f)
 
                 inp = input(f"""
@@ -594,7 +595,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             if inp == "g":
                 fig, _ = model_wrapper.model_graph()
-                save_plt_fig(fig, main_save_path, f"{train_iter}_model_graph")
+                graph_save_path = osp.join(main_save_path, "graphs")
+                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph")
                 inp = input("""
                         Enter r to trigger show_results() and re-ask for input.
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
@@ -606,7 +608,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 res = show_results(main_save_path)
                 if res is not None:
                     fig, _ = res
-                    save_plt_fig(fig, main_save_path, f"{train_iter}_show_results")
+                    graph_save_path = osp.join(main_save_path, "graphs")
+                    save_plt_fig(fig, graph_save_path, f"{train_iter}_show_results")
                 inp = input("""
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
                         Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
@@ -655,7 +658,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
             if inp == "g":
                 fig, _ = model_wrapper.model_graph()
-                save_plt_fig(fig, main_save_path, f"{train_iter}_model_graph_later")
+                graph_save_path = osp.join(main_save_path, "graphs")
+                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph_later")
                 inp = input("""
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")
@@ -698,11 +702,19 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             if not are_there_more_to_prune_in_the_future:
                 print("There are no more kernels that could be pruned in the future.")
                 break
+
+
+
+        if train_iter >= max_total_training_iters:
+            print(f"Max total training iterations reached: {max_total_training_iters}. Train_iter: {train_iter}")
+            break
         
         if (train_iter - initial_train_iter) >= max_training_iters:
+            print(f"Max training iterations reached: {max_training_iters}. Train_iter: {train_iter}, Initial_train_iter: {initial_train_iter}")
             break
 
         if num_of_auto_prunings >= max_auto_prunings:
+            print(f"Max auto prunings reached: {max_auto_prunings}. num_of_auto_prunings: {num_of_auto_prunings}")
             break
     
 

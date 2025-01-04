@@ -76,6 +76,9 @@ goal_train_iters = args.gti
 
 
 
+is_for_ana = False
+
+
 
 
 # What do we have to do?
@@ -85,7 +88,7 @@ goal_train_iters = args.gti
 # - make base folder
 
 model_name = "UNet"
-base_folder = f"ana_pruned_models_{abstract_folder_name}"    # e.g. UNet_IPAD_PrunedModels
+base_folder = f"{'ana_' if is_for_ana else ''}pruned_models_{abstract_folder_name}"    # e.g. UNet_IPAD_PrunedModels
 os.makedirs(base_folder, exist_ok=True)
 
 
@@ -151,6 +154,13 @@ for model in models:
         print(f"Could not find {to_pruner_pkl}. Skipping copying of {pruner_pkl}. This is expected if the model was not pruned.")
         previous_model_details = {"previous_model_filename": model_pth, "previous_pruner_filename": None}
     
+    
+    # - copy initial_conv_resource_calc.pkl
+
+    initial_conv_resource_calc = "initial_conv_resource_calc.pkl"
+    to_initial_conv_resource_calc = osp.join(starting_path, "saved_model_wrapper", initial_conv_resource_calc)
+
+
     # - make a new previous_model_details.json: {"previous_model_filename":"SegNet_{str_id}.pth","previous_pruner_filename":"pruner_{str_id}.pkl"}
 
     to_previous_model_details = osp.join(to_saved_model_wrapper, "previous_model_details.json")
@@ -242,18 +252,15 @@ for model in models:
 
 
     sbatch = f"""#!/bin/bash
-#SBATCH --job-name=ut_{str_id}
-#SBATCH --time=0-12:00:00
+#SBATCH --job-name={str_id}_{curr_folder_name}
+#SBATCH --time=1-12:00:00
 
 #SBATCH -p frida
 #SBATCH -c 7
-#SBATCH --gpus=A100
+#SBATCH --gpus=A100{'_80GB' if is_for_ana else ''}
 #SBATCH --mem-per-cpu=8G
 
-
-mti={goal_train_iters - train_iter}
-
-srun --output=x_unet_train_{str_id}.txt python3 unet_original_main.py --mti ${{mti}}  --ptd ./vein_sclera_data --sd {to_curr_folder} --yaml z_pipeline_unet/unet_original_0.yaml
+srun --output=x_{curr_folder_name}.txt python3 unet_original_main.py --mtti {goal_train_iters}  --ptd ./vein_sclera_data --sd {to_curr_folder} --yaml z_pipeline_unet/unet_original_0.yaml
 """
 
     # To escape { and } in fstrings, use double brackets: {{ and }}
@@ -274,90 +281,89 @@ srun --output=x_unet_train_{str_id}.txt python3 unet_original_main.py --mti ${{m
 
 
 
-    """
+    # """
     
 
 
 
 
 
-    What do we have to do?
+    # What do we have to do?
 
-    abstract_folder_name = f"{model_name}_{folder_id}"    e.g. UNet_IPAD
-    base_folder = f"{abstract_folder_name}_PrunedModels"    e.g. UNet_IPAD_PrunedModels
+    # abstract_folder_name = f"{model_name}_{folder_id}"    e.g. UNet_IPAD
+    # base_folder = f"{abstract_folder_name}_PrunedModels"    e.g. UNet_IPAD_PrunedModels
 
-    - make base folder
+    # - make base folder
 
-    For each model:
+    # For each model:
 
-    str_id = f"{train_iter}_{uniq_id}"
-    curr_folder_name = f"{abstract_folder_name}_{str_id}"
+    # str_id = f"{train_iter}_{uniq_id}"
+    # curr_folder_name = f"{abstract_folder_name}_{str_id}"
     
-    - make folder:  base_folder/curr_folder_name,   
-        e.g.     UNet_IPAD_PrunedModels/UNet_IPAD_80_after_pruning
-    - and subfolders saved_main and saved_model_wrapper
+    # - make folder:  base_folder/curr_folder_name,   
+    #     e.g.     UNet_IPAD_PrunedModels/UNet_IPAD_80_after_pruning
+    # - and subfolders saved_main and saved_model_wrapper
         
 
-    For curr_folder_name/saved_model_wrapper/:
+    # For curr_folder_name/saved_model_wrapper/:
 
-    From /SegNet_main/safety_copies/actual_safety_copies/:
-    - copy SegNet_{str_id}.pth
+    # From /SegNet_main/safety_copies/actual_safety_copies/:
+    # - copy SegNet_{str_id}.pth
 
-    From /SegNet_main/saved_model_wrapper/:    
-    - copy pruner_{str_id}.pkl
+    # From /SegNet_main/saved_model_wrapper/:    
+    # - copy pruner_{str_id}.pkl
+    # - copy initial_conv_resource_calc.pkl
 
-    - make a new previous_model_details.json: {"previous_model_filename":"SegNet_{str_id}.pth","previous_pruner_filename":"pruner_{str_id}.pkl"}
-
-    
-
-    For curr_folder_name/saved_main/:
-
-    From /SegNet_main/saved_main/:
-    - copy training_logs_{str_id}.pkl and pruning_logs_{str_id}.pkl
-    - copy initial_train_iters.json
-
-    From /SegNet_main/saved_main/copies/:
-    - copy prev_training_logs_name_{str_id}.json and rename it to prev_training_logs_name.json
-    - copy previous_pruning_logs_name_{str_id}.json and rename it to prev_pruning_logs_name.json
-
+    # - make a new previous_model_details.json: {"previous_model_filename":"SegNet_{str_id}.pth","previous_pruner_filename":"pruner_{str_id}.pkl"}
 
     
 
+    # For curr_folder_name/saved_main/:
+
+    # From /SegNet_main/saved_main/:
+    # - copy training_logs_{str_id}.pkl and pruning_logs_{str_id}.pkl
+    # - copy initial_train_iters.json
+
+    # From /SegNet_main/saved_main/copies/:
+    # - copy prev_training_logs_name_{str_id}.json and rename it to prev_training_logs_name.json
+    # - copy previous_pruning_logs_name_{str_id}.json and rename it to prev_pruning_logs_name.json
 
 
-
-    Now the model copying is done.
-    But we would also like to automatically create the sbatch files to run the programes with the correct parameters.
-
-    We will create a run_folder {base_folder}/z_run_{abstract_folder_name}/
-     with all the necessary sbatch scripts.
-
-    Then you will be running:
-    sbatch {base_folder}/z_run_{folder_name}/y_{folder_name}_{str_id}.sbatch
     
 
 
-    So how does the preparation of scripts work:
+
+
+    # Now the model copying is done.
+    # But we would also like to automatically create the sbatch files to run the programes with the correct parameters.
+
+    # We will create a run_folder {base_folder}/z_run_{abstract_folder_name}/
+    #  with all the necessary sbatch scripts.
+
+    # Then you will be running:
+    # sbatch {base_folder}/z_run_{folder_name}/y_{folder_name}_{str_id}.sbatch
+    
+
+
+    # So how does the preparation of scripts work:
        
-    - create an sbatch script for each model:
+    # - create an sbatch script for each model:
 
-    filename: y_{folder_name}_{str_id}.sbatch
-
-
-    #!/bin/bash
-
-    #SBATCH --job-name=ut_{str_id}
-    #SBATCH --time=0-12:00:00
-
-    #SBATCH -p frida
-    #SBATCH -c 7
-    #SBATCH --gpus=A100_80GB
-    #SBATCH --mem-per-cpu=8G
+    # filename: y_{folder_name}_{str_id}.sbatch
 
 
-    mti={goal_train_iters - train_iter}
+    # #!/bin/bash
 
-    srun --output=x_unet_train_{str_id}.txt python3 unet_original_main.py --mti ${{mti}}  --ptd ./vein_sclera_data --sd {curr_folder_name} --yaml z_pipeline_unet/unet_original_0.yaml
+    # #SBATCH --job-name=ut_{str_id}
+    # #SBATCH --time=0-12:00:00
+
+    # #SBATCH -p frida
+    # #SBATCH -c 7
+    # #SBATCH --gpus=A100{"_80GB" if is_for_ana else ""}
+    # #SBATCH --mem-per-cpu=8G
 
 
-    """
+    # srun --output=x_unet_train_{curr_folder_name}.txt python3 unet_original_main.py --mtti ${goal_train_iters}  --ptd ./vein_sclera_data --sd {curr_folder_name} --yaml z_pipeline_unet/unet_original_0.yaml
+
+
+    # """

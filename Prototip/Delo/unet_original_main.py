@@ -67,6 +67,7 @@ if __name__ == "__main__":
 
     # To easily get the num of trainings to some nice round number.
     parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations. After how many train iterations do we stop the program.')
+    parser.add_argument('--mtti', type=int, default=1e9, help='max_total_train_iters. If the num of total train iters is this, we stop the program.')
     
     # To conduct pruning.
     parser.add_argument('-p', '--pruning_phase', action='store_true',
@@ -117,6 +118,7 @@ if __name__ == "__main__":
     PATH_TO_DATA = args.ptd
     SAVE_DIR = args.sd
     max_train_iters = args.mti
+    max_total_train_iters = args.mtti
     is_pruning_ph = args.pruning_phase
     IMPORTANCE_FN_DEFINER = args.ifn
     iter_possible_stop = args.ips
@@ -365,7 +367,7 @@ def get_data_loaders(**dataloading_args):
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=False, num_workers=dataloading_args["num_workers"], drop_last=False)
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
@@ -1199,7 +1201,7 @@ if __name__ == "__main__":
 
 
     
-    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 

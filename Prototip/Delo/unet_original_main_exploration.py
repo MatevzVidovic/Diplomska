@@ -398,7 +398,10 @@ def get_data_loaders(**dataloading_args):
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], num_workers=dataloading_args["num_workers"], drop_last=False)
+
+    # I don't want shuffle=True for test, so that it's easier to compare models in test_showcase.
+
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 

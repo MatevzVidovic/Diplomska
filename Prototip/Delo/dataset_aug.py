@@ -144,7 +144,6 @@ class IrisDataset(Dataset):
 
         try:
 
-
             image_path = osp.join(self.filepath,'Images',self.list_files[idx]+'.jpg')
 
             img = Image.open(image_path).convert("RGB")
