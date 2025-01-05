@@ -24,7 +24,7 @@ source z0_sh_help.sh
 
 
 create_empty_folder test_main_vein
-python3 unet_original_main.py --tras 3 --mti 2 --ptd ./Data/vein_and_sclera_data --sd test_main_vein --yaml z_pipeline_unet/unet_original_0.yaml           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 unet_original_main.py --tras 3 --mti 2 --ptd ./vein_sclera_data --sd test_main_vein --yaml z_pipeline_unet/unet_original_0.yaml           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
 
 
 

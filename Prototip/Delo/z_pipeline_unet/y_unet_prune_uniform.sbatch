@@ -21,4 +21,4 @@
 
 
 
-srun python3 unet_original_main.py --ifn uniform -p --ptd ./vein_sclera_data --sd unet_prune_uniform --yaml z_pipeline_unet/unet_original_0.yaml
+srun python3 unet_original_main.py --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd unet_prune_uniform --yaml z_pipeline_unet/unet_original_0.yaml

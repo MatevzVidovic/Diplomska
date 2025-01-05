@@ -1,8 +1,10 @@
 
 
 # symlinks to data
+Data/*
 /sclera_data*
 /vein_sclera_data*
+/vein_and_sclera_data*
 
 # Usual scp transfer folders:
 scp*/

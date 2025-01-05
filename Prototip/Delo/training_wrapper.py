@@ -490,7 +490,12 @@ class TrainingWrapper:
 
             # print_cuda_memory()
 
-            for batch, (X, y) in enumerate(dataloader):
+            for batch_ix, data_dict in enumerate(dataloader):
+                X = data_dict["images"]
+                y = data_dict["masks"]
+                img_names = data_dict["img_names"]
+
+
                 X, y = X.to(self.device), y.to(self.device)
 
 
@@ -507,7 +512,7 @@ class TrainingWrapper:
 
                 size_so_far += len(X)
 
-                if batch % 1 == 0:
+                if batch_ix % 1 == 0:
                     end = timer()
                     train_times.append(end - start)
                     start = timer()
@@ -540,9 +545,12 @@ class TrainingWrapper:
 
             self.model.eval()
             with torch.no_grad():
-                for X, y in dataloader:
-                        X, y = X.to(self.device), y.to(self.device)
-                        self.model(X)
+                for batch_ix, data_dict in enumerate(dataloader):
+                    X = data_dict["images"]
+                    y = data_dict["masks"]
+                    img_names = data_dict["img_names"]
+                    X, y = X.to(self.device), y.to(self.device)
+                    self.model(X)
         
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER)
@@ -568,41 +576,50 @@ class TrainingWrapper:
             self.model.eval()
             test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
             with torch.no_grad():
-                for X, y in dataloader:
-                        X, y = X.to(self.device), y.to(self.device)
-                        pred = self.model(X)
+                for batch_ix, data_dict in enumerate(dataloader):
+                    X = data_dict["images"]
+                    y = data_dict["masks"]
+                    img_names = data_dict["img_names"]
+                    X, y = X.to(self.device), y.to(self.device)
+                    pred = self.model(X)
 
 
-                        # loss_fn computes the mean loss for the entire batch.
-                        # We cold also get the loss for each image, but we don't need to.
-                        # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
+                    # loss_fn computes the mean loss for the entire batch.
+                    # We cold also get the loss for each image, but we don't need to.
+                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
 
-                        # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                        # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                        test_loss += self.loss_fn(pred, y).item()
+                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
+                    test_loss += self.loss_fn(pred, y).item()
 
 
 
-                        pred_binary = pred[:, 1] > pred[:, 0]
+                    pred_binary = pred[:, 1] > pred[:, 0]
 
-                        F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoUs, where_is_union_zero = get_IoU_from_predictions(pred_binary, y)
+                    F1 += get_F1_from_predictions(pred_binary, y)
+
+                    n_cl = 2
+                    confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
+                    approx_IoUs, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
+
+                    if where_is_union_zero[1] == False:
+                        approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
+                        approx_IoU_size += 1
+
+
+                    # X and y are tensors of a batch, so we have to go over them all
+                    for i in range(X.shape[0]):
+
+                        pred_binary = pred[i][1] > pred[i][0]
+
+                        n_cl = 2
+                        confusion_matrix = get_conf_matrix(pred_binary, y[i], num_classes=n_cl)
+                        curr_IoU, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
+
                         if where_is_union_zero[1] == False:
-                            approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
-                            approx_IoU_size += 1
-
-
-                        # X and y are tensors of a batch, so we have to go over them all
-                        for i in range(X.shape[0]):
-
-                            pred_binary = pred[i][1] > pred[i][0]
-
-
-                            curr_IoU, where_is_union_zero = get_IoU_from_predictions(pred_binary, y[i])
-                            if where_is_union_zero[1] == False:
-                                IoU += curr_IoU.item(1) # only IoU for sclera (not background)
-                                IoU_size += 1
-                            # print(f"This image's IoU: {curr_IoU:>.6f}%")
+                            IoU += curr_IoU.item(1) # only IoU for sclera (not background)
+                            IoU_size += 1
+                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
 
 
 
@@ -618,7 +635,8 @@ class TrainingWrapper:
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
             # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
-            return (test_loss, approx_IoU, F1, IoU)
+            # return (test_loss, approx_IoU, F1, IoU)
+            return {"loss": test_loss, "approx_IoU": approx_IoU, "F1": F1, "IoU": IoU}
 
 
         except Exception as e:
@@ -656,137 +674,167 @@ class TrainingWrapper:
             test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
             quick_figs_counter = 0
             with torch.no_grad():
-                for X, y in dataloader:
-                        X, y = X.to(self.device), y.to(self.device)
-                        pred = self.model(X)
+                for batch_ix, data_dict in enumerate(dataloader):
+                    X = data_dict["images"]
+                    y = data_dict["masks"]
+                    img_names = data_dict["img_names"]
+                    
+                    X, y = X.to(self.device), y.to(self.device)
+                    pred = self.model(X)
 
 
-                        # loss_fn computes the mean loss for the entire batch.
-                        # We cold also get the loss for each image, but we don't need to.
-                        # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
+                    # loss_fn computes the mean loss for the entire batch.
+                    # We cold also get the loss for each image, but we don't need to.
+                    # https://discuss.pytorch.org/t/loss-for-each-sample-in-batch/36200
 
-                        # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-                        # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                        test_loss += self.loss_fn(pred, y).item()
+                    # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+                    # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
+                    test_loss += self.loss_fn(pred, y).item()
 
 
 
-                        pred_binary = pred[:, 1] > pred[:, 0]
+                    pred_binary = pred[:, 1] > pred[:, 0]
 
-                        F1 += get_F1_from_predictions(pred_binary, y)
-                        approx_IoUs, where_is_union_zero = get_IoU_from_predictions(pred_binary, y)
+                    F1 += get_F1_from_predictions(pred_binary, y)
+
+                    n_cl = 2
+                    confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
+                    approx_IoUs, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
+                    
+                    if where_is_union_zero[1] == False:
+                        approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
+                        approx_IoU_size += 1
+
+
+                    # make tensor of zeros of size o confusion matrix
+                    aggregated_conf_matrix = torch.zeros(confusion_matrix.shape, dtype=torch.long, device=self.device)
+
+                    # X and y are tensors of a batch, so we have to go over them all
+                    for i in range(X.shape[0]):
+
+                        img_name = img_names[i]
+
+                        pred_binary = pred[i][1] > pred[i][0]
+
+                        n_cl = 2
+                        confusion_matrix = get_conf_matrix(pred_binary, y[i], num_classes=n_cl)
+                        curr_IoU, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
+
+                        conf_matrix += confusion_matrix
+
                         if where_is_union_zero[1] == False:
-                            approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
-                            approx_IoU_size += 1
-
-                        # X and y are tensors of a batch, so we have to go over them all
-                        for i in range(X.shape[0]):
-
-                            pred_binary = pred[i][1] > pred[i][0]
+                            IoU += curr_IoU.item(1) # only IoU for sclera (not background)
+                            IoU_size += 1
+                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
 
 
-                            curr_IoU, where_is_union_zero = get_IoU_from_predictions(pred_binary, y[i])
-                            if where_is_union_zero[1] == False:
-                                IoU += curr_IoU.item(1) # only IoU for sclera (not background)
-                                IoU_size += 1
-                            # print(f"This image's IoU: {curr_IoU:>.6f}%")
+                        
+                        pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+
+                        pred_grayscale_mask = pred[i][1].cpu().numpy() - pred[i][0].cpu().numpy()
+                        pred_grayscale_mask_min_max_normed = (pred_grayscale_mask - pred_grayscale_mask.min()) / (pred_grayscale_mask.max() - pred_grayscale_mask.min())
+
+                        # matplotlib expects (height, width, channels), but pytorch has (channels, height, width)
+                        image_tensor = X[i].cpu()
+                        image_np = image_tensor.permute(1, 2, 0).numpy()
+
+                        # print("min(Ground truth):", y[i].min())
+                        # print("max(Ground truth):", y[i].max())
+                        # print("num of ones in Ground truth:", torch.sum(y[i] == 1).item())
+                        # print("num of zeros in Ground truth:", torch.sum(y[i] == 0).item())
+                        # print("num of all elements in Ground truth:", y[i].numel())
+
+                        gt = y[i].cpu().numpy()
+                        
+                        # fig, ax = plt.subplots(2, 2)
+                        
+                        # ax[0, 0].set_title('Original image')
+                        # ax[0, 0].imshow(image_np)
+
+                        # ax[0, 1].set_title('Ground truth')
+                        # ax[0, 1].imshow(gt)
+
+                        # ax[1, 0].set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
+                        # ax[1, 0].imshow(pred_binary_cpu_np, cmap='gray')
+
+                        # ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
+                        # ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
+                        # plt.show(block=False)
 
 
-                            
-                            pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+                        # save_plt_fig_quick_figs(fig, f"ts_{img_name}")
+                        save_img(image_np, path_to_save_to, f"{img_name}_ts_img.png")
 
-                            pred_grayscale_mask = pred[i][1].cpu().numpy() - pred[i][0].cpu().numpy()
-                            pred_grayscale_mask_min_max_normed = (pred_grayscale_mask - pred_grayscale_mask.min()) / (pred_grayscale_mask.max() - pred_grayscale_mask.min())
-
-                            # matplotlib expects (height, width, channels), but pytorch has (channels, height, width)
-                            image_tensor = X[i].cpu()
-                            image_np = image_tensor.permute(1, 2, 0).numpy()
-
-                            # print("min(Ground truth):", y[i].min())
-                            # print("max(Ground truth):", y[i].max())
-                            # print("num of ones in Ground truth:", torch.sum(y[i] == 1).item())
-                            # print("num of zeros in Ground truth:", torch.sum(y[i] == 0).item())
-                            # print("num of all elements in Ground truth:", y[i].numel())
-
-                            gt = y[i].cpu().numpy()
-                            
-                            # fig, ax = plt.subplots(2, 2)
-                            
-                            # ax[0, 0].set_title('Original image')
-                            # ax[0, 0].imshow(image_np)
-
-                            # ax[0, 1].set_title('Ground truth')
-                            # ax[0, 1].imshow(gt)
-
-                            # ax[1, 0].set_title('Binarized predictions (pred[1] > pred[0] i.e. target prob > background prob)')
-                            # ax[1, 0].imshow(pred_binary_cpu_np, cmap='gray')
-
-                            # ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
-                            # ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
-                            # plt.show(block=False)
+                        # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img()
+                        # will make it 0s and 255s.
+                        gt_float = gt.astype(np.float32)
+                        save_img(gt_float, path_to_save_to, f"{img_name}_ts_gt.png")
+                        
+                        # Here we actually have bool, surprisingly. Again, lets just multiply by 255
+                        pred_binary_cpu_np_255 = pred_binary_cpu_np.astype(np.uint8)
+                        pred_binary_cpu_np_255 = pred_binary_cpu_np_255 * 255
+                        save_img(pred_binary_cpu_np_255, path_to_save_to, f"{img_name}_ts_pred.png")
 
 
-                            # save_plt_fig_quick_figs(fig, f"ts_{quick_figs_counter}")
-                            save_img(image_np, path_to_save_to, f"{quick_figs_counter}_ts_img.jpg")
+                        # Get an image where TP is green, FP is red, FN is yellow
+                        # Initialize an RGB image with zeros (black)
+                        height, width = gt.shape
+                        pred_colormap = np.zeros((height, width, 3), dtype=np.uint8)
+                        # Green where both gt and pred are 1
+                        pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 255)] = [0, 255, 0]
+                        # Red where pred is 1 and gt is 0
+                        pred_colormap[(gt == 0) & (pred_binary_cpu_np_255 == 255)] = [255, 0, 0]
+                        # Yellow where pred is 0 and gt is 1
+                        pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 0)] = [255, 255, 0]
 
-                            # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img()
-                            # will make it 0s and 255s.
-                            gt_float = gt.astype(np.float32)
-                            save_img(gt_float, path_to_save_to, f"{quick_figs_counter}_ts_gt.png")
-                            
-                            # Here we actually have bool, surprisingly. Again, lets just multiply by 255
-                            pred_binary_cpu_np_255 = pred_binary_cpu_np.astype(np.uint8)
-                            pred_binary_cpu_np_255 = pred_binary_cpu_np_255 * 255
-                            save_img(pred_binary_cpu_np_255, path_to_save_to, f"{quick_figs_counter}_ts_pred.png")
-
-
-                            # Get an image where TP is green, FP is red, FN is yellow
-                            # Initialize an RGB image with zeros (black)
-                            height, width = gt.shape
-                            pred_colormap = np.zeros((height, width, 3), dtype=np.uint8)
-                            # Green where both gt and pred are 1
-                            pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 255)] = [0, 255, 0]
-                            # Red where pred is 1 and gt is 0
-                            pred_colormap[(gt == 0) & (pred_binary_cpu_np_255 == 255)] = [255, 0, 0]
-                            # Yellow where pred is 0 and gt is 1
-                            pred_colormap[(gt == 1) & (pred_binary_cpu_np_255 == 0)] = [255, 255, 0]
-
-                            save_img(pred_colormap, path_to_save_to, f"{quick_figs_counter}_ts_colormap.png")
+                        save_img(pred_colormap, path_to_save_to, f"{img_name}_ts_colormap.png")
 
 
 
-                            fp_and_fn = (gt == 1) & (pred_binary_cpu_np_255 == 0) | (gt == 0) & (pred_binary_cpu_np_255 == 255)
-                            fp_and_fn_on_image_np = image_np.copy()
-                            fp_and_fn_on_image_np[fp_and_fn] = pred_colormap[fp_and_fn]
-                            save_img(fp_and_fn_on_image_np, path_to_save_to, f"{quick_figs_counter}_ts_fp_and_fn.png")
 
 
-                            image_np_blacked_out_in_tp_and_tn = image_np.copy()
-                            tp_and_tn = (gt == 1) & (pred_binary_cpu_np_255 == 255) | (gt == 0) & (pred_binary_cpu_np_255 == 0)
-                            image_np_blacked_out_in_tp_and_tn[tp_and_tn] = 0
-                            save_img(image_np_blacked_out_in_tp_and_tn, path_to_save_to, f"{quick_figs_counter}_ts_blacked_out.png")
+                        fp_and_fn = (gt == 1) & (pred_binary_cpu_np_255 == 0) | (gt == 0) & (pred_binary_cpu_np_255 == 255)
+                        fp_and_fn_on_image_np = image_np.copy()
+                        fp_and_fn_on_image_np[fp_and_fn] = pred_colormap[fp_and_fn]
+                        save_img(fp_and_fn_on_image_np, path_to_save_to, f"{img_name}_ts_fp_and_fn.png")
+
+
+                        image_np_blacked_out_in_tp_and_tn = image_np.copy()
+                        tp_and_tn = (gt == 1) & (pred_binary_cpu_np_255 == 255) | (gt == 0) & (pred_binary_cpu_np_255 == 0)
+                        image_np_blacked_out_in_tp_and_tn[tp_and_tn] = 0
+                        save_img(image_np_blacked_out_in_tp_and_tn, path_to_save_to, f"{img_name}_ts_blacked_out.png")
 
 
 
-                            
-                            # save_img(pred_grayscale_mask_min_max_normed, path_to_save_to, f"{quick_figs_counter}_ts_pred_grayscale.png")
-                            
-                            plt.pause(1.0)
+                        
+                        # save_img(pred_grayscale_mask_min_max_normed, path_to_save_to, f"{img_name}_ts_pred_grayscale.png")
+                        
+                        plt.pause(1.0)
 
-                            
-                            # This way we will keep going after inp was 'all' once.
-                            if quick_figs_counter == 0:
+                        
+                        # This way we will keep going after inp was 'all' once.
+                        if quick_figs_counter == 0:
+                            inp = input("Enter 'all' to go through all imgs without reasking for input. Enter anything else to stop. Press Enter to continue...")
+                        else:
+                            if inp != 'all':
                                 inp = input("Enter 'all' to go through all imgs without reasking for input. Enter anything else to stop. Press Enter to continue...")
-                            else:
-                                if inp != 'all':
-                                    inp = input("Enter 'all' to go through all imgs without reasking for input. Enter anything else to stop. Press Enter to continue...")
-                            
+                        
 
-                            if inp != "" and inp != 'all':
-                                return
+                        if inp != "" and inp != 'all':
+                            # write aggregated confusion matrix to csv
+                            aggregated_conf_matrix /= aggregated_conf_matrix.sum()
+                            aggregated_conf_matrix = aggregated_conf_matrix.cpu().numpy()
+                            aggregated_conf_matrix_df = pd.DataFrame(aggregated_conf_matrix)
+                            aggregated_conf_matrix_df.to_csv(osp.join(path_to_save_to, "aggregated_conf_matrix.csv"), index=False)
+                            return
 
-                            quick_figs_counter += 1
+                        quick_figs_counter += 1
 
+
+                aggregated_conf_matrix /= aggregated_conf_matrix.sum()
+                aggregated_conf_matrix = aggregated_conf_matrix.cpu().numpy()
+                aggregated_conf_matrix_df = pd.DataFrame(aggregated_conf_matrix)
+                aggregated_conf_matrix_df.to_csv(osp.join(path_to_save_to, "aggregated_conf_matrix.csv"), index=False)
 
 
 
