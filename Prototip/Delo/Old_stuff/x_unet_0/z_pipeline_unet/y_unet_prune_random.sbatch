@@ -20,6 +20,6 @@
 
 
 
-srun python3 unet_original_main.py --ifn random -p --ptd ./Data/vein_and_sclera_data --sd unet_prune_random --yaml z_pipeline_unet/unet_original_0.yaml
+srun python3 unet_original_main.py --ifn random -p --ptd ./vein_sclera_data --sd unet_prune_random --yaml z_pipeline_unet/unet_original_0.yaml
 
 

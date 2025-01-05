@@ -140,7 +140,6 @@ if __name__ == "__main__":
     TRAIN_EPOCH_SIZE_LIMIT = yaml_dict["train_epoch_size_limit"]
 
     num_ep_per_iter = yaml_dict["num_epochs_per_training_iteration"]
-    cleaning_err_ix = yaml_dict["cleaning_error_ix"]
     cleanup_k = yaml_dict["cleanup_k"]
     DATASET = yaml_dict["dataset_option"]
     optimizer = yaml_dict["optimizer_used"]
@@ -272,7 +271,7 @@ print(f"Device: {device}")
 
 
 
-from dataset_aug import IrisDataset, transform
+from dataset_aug import IrisDataset, custom_collate_fn
 
 loss_fn = MultiClassDiceLoss()
 
@@ -342,7 +341,7 @@ dataloading_args = {
     
     # iris dataset params
     "path_to_sclera_data" : PATH_TO_DATA,
-    "transform" : transform,
+    # "transform" : transform,
     "n_classes" : OUTPUT_DIMS["channels"],
 
     # DataLoader params
@@ -365,9 +364,9 @@ def get_data_loaders(**dataloading_args):
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], shuffle=False, num_workers=dataloading_args["num_workers"], drop_last=False)
+    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=False, num_workers=dataloading_args["num_workers"], drop_last=False)
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
@@ -1201,7 +1200,8 @@ if __name__ == "__main__":
 
 
     
-    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, 
+                        max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleanup_k=cleanup_k,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 

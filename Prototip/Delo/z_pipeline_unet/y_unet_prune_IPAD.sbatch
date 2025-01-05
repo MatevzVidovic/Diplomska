@@ -25,5 +25,5 @@
 # bs 5 gre
 
 
-srun python3 unet_original_main.py --ifn IPAD_eq -p --ptd ./vein_sclera_data --sd unet_prune_IPAD --yaml z_pipeline_unet/unet_original_0.yaml
+srun python3 unet_original_main.py --ifn IPAD_eq -p --ptd ./Data/vein_and_sclera_data --sd unet_prune_IPAD --yaml z_pipeline_unet/unet_original_0.yaml
 

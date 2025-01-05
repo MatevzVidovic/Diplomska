@@ -25,6 +25,6 @@
 # bs 5 gre
 
 
-srun --output=x_unet_train${1}.txt python3 unet_original_main.py --mti ${2} --ptd ./Data/vein_and_sclera_data --sd unet_train${1} --yaml z_pipeline_unet/unet_original_0.yaml
+srun --output=x_unet_train${1}.txt python3 unet_original_main.py --mti ${2} --ptd ./vein_sclera_data --sd unet_train${1} --yaml z_pipeline_unet/unet_original_0.yaml
 
 

@@ -29,19 +29,19 @@ create_empty_folder test_uniform
 
 
 # training phase
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
-python3 unet_original_main.py --tras 2 --mti 2 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
+python3 unet_original_main.py --tras 2 --mti 2 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
 
 
 # pruning_phase
 for i in {1..30}; do
-    python3 unet_original_main.py --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
-    python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$graph_and_stop"
+    python3 unet_original_main.py --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
+    python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$graph_and_stop"
 done
 
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$results_and_stop"
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$resource_graph_and_stop"
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$results_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$resource_graph_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
 
 

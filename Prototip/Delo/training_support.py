@@ -87,33 +87,34 @@ class TrainingLogs:
     pickle_filename = "training_logs"
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error=None, deleted_models_errors=[]) -> None:
+    def __init__(self, tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=[]) -> None:
         
         self.tl_main_save_path = tl_main_save_path
         self.number_of_epochs_per_training = number_of_epochs_per_training
-        self.last_error = last_error
-        self.deleted_models_errors = deleted_models_errors
+        self.last_log = last_log
+        self.deleted_models_logs = deleted_models_logs
 
-        self.cleaning_err_ix = cleaning_err_ix
+        self.cleaning_err_key = cleaning_err_key
 
         self.last_train_iter = None
         self.last_unique_id = None
 
         # of the form (val_error, test_error, train_iter, model_path)
-        self.errors = []
+        self.logs = []
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def add_error(self, error):
-        if error is None:
+    def add_log(self, log):
+        if log is None:
             return
-        # (val_error, test_error, train_iter, model_path, unique_id, is_not_automatic)
-        self.last_error = error
-        self.errors.append(error)
+        
+        # e.g. log = {"val_err": v, "test_err": t, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True}
+        self.last_log = log
+        self.logs.append(log)
     
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def delete_error(self, error):
-        self.errors.remove(error)
-        self.deleted_models_errors.append(error)
+    def delete_log(self, log):
+        self.logs.remove(log)
+        self.deleted_models_logs.append(log)
 
     """
     The picking and loading is done in such a way, because if we change where we are running the proram (like go onto another computer)
@@ -124,7 +125,7 @@ class TrainingLogs:
 
     @staticmethod
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error=None, deleted_models_errors=[]):
+    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=[]):
 
         os.makedirs(tl_main_save_path, exist_ok=True)
         j_path = osp.join(tl_main_save_path, "prev_training_logs_name.json")
@@ -140,7 +141,7 @@ class TrainingLogs:
             return new_tl
             
 
-        return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_ix, last_error, deleted_models_errors)
+        return TrainingLogs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log, deleted_models_logs)
 
     @py_log.autolog(passed_logger=MY_LOGGER)
     def pickle_training_logs(self, train_iter, unique_id):
@@ -168,8 +169,8 @@ class TrainingLogs:
     def __str__(self):
         returner = ""
         returner += f"Number of epochs per training: {self.number_of_epochs_per_training}\n"
-        returner += f"Last train iteration: {self.last_error}\n"
-        returner += f"Errors: {self.errors}\n"
+        returner += f"Last train iteration: {self.last_log}\n"
+        returner += f"logs: {self.logs}\n"
         return returner
     
     def __repr__(self):
@@ -218,26 +219,26 @@ class TrainingLogs:
         
     
 
-        # sort by validation error
-        sorted_errors = sorted(self.errors, key = lambda x: x[0][self.cleaning_err_ix])
+        # sort by validation log
+        sorted_logs = sorted(self.logs, key = lambda x: x["val_err"][self.cleaning_err_key])
 
         to_delete = []
 
-        while len(sorted_errors) > 0 and (len(self.errors) - len(to_delete)) > k:
+        while len(sorted_logs) > 0 and (len(self.logs) - len(to_delete)) > k:
 
-            error = sorted_errors.pop() # pops last element
+            log = sorted_logs.pop() # pops last element
             
-            model_path = error[3]
+            model_path = log[3]
             if is_previous_model(model_path, model_wrapper):
                 continue
 
-            to_delete.append(error)
+            to_delete.append(log)
 
 
-        for error in to_delete:
-            model_filename = error[3]
+        for log in to_delete:
+            model_filename = log[3]
             model_path = osp.join(model_wrapper.save_path, "models", model_filename)
-            self.delete_error(error)
+            self.delete_log(log)
             try:
                 os.remove(model_path)
                 print(f"Deleting model {model_path}")
@@ -373,18 +374,21 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
     pruning_logs.confirm_last_pruning_train_iter()
 
     if val_error is None or test_error is None:
-        new_error = None
+        new_log = None
         # this only happens if we do a manual save before any training even took place
         # or maybe if we prune before any training took place
-        if training_logs.last_error is not None:
-            v = training_logs.last_error[0]
-            t = training_logs.last_error[1]
-            ti = training_logs.last_error[2]
-            new_error = (v, t, ti, new_model_filename, unique_id, True)
+        if training_logs.last_log is not None:
+            v = training_logs.last_log[0]
+            t = training_logs.last_log[1]
+            ti = training_logs.last_log[2]
+            # new_log = (v, t, ti, new_model_filename, unique_id, True)
+            new_log = ({"val_err": v, "test_err": t, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True})
 
-        training_logs.add_error(new_error)
+        training_logs.add_log(new_log)
     else:
-        training_logs.add_error((val_error, test_error, train_iter, new_model_filename, str(train_iter), False))
+        new_log = {"val_err": val_error, "test_err": test_error, "train_iter": train_iter, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": False}
+        training_logs.add_log(new_log)
+
 
     training_logs.pickle_training_logs(train_iter, unique_id)
     pruning_logs.pickle_pruning_logs(train_iter, unique_id)
@@ -401,7 +405,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 
 @py_log.autolog(passed_logger=MY_LOGGER)
 def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
-                        max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_ix=1, 
+                        max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_key="loss", 
                         cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
 
 
@@ -417,7 +421,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
 
-    training_logs = TrainingLogs.load_or_create_training_logs(main_save_path, num_of_epochs_per_training, cleaning_err_ix)
+    training_logs = TrainingLogs.load_or_create_training_logs(main_save_path, num_of_epochs_per_training, cleaning_err_key)
 
     pruning_logs = PruningLogs.load_or_create_pruning_logs(main_save_path)
     
@@ -427,8 +431,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
         
 
 
-    if training_logs.last_error is not None:
-        train_iter = training_logs.last_error[2]
+    if training_logs.last_log is not None:
+        train_iter = training_logs.last_log[2]
     else:
         train_iter = 0
     
