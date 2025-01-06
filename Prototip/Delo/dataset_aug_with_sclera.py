@@ -35,7 +35,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 from img_augments import random_rotation, zoom_in_somewhere, random_gaussian_blur, random_horizontal_flip
 
 
-from helper_img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs
+from helper_img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_imgs_quick_figs
 
 import numpy as np
 import torch
@@ -86,26 +86,28 @@ class IrisDataset(Dataset):
         self.split = split
         self.classes = n_classes
 
-        self.images_without_mask = [] # seznam slik, ki nimajo maske
+        self.images_without_mask = []
         
 
         images_with_masks = []
         
-        all_images = os.listdir(osp.join(self.filepath,'Images'))
-        masks_folder = osp.join(self.filepath,'Masks')
-        all_images.sort()
+        image_names = os.listdir(osp.join(self.filepath,'Images'))
+        image_names.sort()
+        
+        to_veins = osp.join(self.filepath,'Veins')
+        to_scleras = osp.join(self.filepath,'Scleras')
 
 
 
-        for file in all_images:
+        for img_name in image_names:
             
-            file_without_suffix = file.strip(".jpg")
+            img_name_without_suffix = img_name.strip(".jpg")
 
-            if self.mask_exists(masks_folder, file_without_suffix):
-                images_with_masks.append(file_without_suffix)
+            if self.masks_exist(to_veins, to_scleras, img_name_without_suffix):
+                images_with_masks.append(img_name_without_suffix)
 
 
-        self.list_files = images_with_masks
+        self.img_names_no_suffix = images_with_masks
         self.testrun = testrun
 
         #PREPROCESSING STEP FOR ALL TRAIN, VALIDATION AND TEST INPUTS
@@ -114,71 +116,58 @@ class IrisDataset(Dataset):
 
         #summary
         print('summary for ' + str(split))
-        print('valid images: ' + str(len(self.list_files)))
+        print('valid images: ' + str(len(self.img_names_no_suffix)))
 
 
     def __len__(self):
-        real_size = len(self.list_files)
+        real_size = len(self.img_names_no_suffix)
         if self.testrun:
             return min(self.testrun_length, real_size)
         return real_size
     
-    def mask_exists(self, mask_folder_path, file_name_no_suffix):
-        mask_filename = osp.join(mask_folder_path, file_name_no_suffix + '.png')
-        return osp.exists(mask_filename)
+    def masks_exist(self, veins_folder_path, scleras_folder_path, img_name_name_no_suffix):
+        vein_mask_filename = osp.join(veins_folder_path, img_name_name_no_suffix + '.png')
+        sclera_mask_filename = osp.join(scleras_folder_path, img_name_name_no_suffix + '_sclera.png')
+        masks_exist = osp.exists(vein_mask_filename) and osp.exists(sclera_mask_filename)
+        return masks_exist
 
-    def get_mask(self, mask_folder_path, file_name_no_suffix) -> np.array:
 
-        mask_filename = osp.join(mask_folder_path, file_name_no_suffix + '.png')
-        try:
-            mask = Image.open(mask_filename).convert("RGB")
-            return mask
-
-        except FileNotFoundError:
-            print('file not found: ' + str(mask_filename))
-            self.images_without_mask.append(file_name_no_suffix)
-            return None
 
     @py_log.autolog(passed_logger=MY_LOGGER)
     def __getitem__(self, idx):
 
         try:
             
-            img_name = self.list_files[idx]
+            img_name = self.img_names_no_suffix[idx]
             image_path = osp.join(self.filepath,'Images',f'{img_name}.jpg')
 
-            img = Image.open(image_path).convert("RGB")
+            img = cv2.imread(image_path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-            middle_resize = False
-            if middle_resize:
-                preprocessing_resize_size = (1024, 1024) # img.size # or just (1024, 1024)
-
-                img = img.resize(preprocessing_resize_size, Image.LANCZOS) #ali Image.BICUBIC ali 
-
-
-
-            # Since our data augmentation should simulate errors and changes in how the image is taken, we should do gamma correction and clahe after the augmentation.
-            # Because we should first simulate the errors, that is then what our taken img would have been,
-            # and then we do our preprocessing (correction) from there.
-            # We pretend that the data augmentations were actually pictures that we took.
+            veins_path = osp.join(self.filepath,'Veins')
+            img_name_no_suffix = self.img_names_no_suffix[idx]
+            veins_filename = osp.join(veins_path, img_name_no_suffix + '.png')
+            veins = cv2.imread(veins_filename)
+            veins = cv2.cvtColor(veins, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier - the same as for the original image
 
 
+            scleras_path = osp.join(self.filepath,'Scleras')
+            img_name_no_suffix = self.img_names_no_suffix[idx]
+            scleras_filename = osp.join(scleras_path, img_name_no_suffix + '_sclera.png')
+            scleras = cv2.imread(scleras_filename)
+            scleras = cv2.cvtColor(scleras, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier
 
 
-            mask_path = osp.join(self.filepath,'Masks')
-            file_name_no_suffix = self.list_files[idx]
-            mask = self.get_mask(mask_path, file_name_no_suffix) # is of type Image.Image
-            
-            if middle_resize:
-                mask = mask.resize(preprocessing_resize_size, Image.LANCZOS)
+            img = smart_conversion(img, 'ndarray', 'uint8')
+            veins = smart_conversion(veins, 'ndarray', 'uint8')
+            scleras = smart_conversion(scleras, 'ndarray', 'uint8')
+
+            masks = [veins, scleras]
 
 
-            img = smart_conversion(img, 'Image', 'uint8')
-            mask = smart_conversion(mask, 'Image', 'uint8')
+            save_img_ix = 0
 
-
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
-
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_before_da")
 
 
             show_testrun = False
@@ -187,39 +176,39 @@ class IrisDataset(Dataset):
             if show_testrun:
 
                 img_test = img
-                mask_test = mask
+                masks_test = masks
                 
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
 
-                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Original image")
+                py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_original_image")
                 # py_log_always_on.log_time(MY_LOGGER, "test_da")
-                img_test, mask_test = random_horizontal_flip(img_test, mask_test, prob=1.0)
-                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Horizontal flip")
+                img_test, masks_test = random_horizontal_flip(img_test, masks_test, prob=1.0)
+                py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_horizontal_flip")
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
 
-                # Has to be here, because at this point the img is surely still a PIL image, so .size() is correct
-                ksize = (img_test.size[0]//20)
+
+                ksize = (img_test.shape[0]//20)
                 ksize = ksize+1 if ksize % 2 == 0 else ksize
                 # py_log_always_on.log_time(MY_LOGGER, "test_da")
                 img_test = random_gaussian_blur(img_test, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=1.0)
-                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Gaussian blur")
+                py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_gaussian blur")
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
 
                 # py_log_always_on.log_time(MY_LOGGER, "test_da")
-                img_test, mask_test = random_rotation(img_test, mask_test, max_angle_diff=15, prob=1.0)
-                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Rotation")
+                img_test, masks_test = random_rotation(img_test, masks_test, max_angle_diff=15, prob=1.0)
+                py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_rotation")
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
 
                 # py_log_always_on.log_time(MY_LOGGER, "test_da")
-                img_test, mask_test = zoom_in_somewhere(img_test, mask_test, max_scale_percent=0.5, prob=1.0)
-                # py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img_test, mask_test], title="Zoom blur")
+                img_test, masks_test = zoom_in_somewhere(img_test, masks_test, max_scale_percent=0.5, prob=1.0)
+                py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_zoom_blur")
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
 
                 # py_log_always_on.log_time(MY_LOGGER, "test_da")
 
                 if True:
                     img = img_test
-                    mask = mask_test
+                    masks = masks_test
 
 
 
@@ -229,64 +218,71 @@ class IrisDataset(Dataset):
 
             if not show_testrun and self.split == 'train':
 
-                img, mask = random_horizontal_flip(img, mask, prob=0.5)
+                img, masks = random_horizontal_flip(img, masks, prob=0.5)
 
-                # Has to be here, because at this point the img is surely still a PIL image, so .size() is correct
-                ksize = (img.size[0]//20)
+                ksize = (img.shape[0]//20)
                 ksize = ksize+1 if ksize % 2 == 0 else ksize
                 img = random_gaussian_blur(img, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=0.1)
 
-                img, mask = random_rotation(img, mask, max_angle_diff=30, prob=0.5)
+                img, masks = random_rotation(img, masks, max_angle_diff=30, prob=0.5)
 
-                img, mask = zoom_in_somewhere(img, mask, max_scale_percent=0.3, prob=0.7)
-
-
-
-
-
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+                img, masks = zoom_in_somewhere(img, masks, max_scale_percent=0.3, prob=0.7)
 
 
 
 
 
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da")
 
-            # Converting img and mask to correct dimensions, binarization, types, and removing unnecessary dimension
+
+
+
+
+
+            # Converting img and masks to correct dimensions, binarization, types, and removing unnecessary dimension
             img = smart_conversion(img, 'ndarray', 'uint8')
-            mask = smart_conversion(mask, 'ndarray', 'uint8')
+            masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
 
 
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_converted")
 
 
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
+            # #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
             # performing the necessary resizing
             img = cv2.resize(img, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4)
-            mask = cv2.resize(mask, (self.output_width, self.output_height), interpolation=cv2.INTER_LANCZOS4)
+            masks = [cv2.resize(mask, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4) for mask in masks]
 
             if show_testrun:
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
             
-            # Making the mask binary, as it is meant to be.
-            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
-            mask[mask < 127] = 0
-            mask[mask >= 127] = 1
+            # Making the masks binary, as it is meant to be.
+            for i, mask in enumerate(masks):
+                mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+                masks[i] = mask
 
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([img, mask])
+            
+            veins, sclera = masks
 
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_resized")
+
+            # stack img and sclera to get a 4-channel image
+            sclera = np.expand_dims(sclera, axis=2)
+            img = np.concatenate([img, sclera], axis=2)
             # Conversion to standard types that pytorch can work with.
-            # target tensor is long, because it is a classification task (in regression it would also be float32)
             img = smart_conversion(img, "tensor", "float32") # converts to float32
-            mask = smart_conversion(mask, 'tensor', "uint8").long() # converts to int64
+            sclera = smart_conversion(sclera, 'tensor', "float32") # converts to float32
 
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); show_image([img, mask])
+            # target tensor is long, because it is a classification task (in regression it would also be float32)
+            veins = smart_conversion(veins, 'tensor', "uint8").long() # converts to int64
+
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_imgs_quick_figs([img, veins, sclera], f"{idx}_{save_img_ix}_final")
 
 
-            # mask mustn't have channels. It is a target, not an image.
+            # veins mustn't have channels. It is a target, not an image.
             # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
-            # So here we need to return (height, width) mask, not (height, width, 1) mask.
-            mask = mask.squeeze() # This function removes all dimensions of size 1 from the tensor
+            # So here we need to return (height, width) veins, not (height, width, 1) veins.
+            veins = veins.squeeze() # This function removes all dimensions of size 1 from the tensor
 
             if show_testrun:
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
@@ -301,7 +297,7 @@ class IrisDataset(Dataset):
 
 
 
-            return {'images': img, 'masks': mask, 'img_names': img_name}
+            return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name}
         
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER)
@@ -312,8 +308,9 @@ class IrisDataset(Dataset):
 def custom_collate_fn(batch):
     images = torch.stack([item['images'] for item in batch])
     masks = torch.stack([item['masks'] for item in batch])
+    scleras = torch.stack([item['scleras'] for item in batch])
     img_names = [item['img_names'] for item in batch]  # Collect image names into a list
-    return {'images': images, 'masks': masks, 'img_names': img_names}
+    return {'images': images, 'masks': masks, "scleras" : scleras, 'img_names': img_names}
 
 
 

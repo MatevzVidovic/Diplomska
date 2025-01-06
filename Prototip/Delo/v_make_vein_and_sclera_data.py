@@ -14,11 +14,12 @@ import sys
 import matplotlib.pyplot as plt
 
 
-vasd = osp.join('vein_and_sclera_data')
+vasd = osp.join("Data", 'vein_and_sclera_data')
+sh.rmtree(vasd, ignore_errors=True)
 os.makedirs(vasd, exist_ok=True)
 
-sd = osp.join('sclera_data')
-vsd = osp.join('vein_sclera_data')
+sd = osp.join("Data", 'sclera_data')
+vsd = osp.join("Data", 'vein_sclera_data')
 
 
 # make tiff? make in np format? Make 4chan png?
@@ -36,16 +37,29 @@ for p in paths:
 
 
 
+
+
 sh.copytree(vsd, vasd, dirs_exist_ok=True)
+
+# rename Masks to Veins
+paths = os.listdir(vasd) # ["test", "train", "val"]
+for p in paths:
+    curr_p = osp.join(vasd, p, "Masks")
+    new_p = osp.join(vasd, p, "Veins")
+    os.rename(curr_p, new_p)
+
 
 for folder in os.listdir(vasd):
     goal_f = osp.join(vasd, folder, "Scleras")
     os.makedirs(goal_f, exist_ok=True)
-    source = osp.join(vsd, folder, "Images")
-    for img_name in os.listdir(source):
+    source = osp.join(sclera_all_masks_path)
+
+    relevant_imgs = osp.join(vasd, folder, "Images")
+
+    for img_name in os.listdir(relevant_imgs):
         sclera_name = img_name.removesuffix(".jpg") + ".png"
         new_sclera_name = img_name.removesuffix(".jpg") + "_sclera.png"
-        curr_source = osp.join(source, img_name)
+        curr_source = osp.join(source, sclera_name)
         curr_dest = osp.join(goal_f, new_sclera_name)
         sh.copy(curr_source, curr_dest)
         

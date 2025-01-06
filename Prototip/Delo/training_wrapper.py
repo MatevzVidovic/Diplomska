@@ -312,7 +312,7 @@ def get_IoU_from_predictions(predictions, targets, num_classes=2):
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
 
-def conf_matrix_to_IoU(confusion_matrix, n_classes):
+def conf_matrix_to_IoU(confusion_matrix, num_classes):
     """
     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
     print(c)
@@ -325,7 +325,7 @@ def conf_matrix_to_IoU(confusion_matrix, n_classes):
     """
 
     try:
-        if confusion_matrix.shape != (n_classes, n_classes):
+        if confusion_matrix.shape != (num_classes, num_classes):
             print(confusion_matrix.shape)
             raise NotImplementedError()
 
