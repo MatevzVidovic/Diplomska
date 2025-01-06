@@ -39,6 +39,7 @@ import torch
 import os
 # import random
 from PIL import Image
+import cv2
 from torchvision import transforms
 
 import matplotlib.pyplot as plt
@@ -85,22 +86,30 @@ def save_plt_fig_quick_figs(fig, filename, formats={"svg", "png", "pkl"}, dpi=10
 
 
 def save_img(img, path, filename):
-    os.makedirs(path, exist_ok=True)
+    try:
+        os.makedirs(path, exist_ok=True)
+        
+        # this clones the image anyway
+        img = smart_conversion(img, 'Image', 'uint8')
+        
+        # PIL images can simply be saved. The resolution is the same as that of the image.
+        img.save(osp.join(path, filename))
     
-    py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"])
-
-    # this clones the image anyway
-    img = smart_conversion(img, 'Image', 'uint8')
-
-    py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"])
-    
-    # PIL images can simply be saved. The resolution is the same as that of the image.
-    img.save(osp.join(path, filename))
+    except Exception as e:
+        py_log_always_on.log_stack(MY_LOGGER)
+        raise e
 
 
 def save_img_quick_figs(img, filename):
     quick_figs_path = osp.join("quick_figs")
     save_img(img, quick_figs_path, filename)
+
+def save_imgs_quick_figs(imgs, id_name):
+    quick_figs_path = osp.join("quick_figs")
+    
+    for ix, img in enumerate(imgs):
+        filename = f"{id_name}_{ix}.png"
+        save_img(img, quick_figs_path, filename)
 
 
 
@@ -326,6 +335,8 @@ def to_img_repr_and_then_type(img, goal_type_name, goal_img_repr):
     return to_type(to_img_repr(img, goal_img_repr), goal_type_name)
 
 def smart_conversion(img, goal_type_name, goal_img_repr):
+    # goal_type_name can be 'ndarray', 'tensor', 'Image'
+    # goal_img_repr can be "uint8", "float32"
 
     try:
 

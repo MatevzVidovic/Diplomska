@@ -47,35 +47,32 @@ np.random.seed(7)
 
 # Horizontal flip and gaussian blur funtions:
 
-def random_horizontal_flip(img, masks, prob=0.5):
+def random_horizontal_flip(img, mask, prob=0.5):
     # Takes PIL img as input, returns PIL img.
     # If input not PIL img, automatically transforms it to PIL img.
 
     try:
         
         if np.random.random() > prob:
-            return img, masks
+            return img,mask
 
 
-        img = smart_conversion(img, 'ndarray', 'uint8')
-        masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
+        img = smart_conversion(img, 'Image', 'uint8')
+        mask = smart_conversion(mask, 'Image', 'uint8')
 
-        # aug_img = img.transpose(Image.FLIP_LEFT_RIGHT)
-        # aug_mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
-
-        aug_img = cv2.flip(img, 1)
-        aug_masks = [cv2.flip(mask, 1) for mask in masks]
+        aug_img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        aug_mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
 
         #py_log_always_on.log_time(MY_LOGGER, "test_da")
-        return aug_img, aug_masks
+        return aug_img, aug_mask
     
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
 
-def horizontal_flip(img, masks):
-    aug_img, aug_masks = random_horizontal_flip(img, masks, prob=1.1)
-    return aug_img, aug_masks
+def horizontal_flip(img, mask):
+    aug_img, aug_mask = random_horizontal_flip(img, mask, prob=1.1)
+    return aug_img, aug_mask
 
 
 def random_gaussian_blur(img, possible_sigma_vals_list=range(2, 7), ker_size=7, prob=0.2):
@@ -256,7 +253,7 @@ def maximal_rectangle_with_indices(matrix):
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
 
-def crop_to_nonzero_in_fourth_channel(img, masks, crop="all_zero"):
+def crop_to_nonzero_in_fourth_channel(img, mask, crop="all_zero"):
 
     # crop can be "all_zero" or "hug_nonzero"
     
@@ -277,7 +274,7 @@ def crop_to_nonzero_in_fourth_channel(img, masks, crop="all_zero"):
             
             # Crop the image and mask
             cropped_img = img[min_y:max_y+1, min_x:max_x+1]
-            cropped_masks = [mask[min_y:max_y+1, min_x:max_x+1] for mask in masks]
+            cropped_mask = mask[min_y:max_y+1, min_x:max_x+1]
         
 
 
@@ -417,7 +414,7 @@ def crop_to_nonzero_in_fourth_channel(img, masks, crop="all_zero"):
                 except:
                     # An error in line 395 (the y_min += 1) would cause an error here. I guess sometimes it just doesn't go through nicely.
                     print("Error in cropping the image to the non-zero values in the fourth channel. Returned the original image.")
-                    return img, masks, True
+                    return img, mask, True
 
             # Works but uses more python so it's probably slower:
             else:
@@ -438,18 +435,18 @@ def crop_to_nonzero_in_fourth_channel(img, masks, crop="all_zero"):
 
 
             cropped_img = img[y_min:y_max+1, x_min:x_max+1]
-            cropped_masks = [mask[y_min:y_max+1, x_min:x_max+1] for mask in masks]
+            cropped_mask = mask[y_min:y_max+1, x_min:x_max+1]
             
 
 
-        return cropped_img, cropped_masks, False
+        return cropped_img, cropped_mask, False
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
     
 
-def random_rotation(inp_img, inp_masks, max_angle_diff=15, mean_angle=0, rotate_type="shrink", prob=0.2):
+def random_rotation(inp_img, inp_mask, max_angle_diff=15, mean_angle=0, rotate_type="shrink", prob=0.2):
     
     # THE SIZE OF THE IMAGE MIGHT BE SMALLER AFTER THIS FUNCTION!!!!!
 
@@ -473,11 +470,12 @@ def random_rotation(inp_img, inp_masks, max_angle_diff=15, mean_angle=0, rotate_
     try:
 
         if np.random.random() > prob:
-            return inp_img, inp_masks
+            return inp_img, inp_mask
         
         # These give coppies anyway, so don't worry about changing them.
         img = smart_conversion(inp_img, 'ndarray', 'uint8')
-        masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in inp_masks]
+        mask = smart_conversion(inp_mask, 'ndarray', 'uint8')
+
         
         
         # Add a channel with ones
@@ -497,7 +495,7 @@ def random_rotation(inp_img, inp_masks, max_angle_diff=15, mean_angle=0, rotate_
 
         # Perform the rotation
         aug_img = cv2.warpAffine(img, rotation_matrix, (img.shape[1], img.shape[0]), borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-        aug_masks = [cv2.warpAffine(mask, rotation_matrix, (mask.shape[1], mask.shape[0]), borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0)) for mask in masks]
+        aug_mask = cv2.warpAffine(mask, rotation_matrix, (mask.shape[1], mask.shape[0]), borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
 
         #py_log_always_on.log_time(MY_LOGGER, "test_da")
 
@@ -507,10 +505,10 @@ def random_rotation(inp_img, inp_masks, max_angle_diff=15, mean_angle=0, rotate_
         # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); show_image([aug_img[...,:-1], aug_mask])
 
         if rotate_type == "shrink":
-            aug_img, aug_masks, error = crop_to_nonzero_in_fourth_channel(aug_img, aug_masks, crop="all_zero")
+            aug_img, aug_mask, error = crop_to_nonzero_in_fourth_channel(aug_img, aug_mask, crop="all_zero")
         
         if error:
-            return inp_img, inp_masks
+            return inp_img, inp_mask
         
 
         # Remove the last channel
@@ -520,16 +518,16 @@ def random_rotation(inp_img, inp_masks, max_angle_diff=15, mean_angle=0, rotate_
         # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
         #py_log_always_on.log_time(MY_LOGGER, "test_da")
-        return aug_img, aug_masks
+        return aug_img, aug_mask
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
     
 
-def rotation(img, masks, angle, rotate_type="shrink"):
-    aug_img, aug_masks = random_rotation(img, masks, max_angle_diff=0, mean_angle=angle, rotate_type=rotate_type, prob=1.1)
-    return aug_img, aug_masks
+def rotation(img, mask, angle, rotate_type="shrink"):
+    aug_img, aug_mask = random_rotation(img, mask, max_angle_diff=0, mean_angle=angle, rotate_type=rotate_type, prob=1.1)
+    return aug_img, aug_mask
 
 
 
@@ -540,7 +538,7 @@ def rotation(img, masks, angle, rotate_type="shrink"):
 
 
 
-def zoom_and_offset(img, masks, scale_percent, offset_percent_y=0.5, offset_percent_x=0.5):
+def zoom_and_offset(img, mask, scale_percent, offset_percent_y=0.5, offset_percent_x=0.5):
 
     try:
         # This function zooms in on a random part of the image.
@@ -550,7 +548,7 @@ def zoom_and_offset(img, masks, scale_percent, offset_percent_y=0.5, offset_perc
         # If input not np.array, automatically transforms it to np.array.
 
         img = smart_conversion(img, 'ndarray', 'uint8')
-        masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
+        mask = smart_conversion(mask, 'ndarray', 'uint8')
 
         remain_percent = 1 - scale_percent
         
@@ -573,7 +571,7 @@ def zoom_and_offset(img, masks, scale_percent, offset_percent_y=0.5, offset_perc
         offset_horiz = int(offset_percent_x * max_offset_horiz)
         
         aug_img = img[offset_vert:offset_vert+vert_pix_num, offset_horiz:offset_horiz+horiz_pix_num, :]
-        aug_masks = [mask[offset_vert:offset_vert+vert_pix_num, offset_horiz:offset_horiz+horiz_pix_num, :] for mask in masks]
+        aug_mask = mask[offset_vert:offset_vert+vert_pix_num, offset_horiz:offset_horiz+horiz_pix_num, :]
 
         # aug_img = img[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
         # aug_mask = mask[vert_pix_num:-vert_pix_num, horiz_pix_num:-horiz_pix_num, :]
@@ -582,14 +580,14 @@ def zoom_and_offset(img, masks, scale_percent, offset_percent_y=0.5, offset_perc
 
 
         #py_log_always_on.log_time(MY_LOGGER, "test_da")
-        return aug_img, aug_masks
+        return aug_img, aug_mask
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER)
         raise e
 
 
-def zoom_in_somewhere(img, masks, max_scale_percent=0.2, prob=0.2):
+def zoom_in_somewhere(img, mask, max_scale_percent=0.2, prob=0.2):
 
     # This function zooms in on a random part of the image.
 
@@ -598,7 +596,7 @@ def zoom_in_somewhere(img, masks, max_scale_percent=0.2, prob=0.2):
     # If input not np.array, automatically transforms it to np.array.
 
     if np.random.random() > prob:
-        return img, masks
+        return img, mask
     
 
     scale_percent = np.random.uniform(0, max_scale_percent)
@@ -606,6 +604,6 @@ def zoom_in_somewhere(img, masks, max_scale_percent=0.2, prob=0.2):
     offset_percent_x = np.random.uniform(0, 1)
     offset_percent_y = np.random.uniform(0, 1)
 
-    aug_img, aug_masks = zoom_and_offset(img, masks, scale_percent, offset_percent_x, offset_percent_y)
+    aug_img, aug_mask = zoom_and_offset(img, mask, scale_percent, offset_percent_x, offset_percent_y)
 
-    return aug_img, aug_masks
+    return aug_img, aug_mask

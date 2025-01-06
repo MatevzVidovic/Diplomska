@@ -12,7 +12,7 @@ train_epoch_size_limit: 400
 # More trainig-type-defining parameters
 num_epochs_per_training_iteration: 1
 cleanup_k: 3      # Options: 0, 1, 2, 3
-dataset_option: "augment"    # Options: augment, pass_through, partially_preaugmented.
+dataset_option: "aug_with_sclera"    # Options: augment, pass_through, partially_preaugmented.
 optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
 loss_fn_name: "MCDL"
 alphas: []
@@ -21,7 +21,7 @@ alphas: []
 model: "64_2_6"
 input_width: 2048
 input_height: 1024
-input_channels: 3
+input_channels: 4
 output_channels: 2
 
 
