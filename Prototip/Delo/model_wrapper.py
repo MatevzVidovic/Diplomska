@@ -129,12 +129,8 @@ class ModelWrapper:
             self.learning_rate = learning_dict["learning_rate"]
             self.optimizer_class = learning_dict["optimizer_class"]
 
-            new_learning_dict = {
-                "loss_fn": learning_dict["loss_fn"],
-                "train_epoch_size_limit": learning_dict["train_epoch_size_limit"],
-            }
 
-            self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, new_learning_dict, device)
+            self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, learning_dict, device)
 
             self.initialize_optimizer()
 
@@ -157,7 +153,7 @@ class ModelWrapper:
         
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -180,13 +176,13 @@ class ModelWrapper:
 
         batchnorm_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("BatchNorm2d")
         other_zeroth_dim_ixs = []
-        print(other_zeroth_dim_LLM_ixs)
+        # print(other_zeroth_dim_LLM_ixs)
         for ix in other_zeroth_dim_LLM_ixs:
             curr = self.lowest_level_modules[ix]
-            print("curr", curr)
+            # print("curr", curr)
             other_zeroth_dim_ixs.append(curr)
         other_zeroth_dim_ixs = batchnorm_ixs + other_zeroth_dim_ixs
-        print("other_zeroth_dim_ixs", other_zeroth_dim_ixs)
+        # print("other_zeroth_dim_ixs", other_zeroth_dim_ixs)
         
         initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
         if osp.exists(osp.join(initial_resource_calc_path)):

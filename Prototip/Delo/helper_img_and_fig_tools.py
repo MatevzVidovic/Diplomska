@@ -96,7 +96,7 @@ def save_img(img, path, filename):
         img.save(osp.join(path, filename))
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -197,7 +197,7 @@ def show_image(passed_img, title="", close_all_limit=1e9):
         return fig, axes
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -257,7 +257,7 @@ def to_type(given_img, goal_type_name):
                         We got type(given_img) = {type(given_img)} and goal_type_name = {goal_type_name}""")
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 def to_img_repr(given_img, goal_img_repr):
@@ -325,7 +325,7 @@ def to_img_repr(given_img, goal_img_repr):
                         
                         """)
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 def to_type_and_then_img_repr(img, goal_type_name, goal_img_repr):
@@ -364,5 +364,5 @@ def smart_conversion(img, goal_type_name, goal_img_repr):
             return to_type_and_then_img_repr(img, goal_type_name, goal_img_repr)
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e

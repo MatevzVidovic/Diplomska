@@ -272,10 +272,13 @@ class IrisDataset(Dataset):
 
             # stack img and sclera to get a 4-channel image
             sclera = np.expand_dims(sclera, axis=2)
-
-            # this is the only thing that we don't do
             # img = np.concatenate([img, sclera], axis=2)
-            
+            imgXsclera = img * sclera
+
+            sclera_3_channels = np.concatenate([sclera, sclera, sclera], axis=2)
+            where_is_not_sclera = np.where(sclera_3_channels == 0)
+            img[where_is_not_sclera] = 0
+
             # Conversion to standard types that pytorch can work with.
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             sclera = smart_conversion(sclera, 'tensor', "float32") # converts to float32

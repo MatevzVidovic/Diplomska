@@ -96,6 +96,7 @@ class IrisDataset(Dataset):
         
         to_veins = osp.join(self.filepath,'Veins')
         to_scleras = osp.join(self.filepath,'Scleras')
+        to_bcosfire = osp.join(self.filepath,'Bcosfire')
 
 
 
@@ -103,7 +104,7 @@ class IrisDataset(Dataset):
             
             img_name_without_suffix = img_name.strip(".jpg")
 
-            if self.masks_exist(to_veins, to_scleras, img_name_without_suffix):
+            if self.masks_exist(to_veins, to_scleras, to_bcosfire, img_name_without_suffix):
                 images_with_masks.append(img_name_without_suffix)
 
 
@@ -125,10 +126,11 @@ class IrisDataset(Dataset):
             return min(self.testrun_length, real_size)
         return real_size
     
-    def masks_exist(self, veins_folder_path, scleras_folder_path, img_name_name_no_suffix):
+    def masks_exist(self, veins_folder_path, scleras_folder_path, bcosfire_folder_path, img_name_name_no_suffix):
         vein_mask_filename = osp.join(veins_folder_path, img_name_name_no_suffix + '.png')
         sclera_mask_filename = osp.join(scleras_folder_path, img_name_name_no_suffix + '_sclera.png')
-        masks_exist = osp.exists(vein_mask_filename) and osp.exists(sclera_mask_filename)
+        bcosfire_filename = osp.join(bcosfire_folder_path, img_name_name_no_suffix + '.png')
+        masks_exist = osp.exists(vein_mask_filename) and osp.exists(sclera_mask_filename) and osp.exists(bcosfire_filename)
         return masks_exist
 
 
@@ -158,11 +160,19 @@ class IrisDataset(Dataset):
             scleras = cv2.cvtColor(scleras, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier
 
 
+            bcosfire_path = osp.join(self.filepath,'Bcosfire')
+            img_name_no_suffix = self.img_names_no_suffix[idx]
+            bcosfire_filename = osp.join(bcosfire_path, img_name_no_suffix + '.png')
+            bcosfire = cv2.imread(bcosfire_filename)
+            bcosfire = cv2.cvtColor(bcosfire, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier
+
+
             img = smart_conversion(img, 'ndarray', 'uint8')
             veins = smart_conversion(veins, 'ndarray', 'uint8')
             scleras = smart_conversion(scleras, 'ndarray', 'uint8')
+            bcosfire = smart_conversion(bcosfire, 'ndarray', 'uint8')
 
-            masks = [veins, scleras]
+            masks = [veins, scleras, bcosfire]
 
 
             save_img_ix = 0
@@ -257,7 +267,7 @@ class IrisDataset(Dataset):
 
 
             
-            veins, sclera = masks
+            veins, sclera, bcosfire = masks
 
             veins = cv2.cvtColor(veins, cv2.COLOR_RGB2GRAY)
             veins[veins <= 127] = 0
@@ -266,16 +276,24 @@ class IrisDataset(Dataset):
             sclera = cv2.cvtColor(sclera, cv2.COLOR_RGB2GRAY)
             sclera[sclera <= 127] = 0
             sclera[sclera > 127] = 255
-            
+            sclera = np.expand_dims(sclera, axis=2)
+
+            bcosfire = cv2.cvtColor(bcosfire, cv2.COLOR_RGB2GRAY)
+            bcosfire = np.expand_dims(bcosfire, axis=2)
 
             #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_resized")
 
             # stack img and sclera to get a 4-channel image
-            sclera = np.expand_dims(sclera, axis=2)
-
-            # this is the only thing that we don't do
             # img = np.concatenate([img, sclera], axis=2)
-            
+            # imgXsclera = img * sclera
+
+            img = np.concatenate([img, bcosfire], axis=2)
+
+            sclera_3_channels = np.concatenate([sclera, sclera, sclera], axis=2)
+            where_is_not_sclera = np.where(sclera_3_channels == 0)
+            img[where_is_not_sclera] = 0
+
+
             # Conversion to standard types that pytorch can work with.
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             sclera = smart_conversion(sclera, 'tensor', "float32") # converts to float32

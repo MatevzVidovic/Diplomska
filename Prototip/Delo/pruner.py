@@ -153,7 +153,7 @@ class Pruner:
             return
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -200,7 +200,7 @@ class Pruner:
             return
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -253,7 +253,7 @@ class Pruner:
             return
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -298,7 +298,7 @@ class Pruner:
             return
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -385,7 +385,7 @@ class Pruner:
             return disallowed_directly, disallowed_tree_ixs, disallowed_choices, disallowed_choices_tree_ixs
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
     
 
@@ -532,7 +532,7 @@ class Pruner:
 
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
         
@@ -684,6 +684,6 @@ class Pruner:
         
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 

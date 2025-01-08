@@ -167,8 +167,7 @@ class IrisDataset(Dataset):
 
             save_img_ix = 0
 
-            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_before_da")
-
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_before_da")
 
             show_testrun = False
 
@@ -255,14 +254,19 @@ class IrisDataset(Dataset):
 
             if show_testrun:
                 py_log_always_on.log_time(MY_LOGGER, "test_da")
-            
-            # Making the masks binary, as it is meant to be.
-            for i, mask in enumerate(masks):
-                mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
-                masks[i] = mask
+
 
             
             veins, sclera = masks
+
+            veins = cv2.cvtColor(veins, cv2.COLOR_RGB2GRAY)
+            veins[veins <= 127] = 0
+            veins[veins > 127] = 1
+
+            sclera = cv2.cvtColor(sclera, cv2.COLOR_RGB2GRAY)
+            sclera[sclera <= 127] = 0
+            sclera[sclera > 127] = 255
+            
 
             #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_resized")
 
@@ -275,9 +279,9 @@ class IrisDataset(Dataset):
 
             # target tensor is long, because it is a classification task (in regression it would also be float32)
             veins = smart_conversion(veins, 'tensor', "uint8").long() # converts to int64
-
-            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_imgs_quick_figs([img, veins, sclera], f"{idx}_{save_img_ix}_final")
-
+            
+            veins_for_show = veins.clone() * 255
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_imgs_quick_figs([img, veins_for_show, sclera], f"{idx}_{save_img_ix}_final")
 
             # veins mustn't have channels. It is a target, not an image.
             # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
@@ -300,7 +304,7 @@ class IrisDataset(Dataset):
             return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name}
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 

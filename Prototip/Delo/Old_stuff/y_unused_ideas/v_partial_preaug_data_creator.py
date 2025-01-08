@@ -298,5 +298,5 @@ if __name__ == "__main__":
 
         
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e

@@ -63,17 +63,13 @@ from helper_model_eval_graphs import resource_graph, show_results
 
 
 @py_log.autolog(passed_logger=MY_LOGGER)
-def is_previous_model(model_path, model_wrapper, get_last_model_path = False):
+def is_previous_model(model_filename, model_wrapper):
 
     j_path = osp.join(model_wrapper.save_path, "previous_model_details.json")
     j_dict = jh.load(j_path)
     prev_filename = j_dict["previous_model_filename"]
-    prev_model_path = osp.join(model_wrapper.save_path, prev_filename)
     
-    returner = model_path == prev_model_path
-
-    if get_last_model_path:
-        returner = (returner, prev_model_path)
+    returner = model_filename == prev_filename
 
     return returner
 
@@ -228,15 +224,15 @@ class TrainingLogs:
 
             log = sorted_logs.pop() # pops last element
             
-            model_path = log[3]
-            if is_previous_model(model_path, model_wrapper):
+            model_filename = log["model_filename"]
+            if is_previous_model(model_filename, model_wrapper):
                 continue
 
             to_delete.append(log)
 
 
         for log in to_delete:
-            model_filename = log[3]
+            model_filename = log["model_filename"]
             model_path = osp.join(model_wrapper.save_path, "models", model_filename)
             self.delete_log(log)
             try:
@@ -378,9 +374,9 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
         # this only happens if we do a manual save before any training even took place
         # or maybe if we prune before any training took place
         if training_logs.last_log is not None:
-            v = training_logs.last_log[0]
-            t = training_logs.last_log[1]
-            ti = training_logs.last_log[2]
+            v = training_logs.last_log["val_err"]
+            t = training_logs.last_log["test_err"]
+            ti = training_logs.last_log["train_iter"]
             # new_log = (v, t, ti, new_model_filename, unique_id, True)
             new_log = ({"val_err": v, "test_err": t, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True})
 
@@ -432,7 +428,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
     if training_logs.last_log is not None:
-        train_iter = training_logs.last_log[2]
+        train_iter = training_logs.last_log["train_iter"]
     else:
         train_iter = 0
     
@@ -743,6 +739,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
         train_iter += 1 # this reflects how many trainings we have done
+
+        print(f"We have finished training iteration {train_iter}")
 
 
 
