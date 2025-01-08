@@ -67,7 +67,7 @@ def random_horizontal_flip(img, mask, prob=0.5):
         return aug_img, aug_mask
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 def horizontal_flip(img, mask):
@@ -95,7 +95,7 @@ def random_gaussian_blur(img, possible_sigma_vals_list=range(2, 7), ker_size=7, 
         return aug_img
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
     
 
@@ -185,7 +185,7 @@ def maxHist(row):
         return max_area, left_index, right_index, height_of_max_area
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -226,7 +226,7 @@ def max_histogram_area_with_indices(heights):
         return max_area, left_index, right_index, height_index
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -250,7 +250,7 @@ def maximal_rectangle_with_indices(matrix):
         return max_area, max_coords
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 def crop_to_nonzero_in_fourth_channel(img, mask, crop="all_zero"):
@@ -442,7 +442,7 @@ def crop_to_nonzero_in_fourth_channel(img, mask, crop="all_zero"):
         return cropped_img, cropped_mask, False
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
     
 
@@ -521,7 +521,7 @@ def random_rotation(inp_img, inp_mask, max_angle_diff=15, mean_angle=0, rotate_t
         return aug_img, aug_mask
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
     
 
@@ -583,7 +583,7 @@ def zoom_and_offset(img, mask, scale_percent, offset_percent_y=0.5, offset_perce
         return aug_img, aug_mask
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 

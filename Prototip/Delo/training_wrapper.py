@@ -30,7 +30,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-
+import cv2
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -86,7 +86,7 @@ def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=
     
 
     except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -107,9 +107,22 @@ def get_conf_matrix(predictions, targets, num_classes=2):
     """
 
     try:
+        
 
-        predictions_np = predictions.data.cpu().long().numpy()
-        targets_np = targets.cpu().long().numpy()
+        if isinstance(predictions, torch.Tensor):
+            predictions_np = predictions.data.cpu().long().numpy()
+        elif isinstance(predictions, np.ndarray):
+            predictions_np = predictions.astype(np.int64)
+        else:
+            raise NotImplementedError(f"Type of predictions not supported: {type(predictions)}")
+
+        if isinstance(targets, torch.Tensor):    
+            targets_np = targets.cpu().long().numpy()
+        elif isinstance(targets, np.ndarray):
+            targets_np = targets.astype(np.int64)
+        else:
+            raise NotImplementedError(f"Type of targets not supported: {type(targets)}")
+        
         # for batch of predictions
         # if len(np.unique(targets)) != 2:
         #    print(len(np.unique(targets)))
@@ -186,101 +199,103 @@ def get_conf_matrix(predictions, targets, num_classes=2):
 
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
 
+if False:
+    _ = True
 
-# # slow but surely correct
+    # # slow but surely correct
 
-# def get_conf_matrix(predictions, targets, num_classes=2):
-#     """
-#     predictions and targets can be matrixes or tensors.
-    
-#     In both cases we only get a single confusion matrix
-#     - in the tensor case it is simply agreggated over all examples in the batch.
-#     """
-
-#     try:
-
-#         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
-#         targets_np = targets.cpu().long().numpy().astype(np.uint8)
+    # def get_conf_matrix(predictions, targets, num_classes=2):
+    #     """
+    #     predictions and targets can be matrixes or tensors.
         
+    #     In both cases we only get a single confusion matrix
+    #     - in the tensor case it is simply agreggated over all examples in the batch.
+    #     """
+
+    #     try:
+
+    #         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
+    #         targets_np = targets.cpu().long().numpy().astype(np.uint8)
+            
+            
+    #         try:
+    #             assert (predictions.shape == targets.shape)
+    #         except:
+    #             print("predictions.shape: ", predictions.shape)
+    #             print("targets.shape: ", targets.shape)
+    #             raise AssertionError
+
+
+    #         confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.uint64)
+
+    #         for tar in range(num_classes):
+    #             tar_mask = targets_np == tar
+    #             for pred in range(num_classes):
+    #                 curr_pred = predictions_np[tar_mask] == pred
+    #                 confusion_matrix[tar, pred] = curr_pred.sum()
+
+    #         return confusion_matrix
+
+
+    #     except Exception as e:
+    #         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+    #         raise e
+
+
+
+
+
+
+    # def two_class_IoU_from_predictions(predictions, targets):
+    #     """
+    #     predictions and targets can be matrixes or tensors.
         
-#         try:
-#             assert (predictions.shape == targets.shape)
-#         except:
-#             print("predictions.shape: ", predictions.shape)
-#             print("targets.shape: ", targets.shape)
-#             raise AssertionError
+    #     In both cases we only get a single confusion matrix
+    #     - in the tensor case it is simply agreggated over all examples in the batch.
+    #     """
+
+    #     try:
+
+    #         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
+    #         targets_np = targets.cpu().long().numpy().astype(np.uint8)
+    #         # for batch of predictions
+    #         # if len(np.unique(targets)) != 2:
+    #         #    print(len(np.unique(targets)))
+            
+            
+    #         try:
+    #             assert (predictions.shape == targets.shape)
+    #         except:
+    #             print("predictions.shape: ", predictions.shape)
+    #             print("targets.shape: ", targets.shape)
+    #             raise AssertionError
 
 
-#         confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.uint64)
+    #         # Calculate intersection and union
+    #         intersection = np.logical_and(predictions_np, targets_np).astype(np.uint8)
+    #         union = np.logical_or(predictions_np, targets_np).astype(np.uint8)
 
-#         for tar in range(num_classes):
-#             tar_mask = targets_np == tar
-#             for pred in range(num_classes):
-#                 curr_pred = predictions_np[tar_mask] == pred
-#                 confusion_matrix[tar, pred] = curr_pred.sum()
+    #         union_sum = union.sum()
+    #         # Calculate IoU
+    #         iou = intersection.sum() / union_sum if union_sum != 0 else 0
 
-#         return confusion_matrix
+    #         if len(predictions_np.shape) > 2:
+    #             for ix in range(union.shape[0]):
+    #                 print("IoU for image", ix, ":", intersection[ix].sum() / union[ix].sum())
+    #                 show_image([(predictions_np[ix], "Predictions"), (targets_np[ix], "Targets"), (intersection[ix], "Intersection"), (union[ix], "Union")])
+    #                 input("Press Enter to continue...")
 
-
-#     except Exception as e:
-#         py_log_always_on.log_stack(MY_LOGGER)
-#         raise e
-
-
-
+    #         return iou
 
 
-
-# def two_class_IoU_from_predictions(predictions, targets):
-#     """
-#     predictions and targets can be matrixes or tensors.
-    
-#     In both cases we only get a single confusion matrix
-#     - in the tensor case it is simply agreggated over all examples in the batch.
-#     """
-
-#     try:
-
-#         predictions_np = predictions.data.cpu().long().numpy().astype(np.uint8)
-#         targets_np = targets.cpu().long().numpy().astype(np.uint8)
-#         # for batch of predictions
-#         # if len(np.unique(targets)) != 2:
-#         #    print(len(np.unique(targets)))
-        
-        
-#         try:
-#             assert (predictions.shape == targets.shape)
-#         except:
-#             print("predictions.shape: ", predictions.shape)
-#             print("targets.shape: ", targets.shape)
-#             raise AssertionError
-
-
-#         # Calculate intersection and union
-#         intersection = np.logical_and(predictions_np, targets_np).astype(np.uint8)
-#         union = np.logical_or(predictions_np, targets_np).astype(np.uint8)
-
-#         union_sum = union.sum()
-#         # Calculate IoU
-#         iou = intersection.sum() / union_sum if union_sum != 0 else 0
-
-#         if len(predictions_np.shape) > 2:
-#             for ix in range(union.shape[0]):
-#                 print("IoU for image", ix, ":", intersection[ix].sum() / union[ix].sum())
-#                 show_image([(predictions_np[ix], "Predictions"), (targets_np[ix], "Targets"), (intersection[ix], "Intersection"), (union[ix], "Union")])
-#                 input("Press Enter to continue...")
-
-#         return iou
-
-
-#     except Exception as e:
-#         py_log_always_on.log_stack(MY_LOGGER)
-#         raise e
+    #     except Exception as e:
+    #         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+    #         raise e
 
 
 
@@ -309,7 +324,7 @@ def get_IoU_from_predictions(predictions, targets, num_classes=2):
     
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 def conf_matrix_to_IoU(confusion_matrix, num_classes):
@@ -346,87 +361,81 @@ def conf_matrix_to_IoU(confusion_matrix, num_classes):
         return IoU, where_is_union_zero
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
 
 
 
-
-def get_F1_from_predictions(predictions, targets):
-    confusion_matrix = get_conf_matrix(predictions, targets)
-    IoU = conf_matrix_to_F1(confusion_matrix)
-
-    return IoU
-
-def conf_matrix_to_F1(confusion_matrix):
+def conf_matrix_to_F1_prec_rec(confusion_matrix):
 
 
     try:
 
-        TP = confusion_matrix[0][0] # this is actually the background
+        TN = confusion_matrix[0][0]
         FN = confusion_matrix[0][1]
         FP = confusion_matrix[1][0]
-        TN = confusion_matrix[1][1] # this is the target.
-
-        # We could switch them, but it doesn't matter computationally.
+        TP = confusion_matrix[1][1]
 
 
-        precision = TP / (TP + FP)
-        recall = TP / (TP + FN)
+        precision = TP / (TP + FP)    if TP + FP > 0 else 0
+        recall = TP / (TP + FN)    if TP + FN > 0 else 0
 
-        F1 = 2 * (precision * recall) / (precision + recall)
+        F1 = 2 * (precision * recall) / (precision + recall)    if precision + recall > 0 else 0
 
-        return F1
+        return {"F1": F1, "precision": precision, "recall": recall}
+
     
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
-# # On mIoU: It is particularly useful for multi-class segmentation tasks.
-# # mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
-# def get_mIoU_from_predictions(predictions, targets):
-#     confusion_matrix = get_conf_matrix(predictions, targets)
-#     mIoU = conf_matrix_to_mIoU(confusion_matrix)
+if False:
+    _ = True
+    # # On mIoU: It is particularly useful for multi-class segmentation tasks.
+    # # mIoU is calculated by averaging the Intersection over Union (IoU) for each class.
+    # def get_mIoU_from_predictions(predictions, targets):
+    #     confusion_matrix = get_conf_matrix(predictions, targets)
+    #     mIoU = conf_matrix_to_mIoU(confusion_matrix)
 
-#     return mIoU
+    #     return mIoU
 
 
-# def conf_matrix_to_mIoU(confusion_matrix):
-#     """
-#     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
-#     print(c)
-#     [[1 0 0 0]
-#      [0 0 0 0]
-#      [0 1 1 0]
-#      [0 0 0 2]]
-#     miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
-#     print(miou) # 0.625
-#     """
+    # def conf_matrix_to_mIoU(confusion_matrix):
+    #     """
+    #     c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
+    #     print(c)
+    #     [[1 0 0 0]
+    #      [0 0 0 0]
+    #      [0 1 1 0]
+    #      [0 0 0 2]]
+    #     miou = conf_matrix_to_mIoU(c)  # for each class: [1.  0.  0.5 1. ]
+    #     print(miou) # 0.625
+    #     """
 
-#     try:
-#         #print(confusion_matrix)
-#         n_classes = 2
-#         if confusion_matrix.shape != (n_classes, n_classes):
-#             print(confusion_matrix.shape)
-#             raise NotImplementedError()
+    #     try:
+    #         #print(confusion_matrix)
+    #         n_classes = 2
+    #         if confusion_matrix.shape != (n_classes, n_classes):
+    #             print(confusion_matrix.shape)
+    #             raise NotImplementedError()
 
-#         MIoU = np.diag(confusion_matrix) / (
-#                 np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
-#                 np.diag(confusion_matrix))
+    #         MIoU = np.diag(confusion_matrix) / (
+    #                 np.sum(confusion_matrix, axis=1) + np.sum(confusion_matrix, axis=0) -
+    #                 np.diag(confusion_matrix))
 
-#         if n_classes == 2:
-#             print("mIoU computed with only two classes. Background omitted.")
-#             return MIoU.item(1) # only IoU for sclera (not background)
-#         else:
-#             return np.mean(MIoU)
+    #         if n_classes == 2:
+    #             print("mIoU computed with only two classes. Background omitted.")
+    #             return MIoU.item(1) # only IoU for sclera (not background)
+    #         else:
+    #             return np.mean(MIoU)
 
-#     except Exception as e:
-#         py_log_always_on.log_stack(MY_LOGGER)
-#         raise e
+    #     except Exception as e:
+    #         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+    #         raise e
 
 
 
@@ -457,12 +466,14 @@ class TrainingWrapper:
             self.loss_fn = learning_parameters["loss_fn"]
             self.train_epoch_size_limit = learning_parameters["train_epoch_size_limit"]
 
+            self.zero_out_non_sclera_on_predictions = learning_parameters["zero_out_non_sclera_on_predictions"]
+
             # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
             # self.gradient_clip_value = learning_parameters["gradient_clip_value"]
 
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -482,6 +493,7 @@ class TrainingWrapper:
         
             size = int(min(self.train_epoch_size_limit, len(dataloader.dataset)))
             
+            num_batches = len(dataloader)
             size_so_far = 0
 
             self.model.train()
@@ -489,20 +501,35 @@ class TrainingWrapper:
             start = timer()
 
             # print_cuda_memory()
+            agg_test_loss = 0
 
             for batch_ix, data_dict in enumerate(dataloader):
                 X = data_dict["images"]
                 y = data_dict["masks"]
+                scleras = data_dict["scleras"]
                 img_names = data_dict["img_names"]
 
 
                 X, y = X.to(self.device), y.to(self.device)
 
 
-
                 # Compute prediction error
                 pred = self.model(X)
+
+                if self.zero_out_non_sclera_on_predictions:
+                    scleras = scleras.to(self.device)
+                    scleras = torch.squeeze(scleras, dim=1)
+                    where_sclera_is_zero = scleras == 0
+                    pred[:, 0, :, :][where_sclera_is_zero] = 1_000_000
+                    pred[:, 1, :, :][where_sclera_is_zero] = -1_000_000
+                    # we want to make logits such that we are sure this is not a vein
+                    # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
+
                 loss = self.loss_fn(pred, y)
+
+                curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
+                agg_test_loss += curr_test_loss
+
 
 
                 # Backpropagation
@@ -516,8 +543,7 @@ class TrainingWrapper:
                     end = timer()
                     train_times.append(end - start)
                     start = timer()
-                    loss = loss.item()
-                    print(f"loss: {loss:>7f}  [{size_so_far:>5d}/{size:>5d}]")
+                    print(f"per-ex loss: {curr_test_loss:>7f}  [{size_so_far:>5d}/{size:>5d}]")
                 
                 if size_so_far >= size:
                     break
@@ -530,11 +556,13 @@ class TrainingWrapper:
                 # torch.cuda.empty_cache()
 
                 # print_cuda_memory()
+            test_loss = agg_test_loss / num_batches
+            print(f"Train Error: Avg loss: {test_loss:>.8f}")
 
             return train_times
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
     def epoch_pass(self, dataloader_name="train"):
@@ -553,7 +581,7 @@ class TrainingWrapper:
                     self.model(X)
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
@@ -569,19 +597,30 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict[dataloader_name]
 
-            approx_IoU_size = 0
-            IoU_size = 0
             num_batches = len(dataloader)
 
             self.model.eval()
-            test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
+            agg_test_loss = 0
+            n_cl = 2
+            aggregate_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
                     y = data_dict["masks"]
+                    scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
                     X, y = X.to(self.device), y.to(self.device)
                     pred = self.model(X)
+
+                    if self.zero_out_non_sclera_on_predictions:
+                        scleras = scleras.to(self.device)
+                        scleras = torch.squeeze(scleras, dim=1)
+                        where_sclera_is_zero = scleras == 0
+                        pred[:, 0, :, :][where_sclera_is_zero] = 1_000_000
+                        pred[:, 1, :, :][where_sclera_is_zero] = -1_000_000
+                        # we want to make logits such that we are sure this is not a vein
+                        # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
+
 
 
                     # loss_fn computes the mean loss for the entire batch.
@@ -590,57 +629,43 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.loss_fn(pred, y).item()
+                    curr_test_loss = self.loss_fn(pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
+                    agg_test_loss += curr_test_loss
+
+
 
 
 
                     pred_binary = pred[:, 1] > pred[:, 0]
 
-                    F1 += get_F1_from_predictions(pred_binary, y)
 
-                    n_cl = 2
                     confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
-                    approx_IoUs, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
-
-                    if where_is_union_zero[1] == False:
-                        approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
-                        approx_IoU_size += 1
-
-
-                    # X and y are tensors of a batch, so we have to go over them all
-                    for i in range(X.shape[0]):
-
-                        pred_binary = pred[i][1] > pred[i][0]
-
-                        n_cl = 2
-                        confusion_matrix = get_conf_matrix(pred_binary, y[i], num_classes=n_cl)
-                        curr_IoU, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
-
-                        if where_is_union_zero[1] == False:
-                            IoU += curr_IoU.item(1) # only IoU for sclera (not background)
-                            IoU_size += 1
-                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
+                    aggregate_conf_matrix = aggregate_conf_matrix + confusion_matrix
 
 
 
 
-            test_loss /= num_batches # not (num_batches * batch_size), because we are already adding batch means
-            approx_IoU /= approx_IoU_size
-            F1 /= num_batches
-            IoU /= IoU_size # should be same or even more accurate as (num_batches * batch_size)
 
-            print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n approx_IoU: {(approx_IoU):>.6f} \n F1: {F1:>.6f} \n IoU: {IoU:>.6f}\n")
-        
+            test_loss = agg_test_loss / num_batches
+            F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix)
+            F1 = F1_prec_rec["F1"]
+            precision = F1_prec_rec["precision"]
+            recall = F1_prec_rec["recall"]
+            IoU, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
+            IoU = IoU[1]  # only IoU for sclera (not background)
+            
+            print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n F1: {F1:>.6f} \n Precision: {precision:>.6f} \n Recall: {recall:>.6f}\n IoU: {IoU:>.6f}\n")
+            
 
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
             # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
             # return (test_loss, approx_IoU, F1, IoU)
-            return {"loss": test_loss, "approx_IoU": approx_IoU, "F1": F1, "IoU": IoU}
+            return {"loss": test_loss, "F1": F1, "IoU": IoU, "precision": precision, "recall": recall}
 
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
     
 
@@ -668,19 +693,32 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict[dataloader_name]
 
-            approx_IoU_size = 0
-            IoU_size = 0
             self.model.eval()
-            test_loss, approx_IoU, F1, IoU = 0, 0, 0, 0
+            test_loss = 0
             quick_figs_counter = 0
+            n_cl = 2
+            aggregated_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
                     y = data_dict["masks"]
+                    scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
                     
                     X, y = X.to(self.device), y.to(self.device)
                     pred = self.model(X)
+
+                    print(f"scleras.shape: {scleras.shape}")
+
+
+                    if self.zero_out_non_sclera_on_predictions:
+                        scleras = scleras.to(self.device)
+                        scleras = torch.squeeze(scleras, dim=1)
+                        where_sclera_is_zero = scleras == 0
+                        pred[:, 0, :, :][where_sclera_is_zero] = 1_000_000
+                        pred[:, 1, :, :][where_sclera_is_zero] = -1_000_000
+                        # we want to make logits such that we are sure this is not a vein
+                        # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
 
 
                     # loss_fn computes the mean loss for the entire batch.
@@ -695,19 +733,10 @@ class TrainingWrapper:
 
                     pred_binary = pred[:, 1] > pred[:, 0]
 
-                    F1 += get_F1_from_predictions(pred_binary, y)
 
                     n_cl = 2
                     confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
-                    approx_IoUs, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
-                    
-                    if where_is_union_zero[1] == False:
-                        approx_IoU += approx_IoUs.item(1) # only IoU for sclera (not background)
-                        approx_IoU_size += 1
-
-
-                    # make tensor of zeros of size o confusion matrix
-                    aggregated_conf_matrix = torch.zeros(confusion_matrix.shape, dtype=torch.long, device=self.device)
+                    aggregated_conf_matrix += confusion_matrix
 
                     # X and y are tensors of a batch, so we have to go over them all
                     for i in range(X.shape[0]):
@@ -715,18 +744,6 @@ class TrainingWrapper:
                         img_name = img_names[i]
 
                         pred_binary = pred[i][1] > pred[i][0]
-
-                        n_cl = 2
-                        confusion_matrix = get_conf_matrix(pred_binary, y[i], num_classes=n_cl)
-                        curr_IoU, where_is_union_zero = conf_matrix_to_IoU(confusion_matrix, num_classes=n_cl)
-
-                        conf_matrix += confusion_matrix
-
-                        if where_is_union_zero[1] == False:
-                            IoU += curr_IoU.item(1) # only IoU for sclera (not background)
-                            IoU_size += 1
-                        # print(f"This image's IoU: {curr_IoU:>.6f}%")
-
 
                         
                         pred_binary_cpu_np = (pred_binary.cpu()).numpy()
@@ -744,7 +761,7 @@ class TrainingWrapper:
                         # print("num of zeros in Ground truth:", torch.sum(y[i] == 0).item())
                         # print("num of all elements in Ground truth:", y[i].numel())
 
-                        gt = y[i].cpu().numpy()
+                        gt = y[i].cpu().numpy().astype(np.uint8)
                         
                         # fig, ax = plt.subplots(2, 2)
                         
@@ -760,15 +777,22 @@ class TrainingWrapper:
                         # ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
                         # ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
                         # plt.show(block=False)
-
+                        # print(f"gt.shape: {gt.shape}")
+                        # print(f"scleras.shape: {scleras.shape}")
+                        # print(f"scleras[i].shape: {scleras[i].shape}")
+                        sclera = scleras[i].squeeze().cpu().numpy().astype(np.float32)
+                        save_img(sclera, path_to_save_to, f"{img_name}_ts_sclera.png")
 
                         # save_plt_fig_quick_figs(fig, f"ts_{img_name}")
                         save_img(image_np, path_to_save_to, f"{img_name}_ts_img.png")
 
+                        # save_img(gt, path_to_save_to, f"{img_name}_ts_gt.png")
+
                         # mask is int64, because torch likes it like that. Lets make it float, because the vals are only 0s and 1s, and so smart conversion in save_img()
                         # will make it 0s and 255s.
                         gt_float = gt.astype(np.float32)
-                        save_img(gt_float, path_to_save_to, f"{img_name}_ts_gt.png")
+                        save_img(gt_float, path_to_save_to, f"{img_name}_ts_gt_float.png")
+
                         
                         # Here we actually have bool, surprisingly. Again, lets just multiply by 255
                         pred_binary_cpu_np_255 = pred_binary_cpu_np.astype(np.uint8)
@@ -789,20 +813,25 @@ class TrainingWrapper:
 
                         save_img(pred_colormap, path_to_save_to, f"{img_name}_ts_colormap.png")
 
+                        sclera = (sclera * 255).astype(np.uint8)
+                        sclera = cv2.cvtColor(sclera, cv2.COLOR_GRAY2BGR)
+                        sclera_with_colormap = cv2.addWeighted(sclera, 0.5, pred_colormap, 0.5, 0)
+                        save_img(sclera_with_colormap, path_to_save_to, f"{img_name}_ts_sclera_with_colormap.png")
 
 
 
 
-                        fp_and_fn = (gt == 1) & (pred_binary_cpu_np_255 == 0) | (gt == 0) & (pred_binary_cpu_np_255 == 255)
-                        fp_and_fn_on_image_np = image_np.copy()
-                        fp_and_fn_on_image_np[fp_and_fn] = pred_colormap[fp_and_fn]
-                        save_img(fp_and_fn_on_image_np, path_to_save_to, f"{img_name}_ts_fp_and_fn.png")
+
+                        # fp_and_fn = (gt == 1) & (pred_binary_cpu_np_255 == 0) | (gt == 0) & (pred_binary_cpu_np_255 == 255)
+                        # fp_and_fn_on_image_np = image_np.copy()
+                        # fp_and_fn_on_image_np[fp_and_fn] = pred_colormap[fp_and_fn]
+                        # save_img(fp_and_fn_on_image_np, path_to_save_to, f"{img_name}_ts_fp_and_fn.png")
 
 
-                        image_np_blacked_out_in_tp_and_tn = image_np.copy()
-                        tp_and_tn = (gt == 1) & (pred_binary_cpu_np_255 == 255) | (gt == 0) & (pred_binary_cpu_np_255 == 0)
-                        image_np_blacked_out_in_tp_and_tn[tp_and_tn] = 0
-                        save_img(image_np_blacked_out_in_tp_and_tn, path_to_save_to, f"{img_name}_ts_blacked_out.png")
+                        # image_np_blacked_out_in_tp_and_tn = image_np.copy()
+                        # tp_and_tn = (gt == 1) & (pred_binary_cpu_np_255 == 255) | (gt == 0) & (pred_binary_cpu_np_255 == 0)
+                        # image_np_blacked_out_in_tp_and_tn[tp_and_tn] = 0
+                        # save_img(image_np_blacked_out_in_tp_and_tn, path_to_save_to, f"{img_name}_ts_blacked_out.png")
 
 
 
@@ -821,25 +850,19 @@ class TrainingWrapper:
                         
 
                         if inp != "" and inp != 'all':
-                            # write aggregated confusion matrix to csv
-                            aggregated_conf_matrix /= aggregated_conf_matrix.sum()
-                            aggregated_conf_matrix = aggregated_conf_matrix.cpu().numpy()
-                            aggregated_conf_matrix_df = pd.DataFrame(aggregated_conf_matrix)
-                            aggregated_conf_matrix_df.to_csv(osp.join(path_to_save_to, "aggregated_conf_matrix.csv"), index=False)
                             return
 
                         quick_figs_counter += 1
 
 
-                aggregated_conf_matrix /= aggregated_conf_matrix.sum()
-                aggregated_conf_matrix = aggregated_conf_matrix.cpu().numpy()
+                aggregated_conf_matrix = aggregated_conf_matrix / aggregated_conf_matrix.sum()
                 aggregated_conf_matrix_df = pd.DataFrame(aggregated_conf_matrix)
                 aggregated_conf_matrix_df.to_csv(osp.join(path_to_save_to, "aggregated_conf_matrix.csv"), index=False)
 
 
 
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 

@@ -5,7 +5,7 @@
 
 # More situationally changed parameters
 batch_size: 2
-learning_rate: 0.0001
+learning_rate: 0.01
 num_of_dataloader_workers: 7
 train_epoch_size_limit: 400
 
@@ -14,6 +14,7 @@ num_epochs_per_training_iteration: 1
 cleanup_k: 3      # Options: 0, 1, 2, 3
 dataset_option: "aug_with_sclera"    # Options: augment, pass_through, partially_preaugmented.
 optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
+zero_out_non_sclera_on_predictions: False
 loss_fn_name: "MCDL"
 alphas: []
 

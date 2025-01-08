@@ -151,7 +151,7 @@ def show_results(main_save_path):
         return fig, ax
     
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
     # except Exception as e:
@@ -209,7 +209,7 @@ def resource_graph(main_save_path, saved_model_wrapper_path):
         return fig, ax, res_dict
 
     except Exception as e:
-        py_log_always_on.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 

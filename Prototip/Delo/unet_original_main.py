@@ -143,6 +143,7 @@ if __name__ == "__main__":
     cleanup_k = yaml_dict["cleanup_k"]
     DATASET = yaml_dict["dataset_option"]
     optimizer = yaml_dict["optimizer_used"]
+    ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
     loss_fn_name = yaml_dict["loss_fn_name"]
     alphas = yaml_dict["alphas"]
 
@@ -200,9 +201,9 @@ if __name__ == "__main__":
     # These are the specifications.
     # This is how we guard against wrong callings.
 
-    sth_wrong = MODEL != "64_2_6" or INPUT_WIDTH != 2048 or INPUT_HEIGHT != 1024 or INPUT_CHANNELS != 4 or OUTPUT_CHANNELS != 2 or DATASET != "aug_with_sclera" or optimizer != "Adam" or loss_fn_name != "MCDL" or alphas != []
+    sth_wrong = MODEL != "64_2_6" or OUTPUT_CHANNELS != 2 or optimizer != "Adam" or loss_fn_name != "MCDL" or alphas != []
     if sth_wrong:
-        print(f"MODEL: {MODEL}, should be 64_2_6, INPUT_WIDTH: {INPUT_WIDTH}, should be 2048, INPUT_HEIGHT: {INPUT_HEIGHT}, should be 1024, INPUT_CHANNELS: {INPUT_CHANNELS}, should be 4, OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, DATASET: {DATASET}, should be augment, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, should be Default, alphas: {alphas}, should be [].")
+        print(f"MODEL: {MODEL}, should be 64_2_6, OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, should be MCDL, alphas: {alphas}, should be [].")
         raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
 
 
@@ -269,9 +270,16 @@ print(f"Device: {device}")
 
 
 
-
-
-from dataset_aug_with_sclera import IrisDataset, custom_collate_fn
+if DATASET == "augment":
+    from dataset_aug import IrisDataset, custom_collate_fn
+elif DATASET == "aug_with_sclera":
+    from dataset_aug_with_sclera import IrisDataset, custom_collate_fn
+elif DATASET == "aug_with_zero_out_sclera":
+    from dataset_aug_with_zero_out_sclera import IrisDataset, custom_collate_fn
+elif DATASET == "aug_with_zero_out_sclera_real":
+    from dataset_aug_with_zero_out_sclera_real import IrisDataset, custom_collate_fn
+elif DATASET == "aug_bcosfire":
+    from dataset_aug_bcosfire import IrisDataset, custom_collate_fn
 
 loss_fn = MultiClassDiceLoss()
 
@@ -284,16 +292,17 @@ learning_parameters = {
     "learning_rate" : LEARNING_RATE,
     "loss_fn" : loss_fn,
     "optimizer_class" : optimizer,
-    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT
+    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT,
+    "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS
 }
 
 
 # In our UNet implementation the dims can be whatever you want.
 # You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
 INPUT_DIMS = {
-    "width" : 2048,
-    "height" : 1024,
-    "channels" : 4
+    "width" : INPUT_WIDTH,
+    "height" : INPUT_HEIGHT,
+    "channels" : INPUT_CHANNELS
 }
 
 # In our UNet the output width and height have to be the same as the input width and height. 

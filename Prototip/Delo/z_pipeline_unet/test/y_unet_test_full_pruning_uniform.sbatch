@@ -27,13 +27,20 @@ source z0_sh_help.sh
 
 sd_name="test_full_pruning_uniform"
 
+id=${1}
+
+param_num=1
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
+    exit 1
+fi
 
 # pruning_phase
-python3 unet_original_main.py --ntibp 1 --tras 2 --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml
+python3 unet_original_main.py --ntibp 1 --tras 2 --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml
 
-python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml    < "$graph_and_stop"
-python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml    < "$results_and_stop"
-python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml    < "$resource_graph_and_stop"
-python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml    < "$save_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$graph_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$results_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$resource_graph_and_stop"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$save_and_stop"
 
 

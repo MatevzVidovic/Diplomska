@@ -5,5 +5,5 @@ training_wrapper.py : True
 model_wrapper.py : True
 pruner.py : False
 dataset_aug.py : True
-dataset_aug_with_sclera.py : False
+dataset_aug_with_sclera.py : True
 helper_img_and_fig_tools.py : False

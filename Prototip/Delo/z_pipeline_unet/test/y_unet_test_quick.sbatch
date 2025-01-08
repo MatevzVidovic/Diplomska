@@ -24,15 +24,21 @@ source z0_sh_help.sh
 create_empty_folder test_uniform
 
 
+id=${1}
 
+param_num=1
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
+    exit 1
+fi
 
 
 
 # training phase
-python3 unet_original_main.py --tras 2 --mti 2 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
+python3 unet_original_main.py --tras 2 --mti 2 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_${id}.yaml
 
 
 # pruning_phase
 #for i in {1..1}; do
- #   python3 unet_original_main.py --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_0.yaml
+ #   python3 unet_original_main.py --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_original_${id}.yaml
 #done

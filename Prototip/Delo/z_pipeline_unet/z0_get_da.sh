@@ -1,15 +1,22 @@
+#!/bin/bash
 
 
 
 
 # srun -c 2 --gpus=A100:1 bash z_pipeline_unet/z0_get_graphs.sh name_of_sd > x_get_graphs.txt
 
-sd_name=$1
+id=$1
+sd_name=$2
 
+param_num=2
+if [[ $# -ne $param_num ]]; then
+    echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
+    exit 1
+fi
 echo "sd_name: $sd_name"
 
 
 source z0_sh_help.sh
 
 
-python3 unet_original_main.py --ips 0 --ptd ./vein_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_0.yaml    < "$data_aug"
+python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$data_aug"

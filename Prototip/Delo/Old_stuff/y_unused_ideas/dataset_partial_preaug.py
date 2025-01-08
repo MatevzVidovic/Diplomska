@@ -276,7 +276,7 @@ class IrisDataset(Dataset):
             return img, mask
         
         except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER)
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
 
