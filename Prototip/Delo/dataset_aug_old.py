@@ -82,6 +82,14 @@ class IrisDataset(Dataset):
         self.output_height = kwargs['output_height']
 
         self.testrun_length = kwargs['testrun_size']
+
+
+
+        self.zero_out_non_sclera = kwargs.get('zero_out_non_sclera', False)
+        self.add_sclera_to_img = kwargs.get('add_sclera_to_img', False)
+        self.add_bcosfire_to_img = kwargs.get('add_bcosfire_to_img', False)
+        self.add_coye_to_img = kwargs.get('add_coye_to_img', False)
+
         
         self.split = split
         self.classes = n_classes
@@ -97,6 +105,7 @@ class IrisDataset(Dataset):
         to_veins = osp.join(self.filepath,'Veins')
         to_scleras = osp.join(self.filepath,'Scleras')
         to_bcosfire = osp.join(self.filepath,'Bcosfire')
+        to_coye = osp.join(self.filepath,'Coye')
 
 
 
@@ -104,7 +113,7 @@ class IrisDataset(Dataset):
             
             img_name_without_suffix = img_name.strip(".jpg")
 
-            if self.masks_exist(to_veins, to_scleras, to_bcosfire, img_name_without_suffix):
+            if self.masks_exist(to_veins, to_scleras, to_bcosfire, to_coye, img_name_without_suffix):
                 images_with_masks.append(img_name_without_suffix)
 
 
@@ -126,11 +135,12 @@ class IrisDataset(Dataset):
             return min(self.testrun_length, real_size)
         return real_size
     
-    def masks_exist(self, veins_folder_path, scleras_folder_path, bcosfire_folder_path, img_name_name_no_suffix):
+    def masks_exist(self, veins_folder_path, scleras_folder_path, bcosfire_folder_path, coye_folder_path, img_name_name_no_suffix):
         vein_mask_filename = osp.join(veins_folder_path, img_name_name_no_suffix + '.png')
         sclera_mask_filename = osp.join(scleras_folder_path, img_name_name_no_suffix + '_sclera.png')
         bcosfire_filename = osp.join(bcosfire_folder_path, img_name_name_no_suffix + '.png')
-        masks_exist = osp.exists(vein_mask_filename) and osp.exists(sclera_mask_filename) and osp.exists(bcosfire_filename)
+        coye_filename = osp.join(coye_folder_path, img_name_name_no_suffix + '.png')
+        masks_exist = osp.exists(vein_mask_filename) and osp.exists(sclera_mask_filename) and osp.exists(bcosfire_filename) and osp.exists(coye_filename)
         return masks_exist
 
 
@@ -140,42 +150,26 @@ class IrisDataset(Dataset):
 
         try:
             
-            img_name = self.img_names_no_suffix[idx]
-            image_path = osp.join(self.filepath,'Images',f'{img_name}.jpg')
-
-            img = cv2.imread(image_path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-            veins_path = osp.join(self.filepath,'Veins')
             img_name_no_suffix = self.img_names_no_suffix[idx]
-            veins_filename = osp.join(veins_path, img_name_no_suffix + '.png')
-            veins = cv2.imread(veins_filename)
-            veins = cv2.cvtColor(veins, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier - the same as for the original image
 
+            image_path = osp.join(self.filepath,'Images',f'{img_name_no_suffix}.jpg')
+            veins_path = osp.join(self.filepath,'Veins', f"{img_name_no_suffix}.png")
+            scleras_path = osp.join(self.filepath,'Scleras', f"{img_name_no_suffix}_sclera.png")
+            bcosfire_path = osp.join(self.filepath,'Bcosfire', f"{img_name_no_suffix}.png")
+            coye_path = osp.join(self.filepath,'Coye', f"{img_name_no_suffix}.png")
 
-            scleras_path = osp.join(self.filepath,'Scleras')
-            img_name_no_suffix = self.img_names_no_suffix[idx]
-            scleras_filename = osp.join(scleras_path, img_name_no_suffix + '_sclera.png')
-            scleras = cv2.imread(scleras_filename)
-            scleras = cv2.cvtColor(scleras, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier
+            masks = [veins_path, scleras_path, bcosfire_path, coye_path]
 
-
-            bcosfire_path = osp.join(self.filepath,'Bcosfire')
-            img_name_no_suffix = self.img_names_no_suffix[idx]
-            bcosfire_filename = osp.join(bcosfire_path, img_name_no_suffix + '.png')
-            bcosfire = cv2.imread(bcosfire_filename)
-            bcosfire = cv2.cvtColor(bcosfire, cv2.COLOR_BGR2RGB) # have to be this so that transformations are easier
-
+            img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+            masks = [cv2.cvtColor(cv2.imread(mask), cv2.COLOR_BGR2RGB) for mask in masks]
 
             img = smart_conversion(img, 'ndarray', 'uint8')
-            veins = smart_conversion(veins, 'ndarray', 'uint8')
-            scleras = smart_conversion(scleras, 'ndarray', 'uint8')
-            bcosfire = smart_conversion(bcosfire, 'ndarray', 'uint8')
+            masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
 
-            masks = [veins, scleras, bcosfire]
 
 
             save_img_ix = 0
+            rand_ix = np.random.randint(0, 1000)
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_before_da")
 
@@ -267,7 +261,7 @@ class IrisDataset(Dataset):
 
 
             
-            veins, sclera, bcosfire = masks
+            veins, sclera, bcosfire, coye = masks
 
             veins = cv2.cvtColor(veins, cv2.COLOR_RGB2GRAY)
             veins[veins <= 127] = 0
@@ -281,17 +275,27 @@ class IrisDataset(Dataset):
             bcosfire = cv2.cvtColor(bcosfire, cv2.COLOR_RGB2GRAY)
             bcosfire = np.expand_dims(bcosfire, axis=2)
 
+            coye = cv2.cvtColor(coye, cv2.COLOR_RGB2GRAY)
+            coye = np.expand_dims(coye, axis=2)
+
             #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_resized")
 
+
+            if self.zero_out_non_sclera:
+                sclera_3_channels = np.concatenate([sclera, sclera, sclera], axis=2)
+                where_is_not_sclera = np.where(sclera_3_channels == 0)
+                img[where_is_not_sclera] = 0
+
             # stack img and sclera to get a 4-channel image
-            # img = np.concatenate([img, sclera], axis=2)
+            if self.add_sclera_to_img:
+                img = np.concatenate([img, sclera], axis=2)
             # imgXsclera = img * sclera
 
-            img = np.concatenate([img, bcosfire], axis=2)
+            if self.add_bcosfire_to_img:
+                img = np.concatenate([img, bcosfire], axis=2)
 
-            sclera_3_channels = np.concatenate([sclera, sclera, sclera], axis=2)
-            where_is_not_sclera = np.where(sclera_3_channels == 0)
-            img[where_is_not_sclera] = 0
+            if self.add_coye_to_img:
+                img = np.concatenate([img, coye], axis=2)
 
 
             # Conversion to standard types that pytorch can work with.
@@ -310,7 +314,11 @@ class IrisDataset(Dataset):
             veins = veins.squeeze() # This function removes all dimensions of size 1 from the tensor
 
             if show_testrun:
-                py_log_always_on.log_time(MY_LOGGER, "test_da")
+                bcosfire = smart_conversion(bcosfire, 'tensor', "float32") # converts to float32
+                coye = smart_conversion(coye, 'tensor', "float32") # converts to float32
+                py_log_always_on.log_manual(MY_LOGGER, img=img, veins=veins, sclera=sclera, bcosfire=bcosfire, coye=coye)
+                save_imgs_quick_figs([img[:4, :, :], img[[0,1,2,4], :, :], img[[0,1,2,5], :, :], veins_for_show, sclera, bcosfire, coye], f"{idx}_{rand_ix}_final")
+
 
 
             # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
@@ -322,7 +330,7 @@ class IrisDataset(Dataset):
 
 
 
-            return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name}
+            return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name_no_suffix}
         
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -336,7 +344,6 @@ def custom_collate_fn(batch):
     scleras = torch.stack([item['scleras'] for item in batch])
     img_names = [item['img_names'] for item in batch]  # Collect image names into a list
     return {'images': images, 'masks': masks, "scleras" : scleras, 'img_names': img_names}
-
 
 
 if __name__ == "__main__":
@@ -360,10 +367,10 @@ if __name__ == "__main__":
         "testrun_size" : 30,
     
 
-        "input_width" : 2048,
-        "input_height" : 1024,
-        "output_width" : 2048,
-        "output_height" : 1024,
+        "input_width" : 3000,
+        "input_height" : 1500,
+        "output_width" : 3000,
+        "output_height" : 1500,
 
         # "input_width" : 256,
         # "input_height" : 256,
@@ -373,20 +380,23 @@ if __name__ == "__main__":
         "transform" : None,
         "n_classes" : 2,
 
+        "zero_out_non_sclera" : True,
+        "add_sclera_to_img" : True,
+        "add_bcosfire_to_img" : True,
+        "add_coye_to_img" : True,
+
     }
 
 
     
-    data_path = "vein_sclera_data"
+    data_path = "Data/vein_and_sclera_data"
 
     train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
 #    for i in range(1000):
-    img, mask = train_dataset[0]
-    # show_image([img, mask])
-    save_img_quick_figs(img, "ds_img.png")
-    save_img_quick_figs(mask, "ds_mask.png")
-    print(img.shape)
-    print(mask.shape)
-
+    res = train_dataset[0]
+    res = train_dataset[0]
+    # res = train_dataset[0]
+    # res = train_dataset[0]
+    # res = train_dataset[0]
 
 # %%

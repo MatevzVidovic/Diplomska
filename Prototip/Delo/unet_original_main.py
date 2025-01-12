@@ -141,12 +141,16 @@ if __name__ == "__main__":
 
     num_ep_per_iter = yaml_dict["num_epochs_per_training_iteration"]
     cleanup_k = yaml_dict["cleanup_k"]
-    DATASET = yaml_dict["dataset_option"]
     optimizer = yaml_dict["optimizer_used"]
     ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
     loss_fn_name = yaml_dict["loss_fn_name"]
     alphas = yaml_dict["alphas"]
 
+    DATASET = yaml_dict["dataset_option"]
+    zero_out_non_sclera = yaml_dict["zero_out_non_sclera"]
+    add_sclera_to_img = yaml_dict["add_sclera_to_img"]
+    add_bcosfire_to_img = yaml_dict["add_bcosfire_to_img"]
+    add_coye_to_img = yaml_dict["add_coye_to_img"]
 
     MODEL = yaml_dict["model"]
     INPUT_WIDTH = yaml_dict["input_width"]
@@ -270,17 +274,11 @@ print(f"Device: {device}")
 
 
 
-if DATASET == "augment":
-    from dataset_aug import IrisDataset, custom_collate_fn
-elif DATASET == "aug_with_sclera":
-    from dataset_aug_with_sclera import IrisDataset, custom_collate_fn
-elif DATASET == "aug_with_zero_out_sclera":
-    from dataset_aug_with_zero_out_sclera import IrisDataset, custom_collate_fn
-elif DATASET == "aug_with_zero_out_sclera_real":
-    from dataset_aug_with_zero_out_sclera_real import IrisDataset, custom_collate_fn
-elif DATASET == "aug_bcosfire":
-    from dataset_aug_bcosfire import IrisDataset, custom_collate_fn
-
+if DATASET == "aug_tf":
+    from dataset_aug_tf import IrisDataset, custom_collate_fn
+elif DATASET == "aug_old":
+    from dataset_aug_old import IrisDataset, custom_collate_fn
+    
 loss_fn = MultiClassDiceLoss()
 
 optimizer = torch.optim.Adam
@@ -339,6 +337,17 @@ model_parameters = {
 dataloading_args = {
 
 
+    # DataLoader params
+    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
+    #  since val and test use torch.no_grad() and therefore use less memory. 
+    "batch_size" : BATCH_SIZE,
+    "shuffle" : False, # TODO shuffle??
+    "num_workers" : NUM_OF_DATALOADER_WORKERS,
+}
+
+
+dataset_args = {
+
     "testrun" : IS_TEST_RUN,
     "testrun_size" : TEST_RUN_AND_SIZE,
    
@@ -353,25 +362,25 @@ dataloading_args = {
     # "transform" : transform,
     "n_classes" : OUTPUT_DIMS["channels"],
 
-    # DataLoader params
-    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
-    #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : BATCH_SIZE,
-    "shuffle" : False, # TODO shuffle??
-    "num_workers" : NUM_OF_DATALOADER_WORKERS,
+    "zero_out_non_sclera" : zero_out_non_sclera,
+    "add_sclera_to_img" : add_sclera_to_img,
+    "add_bcosfire_to_img" : add_bcosfire_to_img,
+    "add_coye_to_img" : add_coye_to_img
+
 }
+
 
 
 def get_data_loaders(**dataloading_args):
     
-    data_path = dataloading_args["path_to_sclera_data"]
+    data_path = dataset_args["path_to_sclera_data"]
     # n_classes = 4 if 'sip' in args.dataset.lower() else 2
 
     print('path to file: ' + str(data_path))
 
-    train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
-    valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
-    test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
+    train_dataset = IrisDataset(filepath=data_path, split='train', **dataset_args)
+    valid_dataset = IrisDataset(filepath=data_path, split='val', **dataset_args)
+    test_dataset = IrisDataset(filepath=data_path, split='test', **dataset_args)
 
     trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
     validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)

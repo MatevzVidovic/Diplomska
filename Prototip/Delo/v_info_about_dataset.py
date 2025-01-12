@@ -116,7 +116,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Data Augmentation for Vein Sclera Segmentation')
 
 
-    parser.add_argument('--fp', type=str, default='./vein_sclera_data', help='Folder path of the dataset')
+    parser.add_argument('--fp', type=str, default='./Data/vein_and_sclera_data', help='Folder path of the dataset')
     parser.add_argument('--split', type=str, default='all', help='Split of the dataset. Can be train, val, or test, or all')
 
     args = parser.parse_args()
@@ -152,7 +152,7 @@ if __name__ == "__main__":
             images_with_masks = []
             
             imgs_path = osp.join(folderpath, split, 'Images')
-            masks_path = osp.join(folderpath, split, 'Masks')
+            masks_path = osp.join(folderpath, split, 'Veins')
             all_images = os.listdir(imgs_path)
             all_images.sort()
 
