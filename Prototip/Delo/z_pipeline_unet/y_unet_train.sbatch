@@ -2,7 +2,7 @@
 
 
 #SBATCH --job-name=ut
-#SBATCH --time=0-12:00:00
+#SBATCH --time=0-5:00:00
 
 #SBATCH -p frida
 #SBATCH -c 7
