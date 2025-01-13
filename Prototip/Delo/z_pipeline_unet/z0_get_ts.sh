@@ -18,5 +18,7 @@ echo "sd_name: $sd_name"
 
 source z0_sh_help.sh
 
+source z_pipeline_unet/z0_main_name.sh
 
-python3 unet_original_main.py --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$test_showcase"
+
+python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$test_showcase"

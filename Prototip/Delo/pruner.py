@@ -47,39 +47,45 @@ class Pruner:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, pruning_disallowments, initial_conv_resource_calc, input_slice_connection_fn, kernel_connection_fn, conv_tree_ixs, other_zeroth_dim_ixs, lowest_level_modules, input_example):
-        self.initial_conv_resource_calc = initial_conv_resource_calc
-        self.pruning_disallowments = pruning_disallowments
-        self.input_slice_connection_fn = input_slice_connection_fn
-        self.kernel_connection_fn = kernel_connection_fn
-        self.conv_tree_ixs = conv_tree_ixs
-        self.lowest_level_modules = lowest_level_modules
-        self.input_example = input_example
+        try:
+            self.initial_conv_resource_calc = initial_conv_resource_calc
+            self.pruning_disallowments = pruning_disallowments
+            self.input_slice_connection_fn = input_slice_connection_fn
+            self.kernel_connection_fn = kernel_connection_fn
+            self.conv_tree_ixs = conv_tree_ixs
+            self.lowest_level_modules = lowest_level_modules
+            self.input_example = input_example
 
 
-        self.tree_ix_2_list_of_initial_kernel_ixs = {}
-        print(other_zeroth_dim_ixs)
-        # one example of other_zeroth_dim_ixs is the batchnorms
-        for tree_ix in conv_tree_ixs + other_zeroth_dim_ixs:
-            # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
-            # 0. dim is the number of kernels of this layer.
-            # 0. dim also works for batchnorm, for which this is only needed for display of what kernels have been pruned.
-            kernel_num = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix][0]
-            self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix] = list(range(kernel_num))
+            self.tree_ix_2_list_of_initial_kernel_ixs = {}
+            print(other_zeroth_dim_ixs)
+            # one example of other_zeroth_dim_ixs is the batchnorms
+            for tree_ix in conv_tree_ixs + other_zeroth_dim_ixs:
+                # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+                # 0. dim is the number of kernels of this layer.
+                # 0. dim also works for batchnorm, for which this is only needed for display of what kernels have been pruned.
+                dims = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix]
+                kernel_num = dims[0]
+                self.tree_ix_2_list_of_initial_kernel_ixs[tree_ix] = list(range(kernel_num))
 
 
-        self.tree_ix_2_list_of_initial_input_slice_ixs = {}
-        for tree_ix in conv_tree_ixs:
-            # 1. dim is the number input size of this layer.
-            input_slice_num = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix][1]
-            self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix] = list(range(input_slice_num))
+            self.tree_ix_2_list_of_initial_input_slice_ixs = {}
+            for tree_ix in conv_tree_ixs:
+                # 1. dim is the number input size of this layer.
+                input_slice_num = initial_conv_resource_calc.resource_name_2_resource_dict["weights_dimensions"][tree_ix][1]
+                self.tree_ix_2_list_of_initial_input_slice_ixs[tree_ix] = list(range(input_slice_num))
 
+            
+            self.pruning_logs = {
+                "conv" : [],
+                "batch_norm" : [],
+                "upconv" : [],
+                "following" : []
+            }
         
-        self.pruning_logs = {
-            "conv" : [],
-            "batch_norm" : [],
-            "upconv" : [],
-            "following" : []
-        }
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
         
         
     
