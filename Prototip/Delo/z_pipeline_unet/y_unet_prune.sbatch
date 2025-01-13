@@ -29,4 +29,6 @@ if [[ $# -ne $param_num ]]; then
     exit 1
 fi
 
-srun --output=x_unet_prune_${pr_type}.txt python3 unet_original_main.py --ifn ${pr_type} -p --ptd ./Data/vein_and_sclera_data --sd unet_${id}_prune_${pr_type} --yaml z_pipeline_unet/unet_original_${id}.yaml
+source z_pipeline_unet/z0_main_name.sh
+
+srun --output=x_unet_prune_${pr_type}.txt python3 ${main_name} --ifn ${pr_type} -p --sd unet_${id}_prune_${pr_type} --yaml z_pipeline_unet/unet_att_${id}.yaml

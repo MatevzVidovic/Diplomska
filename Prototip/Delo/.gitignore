@@ -48,6 +48,7 @@ y_multipurpose.sbatch
 pruned_models_*/
 ana_*/
 x_*.out
+environment.yml
 
 # Probs not needed anymore:
 # saved/

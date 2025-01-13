@@ -1,4 +1,5 @@
 
+
 import logging
 import yaml
 import os.path as osp
@@ -25,7 +26,6 @@ else:
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
 MY_LOGGER.setLevel(logging.DEBUG)
 
-
 python_logger_path = osp.join(osp.dirname(__file__), 'python_logger')
 py_log_always_on.limitations_setup(max_file_size_bytes=100 * 1024 * 1024, var_blacklist=["tree_ix_2_module", "mask_path"])
 handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
@@ -43,14 +43,14 @@ from min_resource_percentage import MinResourcePercentage
 from model_wrapper import ModelWrapper
 
 from training_support import *
-from losses import MultiClassDiceLoss, WeightedLosses
+from losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss
 
 import ast
 
-
 import helper_yaml_handler as yh
 
-
+c=5
+py_log.log_manual(MY_LOGGER, "brbr", c, a="Starting the program.", enm=c)
 
 
 if __name__ == "__main__":
@@ -61,17 +61,16 @@ if __name__ == "__main__":
 
     # Working with more then 5 arguments is a headache. With each argument you add the headache increases quadratically.
 
-
-    parser.add_argument("--ptd", type=str, help='PATH_TO_DATA', required=True)
     parser.add_argument("--sd", type=str, help='SAVE_DIR', required=True)
 
     # To easily get the num of trainings to some nice round number.
     parser.add_argument('--mti', type=int, default=1e9, help='Max train iterations. After how many train iterations do we stop the program.')
+    parser.add_argument('--mtti', type=int, default=1e9, help='max_total_train_iters. If the num of total train iters is this, we stop the program.')
     
     # To conduct pruning.
     parser.add_argument('-p', '--pruning_phase', action='store_true',
                         help='If present, enables pruning phase (automatic pruning)')
-    parser.add_argument('--ifn', type=str, help='Importance function definer. Options: IPAD_eq, uniform, random.')
+    parser.add_argument('--ifn', type=str, default="IPAD_eq", help='Importance function definer. Options: IPAD_eq, uniform, random.')
     
 
     # Set this to 0 when you want to simulate input with temp file, so you e.g. save the graph of the model, or results, or ...
@@ -91,12 +90,28 @@ if __name__ == "__main__":
     # Main batch of parameters:
     parser.add_argument("--yaml", type=str, help="Path to YAML file with all the parameters.", required=True)
 
+    # Overriding yaml files:
+    parser.add_argument("--yo", type=str, nargs='*', help="""
+                        yaml_overrides
+                        You can pass multiple paths to yaml files. 
+                        Each next yaml file will override/add the attributes it has to the dict of attributes.
+                        This can add some flexibility, so not every set of params you need has to have it's own yaml file.
+                        """)
 
 
 
-    # Overriding the YAML parameters (it is useful to activate this passing in through argument when you are trying to find the right parameter,
-    # so you run multiple programs at once, and it's nice if you can have a bash argument that you just change and through the argument this value changes)
+
+
+    # Overriding the YAML parameters 
+    # For 2 uses:
+    # - tests (should be used only in tests)
+    # - exploration - when trying to find the right parameter so you'd rather be setting it in the sbatch script
+    # (so you can run multiple programs at once, and it's nice if you can have a bash argument that you just change and through the argument this value changes)
     # e.g. parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
+    # Testing ones:
+    parser.add_argument("--ntibp", type=int, help="Number of training iterations between prunings.", default=None)
+    parser.add_argument("--ptp", type=float, help="Proportion to prune.", default=None)
+    parser.add_argument("--map", type=float, help="Max auto prunings.", default=None)
 
 
 
@@ -105,11 +120,12 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+    print(f"Args: {args}")
 
 
-    PATH_TO_DATA = args.ptd
     SAVE_DIR = args.sd
     max_train_iters = args.mti
+    max_total_train_iters = args.mtti
     is_pruning_ph = args.pruning_phase
     IMPORTANCE_FN_DEFINER = args.ifn
     iter_possible_stop = args.ips
@@ -119,25 +135,39 @@ if __name__ == "__main__":
     TEST_PRUNING = args.tp
 
     yaml_path = args.yaml
-
+    yaml_overrides = args.yo
 
 
     yaml_dict = yh.read_yaml(yaml_path)
 
+    if yaml_overrides is not None:
+        for path in yaml_overrides:
+            yo_dict = yh.read_yaml(path)
+            for key, val in yo_dict.items():
+                yaml_dict[key] = val
+
+    print(f"YAML: {yaml_dict}")
+
+    PATH_TO_DATA = yaml_dict["path_to_data"]
     BATCH_SIZE = yaml_dict["batch_size"]
     LEARNING_RATE = yaml_dict["learning_rate"]
     NUM_OF_DATALOADER_WORKERS = yaml_dict["num_of_dataloader_workers"]
     TRAIN_EPOCH_SIZE_LIMIT = yaml_dict["train_epoch_size_limit"]
 
     num_ep_per_iter = yaml_dict["num_epochs_per_training_iteration"]
-    cleaning_err_ix = yaml_dict["cleaning_error_ix"]
     cleanup_k = yaml_dict["cleanup_k"]
-    DATASET = yaml_dict["dataset_option"]
     optimizer = yaml_dict["optimizer_used"]
+    ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
     loss_fn_name = yaml_dict["loss_fn_name"]
     alphas = yaml_dict["alphas"]
 
+    DATASET = yaml_dict["dataset_option"]
+    zero_out_non_sclera = yaml_dict["zero_out_non_sclera"]
+    add_sclera_to_img = yaml_dict["add_sclera_to_img"]
+    add_bcosfire_to_img = yaml_dict["add_bcosfire_to_img"]
+    add_coye_to_img = yaml_dict["add_coye_to_img"]
 
+    model_type = yaml_dict["model_type"]
     MODEL = yaml_dict["model"]
     INPUT_WIDTH = yaml_dict["input_width"]
     INPUT_HEIGHT = yaml_dict["input_height"]
@@ -156,7 +186,13 @@ if __name__ == "__main__":
 
 
     # Override yaml with args here if you want to.
-
+    # For writing tests:
+    if args.ntibp is not None:
+        NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+    if args.ptp is not None:
+        proportion_to_prune = args.ptp
+    if args.map is not None:
+        max_auto_prunings = args.map
 
 
     # Parameter changes to prevent wrongness.
@@ -179,19 +215,18 @@ if __name__ == "__main__":
 
 
 
+    # For pruning to work the functions need to be written to some specific model. We choose to make them after the model that proved to be successful in the training phase.
+    # These are the specifications.
+    # This is how we guard against wrong callings.
+
+    sth_wrong = OUTPUT_CHANNELS != 2 or optimizer != "Adam" or alphas != []
+    if sth_wrong:
+        print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, alphas: {alphas}, should be [].")
+        raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
 
 
 
-    if DATASET == "partially_preaugmented":
-        raise NotImplementedError("partially_preaugmented dataset not in use anymore.")
-        from dataset_partial_preaug import IrisDataset, transform
-    elif DATASET == "augment":
-        from dataset_aug import IrisDataset, transform
-    elif DATASET == "pass_through":
-        raise NotImplementedError("pass_through dataset not in use anymore.")
-        from dataset_pass_through import IrisDataset, transform
-    else:
-        raise ValueError(f"DATASET not recognized: {DATASET}.")
+
 
 
 
@@ -224,32 +259,6 @@ if __name__ == "__main__":
 
 
 
-# # main changable parameters between trainings:
-# SAVE_DIR = "UNet"
-# IS_TEST_RUN = True
-# PATH_TO_DATA = "./vein_sclera_data"
-# NUM_OF_DATALOADER_WORKERS = 1
-# BATCH_SIZE = 4
-
-
-# program args that could be hardcoded here:
-
-# IS_PRUNING_PH = True
-# MAX_TRAIN_ITERS = 100 # change this to 10e9 when doing the pruning phase
-# MAX_AUTO_PRUNINGS = 70 # to get to 70 percent of the starting flops
-
-# # IS_PRUNING_PH to PROPORTION_TO_PRUNE are actually args you can pass.
-# # But they are hardcoded here for the sake of the experiment. Just makes it less room for error.
-
-# # Main parameeters you don't change after training.
-
-# PRUNE_BY_ORIGINAL_PERCENT = True
-# ERR_IX = 3
-# RESOURCE_NAME = "flops_num"
-# PRUNE_N_KERNELS_AT_ONCE = 20
-# PROPORTION_TO_PRUNE = 0.01
-
-
 
 
 
@@ -279,67 +288,29 @@ print(f"Device: {device}")
 
 
 
-
-
-# CE_weights = torch.tensor([0.1, 6.5])
-CE_weights = torch.tensor([0.1, 50.0])
-CE_weights = CE_weights / CE_weights.mean() # to make the loss more interpretable and graphable
-CE_weights = CE_weights.to(device)
-
-
-
-if loss_fn_name == "Default":
-    loss_fn_name = "MCDL"
+if DATASET == "aug_tf":
+    from dataset_aug_tf import IrisDataset, custom_collate_fn
+elif DATASET == "aug_old":
+    from dataset_aug_old import IrisDataset, custom_collate_fn
 
 if loss_fn_name == "MCDL":
     loss_fn = MultiClassDiceLoss()
-elif loss_fn_name == "CE":
-    loss_fn = nn.CrossEntropyLoss()
-
-elif loss_fn_name == "CEHW":
-
-    # There are 65000 pixels in the image. Only like 700 are 1s. 
-    # So to make 0s and 1s equally important, we would have to roughly [0.1, 6.5]
-    # And even then - we should give more priority to the 1s, because they are more important. 
-    # And we really want to increase how much we decide on 1s.
-
-    # The mean of the weights should be 1.0, so that loss remains more interpretable and graphable
-    # CE loss is between 0 and 1 in the 2 class case if the model is remotely okay. 
-    # The weights multiply the error for each class, so if the mean is 1, i think the loss is between 0 and 1.
-
-    loss_fn = nn.CrossEntropyLoss(weight=CE_weights)
-
-elif loss_fn_name == "MCDL_CEHW_W":
-    losses = [MultiClassDiceLoss(), nn.CrossEntropyLoss(weight=CE_weights)]
-    weights = [0.5, 0.5]
-    loss_fn = WeightedLosses(losses, weights)
-
-elif loss_fn_name == "MCDLW":
-    loss_fn = MultiClassDiceLoss(background_adjustment=alphas[0])
-
+elif loss_fn_name == "JACCARD":
+    loss_fn = JaccardLoss()
 else:
     raise ValueError("Loss function not recognized.")
 
+optimizer = torch.optim.Adam
 
 
-
-
-if optimizer == "Adam":
-    optimizer = torch.optim.Adam
-elif optimizer == "SGD":
-    optimizer = torch.optim.SGD
-elif optimizer == "LBFGS":
-    raise NotImplementedError("LBFGS is not implemented.")
-    optimizer = torch.optim.LBFGS
-else:
-    raise ValueError("Optimizer not recognized.")
 
 
 learning_parameters = {
     "learning_rate" : LEARNING_RATE,
     "loss_fn" : loss_fn,
     "optimizer_class" : optimizer,
-    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT
+    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT,
+    "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS
 }
 
 
@@ -355,12 +326,60 @@ INPUT_DIMS = {
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
-    "channels" : OUTPUT_CHANNELS
+    "channels" : 2
 }
+
+
+
+if model_type == "res_att":
+    from unet_res_att import UNet
+elif model_type == "att":
+    from unet_att import UNet
+else:
+    raise ValueError("Model type not recognized.")
+
+if MODEL == "64_2_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+        "depth" : 6,
+        }
+elif MODEL == "64_1_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 1,
+        "depth" : 6,
+        }
+
+
+
+
+
 
 
 dataloading_args = {
 
+
+    # DataLoader params
+    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
+    #  since val and test use torch.no_grad() and therefore use less memory. 
+    "batch_size" : BATCH_SIZE,
+    "shuffle" : False, # TODO shuffle??
+    "num_workers" : NUM_OF_DATALOADER_WORKERS,
+}
+
+
+dataset_args = {
 
     "testrun" : IS_TEST_RUN,
     "testrun_size" : TEST_RUN_AND_SIZE,
@@ -373,35 +392,32 @@ dataloading_args = {
     
     # iris dataset params
     "path_to_sclera_data" : PATH_TO_DATA,
-    "transform" : transform,
+    # "transform" : transform,
     "n_classes" : OUTPUT_DIMS["channels"],
 
-    # DataLoader params
-    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
-    #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : BATCH_SIZE,
-    "shuffle" : False, # TODO shuffle??
-    "num_workers" : NUM_OF_DATALOADER_WORKERS,
+    "zero_out_non_sclera" : zero_out_non_sclera,
+    "add_sclera_to_img" : add_sclera_to_img,
+    "add_bcosfire_to_img" : add_bcosfire_to_img,
+    "add_coye_to_img" : add_coye_to_img
+
 }
+
 
 
 def get_data_loaders(**dataloading_args):
     
-    data_path = dataloading_args["path_to_sclera_data"]
+    data_path = dataset_args["path_to_sclera_data"]
     # n_classes = 4 if 'sip' in args.dataset.lower() else 2
 
     print('path to file: ' + str(data_path))
 
-    train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
-    valid_dataset = IrisDataset(filepath=data_path, split='val', **dataloading_args)
-    test_dataset = IrisDataset(filepath=data_path, split='test', **dataloading_args)
+    train_dataset = IrisDataset(filepath=data_path, split='train', **dataset_args)
+    valid_dataset = IrisDataset(filepath=data_path, split='val', **dataset_args)
+    test_dataset = IrisDataset(filepath=data_path, split='test', **dataset_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], num_workers=dataloading_args["num_workers"], drop_last=False)
-
-    # I don't want shuffle=True for test, so that it's easier to compare models in test_showcase.
-
+    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=False, num_workers=dataloading_args["num_workers"], drop_last=False)
     # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
     # I'm not sure why we're dropping last, but okay.
 
@@ -439,45 +455,7 @@ dataloader_dict = {
 
 
 
-from unet_original import UNet
-
-if MODEL == "64_2_4":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 4,
-    }
-
-elif MODEL == "64_2_6":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-    }
-
-else:
-    raise ValueError(f"MODEL not recognized: {MODEL}.")
-
-
-
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
-
-
-
-
-
 
 
 
@@ -499,26 +477,75 @@ if __name__ == "__main__":
 
 
 
+    # model_wrapper.training_wrapper.test_showcase()
 
 
-    tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
 
-    # If you change FLOPS_min_res_percents and weights_min_res_percents 
-    # or other disallowments
-    # between runnings of main, 
-    # the new onew will be used. So you can have an effect on your training by doing this.
+
+
+
+    @py_log.autolog(passed_logger=MY_LOGGER)
+    def validation_stop(training_logs: TrainingLogs, pruning_logs: PruningLogs, curr_train_iter, initial_train_iter):
+        # returns True when you should stop
+
+        # initial_train_iter is the train_iter when we ran the program this time around
+        # - so if you perhaps wanted at least 3 train iters every time you run the program, you would do:
+        # if curr_train_iter - initial_train_iter < 3:
+        #    return False
+
+
+        # val_errors = [item[0] for item in training_logs.errors]
+
+        # If there have been no prunings, prune.
+        if len(pruning_logs.pruning_logs) == 0:
+            return True
+
+        last_pruning_train_iter = pruning_logs.pruning_logs[-1][0]
+
+
+
+        # This only makes sense for how we are designing our experiment. This is the only way we can compare methods for pruning kernel-selection.
+        # Our idea is: you train the model, then you want it to have 25% the amount of flops.
+        # But how do you choose which 75% of filters to prune?
+        # Well, you prune 1%, then retrain, then prune 1%, then retrain, and so on until you get to 75%.
+        # How you choose the 1% is the question. We are comparing different methods of choosing the 1%.
+        
+        # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
+
+        if (curr_train_iter - last_pruning_train_iter) >= NUM_TRAIN_ITERS_BETWEEN_PRUNINGS:
+            return True
+        
+        return False
+
+
+
+        # Older idea of dynamic decision of when to prune:
+        """
+        if len(val_errors) < 3:
+            return False
+        
+        if len(val_errors) >= 25:
+            return True
+        
+        returner = val_errors[-1] > val_errors[-2] and val_errors[-1] > val_errors[-3]
+
+        # if previous metric doesn't say we should return, we also go check another metric:
+        # if the current validation error is higher than either of the 4. and 5. back
+        # we should stop. Because it means we are not improving.
+        if not returner and len(val_errors) >= 5:
+            returner = val_errors[-1] > val_errors[-4] or val_errors[-1] > val_errors[-5]
+            
+        return returner
+        """
+
+
+
+
 
     
-
-
-
-
-
-
-    
-    train_automatically(model_wrapper, main_save_path, val_stop_fn=None, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, 
-                        train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, 
+                        max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleanup_k=cleanup_k,
                          num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
 
 

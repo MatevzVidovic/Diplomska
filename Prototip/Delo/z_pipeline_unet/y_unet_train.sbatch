@@ -34,6 +34,17 @@ if [[ $# -ne $param_num ]]; then
     exit 1
 fi
 
-srun --output=x_unet_${id}_train.txt python3 unet_original_main.py --mti ${mti} --ptd ./Data/vein_and_sclera_data --sd unet_${id}_train --yaml z_pipeline_unet/unet_original_${id}.yaml
+counter=0
+out_name=x_unet_${id}_train_${counter}.txt
+# -e for file exists, -L for symlink exists
+while [[ -e "$out_name" || -L "$out_name" ]]; do
+    # Increment the counter and create a new filename
+    ((counter++))
+    out_name=x_unet_${id}_train_${counter}.txt
+done
+
+source z_pipeline_unet/z0_main_name.sh
+
+srun --output=${out_name} python3 ${main_name} --mti ${mti} --sd unet_${id}_train --yaml z_pipeline_unet/unet_att_${id}.yaml
 
 
