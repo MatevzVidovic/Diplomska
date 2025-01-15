@@ -7,7 +7,7 @@
 
 # More situationally changed parameters
 path_to_data: "./Data/vein_and_sclera_data"
-batch_size: 2
+batch_size: 1
 learning_rate: 0.00001
 num_of_dataloader_workers: 7
 train_epoch_size_limit: 400
@@ -17,13 +17,13 @@ num_epochs_per_training_iteration: 1
 cleanup_k: 3      # Options: 0, 1, 2, 3
 optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
 zero_out_non_sclera_on_predictions: True
-loss_fn_name: "JACCARD"
+loss_fn_name: "MCDL"
 alphas: []
 
 # Dataset parameters
 dataset_option: "aug_tf"    # Options: aug_old
-zero_out_non_sclera: True
-add_sclera_to_img: False
+zero_out_non_sclera: False
+add_sclera_to_img: True
 add_bcosfire_to_img: True
 add_coye_to_img: True
 
@@ -32,7 +32,7 @@ model_type: res_att
 model: "64_2_6"
 input_width: 2048
 input_height: 1024
-input_channels: 5
+input_channels: 6
 output_channels: 2
 
 

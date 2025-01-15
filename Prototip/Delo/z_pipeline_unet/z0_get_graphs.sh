@@ -20,6 +20,6 @@ source z0_sh_help.sh
 
 source z_pipeline_unet/z0_main_name.sh
 
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$graph_and_stop"
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$results_and_stop"
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$resource_graph_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$graph_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$results_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$resource_graph_and_stop"

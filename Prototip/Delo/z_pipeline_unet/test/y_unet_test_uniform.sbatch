@@ -35,19 +35,19 @@ fi
 source z_pipeline_unet/z0_main_name.sh
 
 # training phase
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$save_and_stop"
-python3 ${main_name} --tras 2 --mti 2 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$save_and_stop"
+python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$save_and_stop"
+python3 ${main_name} --tras 2 --mti 2 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml
+python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$save_and_stop"
 
 
 # pruning_phase
 for i in {1..30}; do
-    python3 ${main_name} --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml
-    python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$graph_and_stop"
+    python3 ${main_name} --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml
+    python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$graph_and_stop"
 done
 
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$results_and_stop"
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$resource_graph_and_stop"
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd test_uniform --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$save_and_stop"
+python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$results_and_stop"
+python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$resource_graph_and_stop"
+python3 ${main_name} --ips 0 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml    < "$save_and_stop"
 
 
