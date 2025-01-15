@@ -38,11 +38,11 @@ fi
 source z_pipeline_unet/z0_main_name.sh
 
 # pruning_phase
-python3 ${main_name} --ntibp 1 --tras 2 --ifn uniform -p --sd $sd_name --yaml z_pipeline_unet/unet_att_${id}.yaml
+python3 ${main_name} --ntibp 1 --tras 2 --ifn uniform -p --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml
 
-python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$graph_and_stop"
-python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$results_and_stop"
-python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$resource_graph_and_stop"
-python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_att_${id}.yaml    < "$save_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$graph_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$results_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$resource_graph_and_stop"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$save_and_stop"
 
 

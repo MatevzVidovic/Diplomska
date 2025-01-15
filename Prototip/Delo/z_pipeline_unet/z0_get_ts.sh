@@ -3,7 +3,14 @@
 
 
 
-# srun -c 2 --gpus=A100:1 bash z_pipeline_unet/z0_get_graphs.sh name_of_sd > x_get_graphs.txt
+# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh att_res unet_att_res_train > x_ts_att_res.txt
+
+# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh att_res_j unet_att_res_j_train > x_ts_att_res_j.txt
+
+# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh att unet_att_train > x_ts_att.txt
+
+# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh att_j unet_att_j_train > x_ts_att_j.txt
+
 
 id=$1
 sd_name=$2
@@ -21,4 +28,4 @@ source z0_sh_help.sh
 source z_pipeline_unet/z0_main_name.sh
 
 
-python3 ${main_name} --ips 0 --ptd ./Data/vein_and_sclera_data --sd $sd_name --yaml z_pipeline_unet/unet_original_${id}.yaml    < "$test_showcase"
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$test_showcase"

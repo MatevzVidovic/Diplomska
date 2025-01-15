@@ -45,6 +45,6 @@ done
 
 source z_pipeline_unet/z0_main_name.sh
 
-srun --output=${out_name} python3 ${main_name} --mti ${mti} --sd unet_${id}_train --yaml z_pipeline_unet/unet_att_${id}.yaml
+srun --output=${out_name} python3 ${main_name} --mti ${mti} --sd unet_${id}_train --yaml z_pipeline_unet/unet_${id}.yaml
 
 

@@ -753,6 +753,7 @@ class TrainingWrapper:
 
                         # matplotlib expects (height, width, channels), but pytorch has (channels, height, width)
                         image_tensor = X[i].cpu()
+                        image_tensor = image_tensor[:3, :, :] # kep only img channels, not Bcos, coye, or sclera
                         image_np = image_tensor.permute(1, 2, 0).numpy()
 
                         # print("min(Ground truth):", y[i].min())

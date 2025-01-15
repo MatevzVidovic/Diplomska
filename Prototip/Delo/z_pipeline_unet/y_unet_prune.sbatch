@@ -31,4 +31,4 @@ fi
 
 source z_pipeline_unet/z0_main_name.sh
 
-srun --output=x_unet_prune_${pr_type}.txt python3 ${main_name} --ifn ${pr_type} -p --sd unet_${id}_prune_${pr_type} --yaml z_pipeline_unet/unet_att_${id}.yaml
+srun --output=x_unet_prune_${pr_type}.txt python3 ${main_name} --ifn ${pr_type} -p --sd unet_${id}_prune_${pr_type} --yaml z_pipeline_unet/unet_${id}.yaml
