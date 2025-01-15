@@ -49,6 +49,8 @@ import ast
 
 import helper_yaml_handler as yh
 
+c=5
+py_log.log_manual(MY_LOGGER, "brbr", c, a="Starting the program.", enm=c)
 
 
 if __name__ == "__main__":
@@ -88,13 +90,7 @@ if __name__ == "__main__":
     # Main batch of parameters:
     parser.add_argument("--yaml", type=str, help="Path to YAML file with all the parameters.", required=True)
 
-    # Overriding yaml files:
-    parser.add_argument("--yo", type=str, nargs='*', help="""
-                        yaml_overrides
-                        You can pass multiple paths to yaml files. 
-                        Each next yaml file will override/add the attributes it has to the dict of attributes.
-                        This can add some flexibility, so not every set of params you need has to have it's own yaml file.
-                        """)
+
 
 
     # Overriding the YAML parameters 
@@ -130,21 +126,11 @@ if __name__ == "__main__":
 
     yaml_path = args.yaml
 
-    yaml_overrides = args.yo
 
 
     yaml_dict = yh.read_yaml(yaml_path)
-
-    if yaml_overrides is not None:
-        for path in yaml_overrides:
-            yo_dict = yh.read_yaml(path)
-            for key, val in yo_dict.items():
-                yaml_dict[key] = val
-
-
     print(f"YAML: {yaml_dict}")
 
-    IS_PRUNING_READY = yaml_dict["is_pruning_ready"]
     PATH_TO_DATA = yaml_dict["path_to_data"]
     BATCH_SIZE = yaml_dict["batch_size"]
     LEARNING_RATE = yaml_dict["learning_rate"]
@@ -331,7 +317,8 @@ OUTPUT_DIMS = {
 
 
 
-from unet_original import UNet
+
+from unet_att import UNet
 
 if MODEL == "64_2_6":
     model_parameters = {
@@ -1070,104 +1057,81 @@ if __name__ == "__main__":
 
 
 
-    if IS_PRUNING_READY:
-
-        tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
 
-        # If you change FLOPS_min_res_percents and weights_min_res_percents 
-        # or other disallowments
-        # between runnings of main, 
-        # the new onew will be used. So you can have an effect on your training by doing this.
-
-        
+    tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
 
-        
+    # If you change FLOPS_min_res_percents and weights_min_res_percents 
+    # or other disallowments
+    # between runnings of main, 
+    # the new onew will be used. So you can have an effect on your training by doing this.
+
+    
 
 
-        # Here we abuse the min_res_percentage class to disallow certain prunings.
-        # Both for general disallowments and for choice disallowments
-        # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-
-        # Important disallowing:
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
-        # Because otherwise your num of classes of the output (pred) will change.
-        # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        generally_disallowed = MinResourcePercentage(tree_ix_2_name)
-
-        disallowed_dict = {
-            model_wrapper.conv_tree_ixs[26] : 1.1
-        }
-        generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
+    
 
 
+    # Here we abuse the min_res_percentage class to disallow certain prunings.
+    # Both for general disallowments and for choice disallowments
+    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
 
+    # Important disallowing:
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
+    # Because otherwise your num of classes of the output (pred) will change.
+    # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
-        # Choice disallowing:
-        # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-        
-        # For segnet:
-        # conv_tree_ixs = model_wrapper.conv_tree_ixs
-        # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
-        # The reasoning for this choice comes from kernel_connection_fn:
-        # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
-        # Because the kernel nums must match.
-        # """
-        # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
-
-        # # Pairs of conv ixs:
-        # # 1 23
-        # # 3 21
-        # # 6 18
-        # # 9 15
-        # """
-        
-        # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-        #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-        # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
-
-        
-        
+    disallowed_dict = {
+        model_wrapper.conv_tree_ixs[26] : 1.1
+    }
+    generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
 
 
 
+    # Choice disallowing:
+    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
+    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
+    
+    # For segnet:
+    # conv_tree_ixs = model_wrapper.conv_tree_ixs
+    # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+    # The reasoning for this choice comes from kernel_connection_fn:
+    # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
+    # Because the kernel nums must match.
+    # """
+    # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
+    # # Pairs of conv ixs:
+    # # 1 23
+    # # 3 21
+    # # 6 18
+    # # 9 15
+    # """
+    
+    # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+    #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+    # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
-        FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
-
-        tree_ix_2_percentage_dict = {
-            (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
-        }
-        FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+    
+    
 
 
 
 
 
 
+    FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+    FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
 
-
-        weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        weights_min_res_percents.set_by_name("Conv2d", 0.2)
-
-        if TEST_PRUNING:
-            weights_min_res_percents.set_by_name("Conv2d", 0.999999)
-
-
-        
-
-        pruning_disallowments = {
-            "general" : generally_disallowed.min_resource_percentage_dict,
-            "choice" : choice_disallowed.min_resource_percentage_dict,
-            "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
-            "weights" : weights_min_res_percents.min_resource_percentage_dict
-        }
+    tree_ix_2_percentage_dict = {
+        (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
+    }
+    FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
 
 
 
@@ -1175,10 +1139,34 @@ if __name__ == "__main__":
 
 
 
-        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
+
+    weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+    weights_min_res_percents.set_by_name("Conv2d", 0.2)
+
+    if TEST_PRUNING:
+        weights_min_res_percents.set_by_name("Conv2d", 0.999999)
+
+
+    
+
+    pruning_disallowments = {
+        "general" : generally_disallowed.min_resource_percentage_dict,
+        "choice" : choice_disallowed.min_resource_percentage_dict,
+        "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
+        "weights" : weights_min_res_percents.min_resource_percentage_dict
+    }
 
 
 
+
+
+
+
+    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
+
+
+
+    # model_wrapper.training_wrapper.test_showcase()
 
 
 

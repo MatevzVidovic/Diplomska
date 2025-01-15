@@ -6,20 +6,6 @@
 
 
 # ----------------------------------------------------------------------------------------------------
-# is_pruning_ready: True   
-Set to false to skip pruning_initialization() and all pruning related work in main.
-Even if you don't prune, jus initialize pruning, the pruning functions in main are called.
-And so they need to be correct so you don't get errors.
-And they are only correct for a very specific model. 
-So imagine you already did some pruning for some specific unet model,
-and then you are experimenting with what trains best again.
-It only makes sense to skip all of that pruning stuff. So I used to just copy the main, name it with _just_train, and remove all the pruning stuff.
-But then you make changes to that main in the process that are generally important and you want to keep them,so then you keep pasting into the old main.
-So have your code be DRY and just use this parameter for when you are exploring.
-# ----------------------------------------------------------------------------------------------------
-
-
-# ----------------------------------------------------------------------------------------------------
 # batch_size: 4
 # ....................................................................................................
 

@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
     sth_wrong = OUTPUT_CHANNELS != 2 or optimizer != "Adam" or alphas != []
     if sth_wrong:
-        print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam, alphas: {alphas}, should be [].")
+        print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam, loss_fn_name: {loss_fn_name}, alphas: {alphas}, should be [].")
         raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
 
 
@@ -330,9 +330,13 @@ OUTPUT_DIMS = {
 }
 
 
-from unet_original import UNet
 
-
+if model_type == "res_att":
+    from unet_res_att import UNet
+elif model_type == "att":
+    from unet_att import UNet
+else:
+    raise ValueError("Model type not recognized.")
 
 if MODEL == "64_2_6":
     model_parameters = {
