@@ -42,7 +42,7 @@ import gc
 
 from helper_img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img
 
-
+from helper_patchification import patchify, accumulate_patches
 
 
 
@@ -468,6 +468,17 @@ class TrainingWrapper:
 
             self.zero_out_non_sclera_on_predictions = learning_parameters["zero_out_non_sclera_on_predictions"]
 
+            self.have_patchification = learning_parameters["have_patchification"]
+            if self.have_patchification:
+                pp = learning_parameters["patchification_params"]
+
+                self.patch_shape = (pp["patch_y"], pp["patch_x"])
+                self.stride_shape = (int(pp["stride_percent_of_patch_y"] * self.patch_shape[0]), int(pp["stride_percent_of_patch_x"] * self.patch_shape[1]))
+                self.input_size_limit = pp["input_size_limit"]
+
+                self.train_no_reconstruct = pp["train_no_reconstruct"]
+                self.train_no_reconstruct_num_patches_per_img = pp["train_no_reconstruct_num_patches_per_img"]
+
             # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
             # self.gradient_clip_value = learning_parameters["gradient_clip_value"]
 
@@ -510,11 +521,66 @@ class TrainingWrapper:
                 img_names = data_dict["img_names"]
 
 
-                X, y = X.to(self.device), y.to(self.device)
+
+                if self.have_patchification:
+
+                    pred = None
+
+                    for img in X:
 
 
-                # Compute prediction error
-                pred = self.model(X)
+                        patch_dict = patchify(img, self.patch_shape, self.stride_shape)
+
+                        concated_patches = torch.cat([patch_dict["main_patches"], patch_dict["right_patches"], patch_dict["bottom_patches"], patch_dict["right_bottom_corner"]], dim=0)
+
+                        concated_patches = concated_patches.to(self.device)
+                        curr_pred = self.model(concated_patches)
+
+                        # deconcat patches
+                        num_main = patch_dict["main_patches"].size(0)
+                        num_right = patch_dict["right_patches"].size(0)
+                        num_bottom = patch_dict["bottom_patches"].size(0)
+                        # num_rbc = patch_dict["right_bottom_corner"].size(0)
+
+                        pred_patch_dict = {
+                            "main_patches" : curr_pred[:num_main],
+                            "right_patches" : curr_pred[num_main:num_main + num_right],
+                            "bottom_patches" : curr_pred[num_main + num_right:num_main + num_right + num_bottom],
+                            "right_bottom_corner" : curr_pred[num_main + num_right + num_bottom:],
+
+                            "main_lu_ixs" : patch_dict["main_lu_ixs"],
+                            "right_lu_ixs" : patch_dict["right_lu_ixs"],
+                            "bottom_lu_ixs" : patch_dict["bottom_lu_ixs"],
+                            "right_bottom_corner_lu_ixs" : patch_dict["right_bottom_corner_lu_ixs"]
+                        }
+
+                        final_pred_shape = (2, img.size()[1], img.size()[2])
+
+                        accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, self.patch_shape, pred_patch_dict)
+
+                        reconstructed_img = accumulating_tensor / num_of_addings
+                        reconstructed_img = torch.unsqueeze(reconstructed_img, dim=0) # to give the batch dimension
+
+                        if pred is None:
+                            pred = reconstructed_img
+                        else:
+                            pred = torch.cat([pred, reconstructed_img], dim=0)
+
+
+                else:
+                    X = X.to(self.device)
+
+                    # Compute prediction error
+                    pred = self.model(X)
+
+
+
+
+
+
+                y = y.to(self.device)
+
+
 
                 if self.zero_out_non_sclera_on_predictions:
                     scleras = scleras.to(self.device)
@@ -609,8 +675,69 @@ class TrainingWrapper:
                     y = data_dict["masks"]
                     scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
-                    X, y = X.to(self.device), y.to(self.device)
-                    pred = self.model(X)
+
+
+
+
+                    if self.have_patchification:
+
+                        pred = None
+
+                        for img in X:
+
+
+                            patch_dict = patchify(img, self.patch_shape, self.stride_shape)
+
+                            concated_patches = torch.cat([patch_dict["main_patches"], patch_dict["right_patches"], patch_dict["bottom_patches"], patch_dict["right_bottom_corner"]], dim=0)
+
+                            concated_patches = concated_patches.to(self.device)
+                            curr_pred = self.model(concated_patches)
+
+                            # deconcat patches
+                            num_main = patch_dict["main_patches"].size(0)
+                            num_right = patch_dict["right_patches"].size(0)
+                            num_bottom = patch_dict["bottom_patches"].size(0)
+                            # num_rbc = patch_dict["right_bottom_corner"].size(0)
+
+                            pred_patch_dict = {
+                                "main_patches" : curr_pred[:num_main],
+                                "right_patches" : curr_pred[num_main:num_main + num_right],
+                                "bottom_patches" : curr_pred[num_main + num_right:num_main + num_right + num_bottom],
+                                "right_bottom_corner" : curr_pred[num_main + num_right + num_bottom:],
+
+                                "main_lu_ixs" : patch_dict["main_lu_ixs"],
+                                "right_lu_ixs" : patch_dict["right_lu_ixs"],
+                                "bottom_lu_ixs" : patch_dict["bottom_lu_ixs"],
+                                "right_bottom_corner_lu_ixs" : patch_dict["right_bottom_corner_lu_ixs"]
+                            }
+
+                            final_pred_shape = (2, img.size()[1], img.size()[2])
+
+                            accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, self.patch_shape, pred_patch_dict)
+
+                            reconstructed_img = accumulating_tensor / num_of_addings
+                            reconstructed_img = torch.unsqueeze(reconstructed_img, dim=0) # to give the batch dimension
+
+                            if pred is None:
+                                pred = reconstructed_img
+                            else:
+                                pred = torch.cat([pred, reconstructed_img], dim=0)
+
+
+                    else:
+                        X = X.to(self.device)
+
+                        # Compute prediction error
+                        pred = self.model(X)
+
+
+
+
+
+
+                    y = y.to(self.device)
+
+
 
                     if self.zero_out_non_sclera_on_predictions:
                         scleras = scleras.to(self.device)

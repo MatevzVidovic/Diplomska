@@ -35,6 +35,18 @@ input_height: 1024
 input_channels: 5
 output_channels: 2
 
+# Patchification options
+have_patchification: True
+patchification_params:
+  patch_x: 129
+  patch_y: 130
+  stride_percent_of_patch_x: 0.5
+  stride_percent_of_patch_y: 0.5     # The 3 params below are currently not used:
+  input_size_limit: 4194304    # Channels in output not really important for VRAM. So just batch_size * input_width * input_height (we could do 2 * 1024 * 2048 = 4194304)
+  train_no_reconstruct: False    # Enabling this would mean that in train() we don't do this accumulation, but just take a few random patches for each image and train on those.
+  train_no_reconstruct_num_patches_per_img: null # And this would be how many images we would take.  The idea is to also train the model completely as if it was just a patchwise one.
+
+
 
 
 # Pruning parameters

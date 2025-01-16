@@ -170,6 +170,10 @@ if __name__ == "__main__":
     INPUT_CHANNELS = yaml_dict["input_channels"]
     OUTPUT_CHANNELS = yaml_dict["output_channels"]
 
+    have_patchification = yaml_dict["have_patchification"]
+    patchification_params = yaml_dict["patchification_params"]
+
+
     NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = yaml_dict["num_train_iters_between_prunings"]
     max_auto_prunings = yaml_dict["max_auto_prunings"]
     proportion_to_prune = yaml_dict["proportion_to_prune"]
@@ -310,7 +314,9 @@ learning_parameters = {
     "loss_fn" : loss_fn,
     "optimizer_class" : optimizer,
     "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT,
-    "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS
+    "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS,
+    "have_patchification" : have_patchification,
+    "patchification_params" : patchification_params
 }
 
 
@@ -333,11 +339,23 @@ OUTPUT_DIMS = {
 
 from unet_original import UNet
 
+# patchification changesthings only for the model
+# The dataset is giving the same exact images as usual.
+# It's just that we do special things in the TrainingWrapper,
+# and consequently patches get fed into the model.
+
+# in and out dims of the model are the same anyways, so i won't say in_x and out_x, but just dim_x.
+dim_y = OUTPUT_DIMS["height"]
+dim_x = OUTPUT_DIMS["width"]
+if have_patchification:
+    dim_y = patchification_params["patch_y"]
+    dim_x = patchification_params["patch_x"]
+
 if MODEL == "64_2_6":
     model_parameters = {
         # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
+        "output_y" : dim_y,
+        "output_x" : dim_x,
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
         "starting_kernels" : 64,
@@ -347,14 +365,17 @@ if MODEL == "64_2_6":
 elif MODEL == "64_1_6":
     model_parameters = {
         # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
+        "output_y" : dim_y,
+        "output_x" : dim_x,
         "n_channels" : INPUT_DIMS["channels"],
         "n_classes" : OUTPUT_DIMS["channels"],
         "starting_kernels" : 64,
         "expansion" : 1,
         "depth" : 6,
         }
+
+
+INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
 
 
 
@@ -450,7 +471,6 @@ dataloader_dict = {
 
 
 
-INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
 
 
 

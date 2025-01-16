@@ -21,7 +21,7 @@
 
 source z0_sh_help.sh
 
-create_empty_folder test_uniform
+create_empty_folder test_quick
 
 
 id=${1}
@@ -36,10 +36,10 @@ fi
 source z_pipeline_unet/z0_main_name.sh
 
 # training phase
-python3 ${main_name} --tras 2 --mti 2 --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml --yo z_pipeline_unet/overriding_yamls/small.yaml 
+python3 ${main_name} --tras 2 --mti 2 --sd test_quick --yaml z_pipeline_unet/unet_${id}.yaml --yo z_pipeline_unet/overriding_yamls/small.yaml 
 
 
 # pruning_phase
 #for i in {1..1}; do
- #   python3 ${main_name} --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --sd test_uniform --yaml z_pipeline_unet/unet_${id}.yaml
+ #   python3 ${main_name} --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --sd test_quick --yaml z_pipeline_unet/unet_${id}.yaml
 #done
