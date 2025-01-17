@@ -1,14 +1,13 @@
 #!/bin/bash
 
 
-#SBATCH --job-name=utu
+#SBATCH --job-name=up
 #SBATCH --time=1-12:00:00
 
 #SBATCH -p frida
 #SBATCH -c 7
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
-#SBATCH --output=x_unet_test_quick.txt
 
 
 # #SBATCH -w ana
@@ -19,27 +18,17 @@
 # But also, substituting it into SBATCH commands doesn't work.
 
 
-source z0_sh_help.sh
-
-create_empty_folder test_quick
-
-
 id=${1}
+pr_type=${2} # can be uniform, random, IPAD_eq
 
-param_num=1
+
+param_num=2
+
 if [[ $# -ne $param_num ]]; then
     echo "Error: The number of parameters is not correct. Expected $param_num, given $#. Given params: $@"
     exit 1
 fi
 
-
 source z_pipeline_unet/z0_main_name.sh
 
-# training phase
-python3 ${main_name} --tras 2 --mti 2 --sd test_quick --yaml z_pipeline_unet/unet_${id}.yaml --yo z_pipeline_unet/overriding_yamls/small.yaml 
-
-
-# pruning_phase
-#for i in {1..1}; do
- #   python3 ${main_name} --ntibp 1 --ptp 0.0000001 --map 1 --tras 2 --tp --ifn uniform -p --sd test_quick --yaml z_pipeline_unet/unet_${id}.yaml
-#done
+srun --output=x_unet_prune_${pr_type}.txt python3 ${main_name} --ifn ${pr_type} -p --sd unet_${id}_prune_${pr_type} --yaml z_pipeline_unet/unet_${id}.yaml

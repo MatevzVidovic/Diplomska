@@ -1,0 +1,65 @@
+
+
+
+# basic_with_zero_out
+
+# Training parameters
+
+# More situationally changed parameters
+is_pruning_ready: True   # set to false to skip all prun
+path_to_data: "./Data/vein_and_sclera_data"
+batch_size: 2
+learning_rate: 0.00001
+num_of_dataloader_workers: 7
+train_epoch_size_limit: 400
+
+# More trainig-type-defining parameters
+num_epochs_per_training_iteration: 1
+cleanup_k: 3      # Options: 0, 1, 2, 3
+optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
+zero_out_non_sclera_on_predictions: True
+loss_fn_name: "MCDL"
+alphas: []
+
+# Dataset parameters
+dataset_option: "aug_tf"    # Options: aug_old
+zero_out_non_sclera: True
+add_sclera_to_img: False
+add_bcosfire_to_img: True
+add_coye_to_img: True
+
+# Model parameters that need to be set in stone for pruning
+model: "64_2_6"
+input_width: 2048
+input_height: 1024
+input_channels: 5
+output_channels: 2
+
+# Patchification options
+have_patchification: True
+patchification_params:
+  patch_x: 129
+  patch_y: 130
+  stride_percent_of_patch_x: 0.5
+  stride_percent_of_patch_y: 0.5     # The 3 params below are currently not used:
+  input_size_limit: 4194304    # Channels in output not really important for VRAM. So just batch_size * input_width * input_height (we could do 2 * 1024 * 2048 = 4194304)
+  train_no_reconstruct: False    # Enabling this would mean that in train() we don't do this accumulation, but just take a few random patches for each image and train on those.
+  train_no_reconstruct_num_patches_per_img: null # And this would be how many images we would take.  The idea is to also train the model completely as if it was just a patchwise one.
+
+
+
+
+# Pruning parameters
+
+# more situationally changed parameters
+num_train_iters_between_prunings: 10
+max_auto_prunings: 70
+proportion_to_prune: 0.01
+
+# More pruning-type-defining parameters
+prune_by_original_percent: True
+num_filters_to_prune: -1 # not applied
+prune_n_kernels_at_once: 100
+resource_name_to_prune_by: "flops_num"        # Options: flops_num, weights_num, kernels_num
+importance_func: IPAD_eq        # Options: [0.5, 0.5, 0.5], 0, 1
+
