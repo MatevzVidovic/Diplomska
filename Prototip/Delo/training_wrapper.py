@@ -443,6 +443,55 @@ if False:
 
 
 
+def split_to_relevant_input_size(input_tensor, input_size_limit):
+    """
+    input_tensor is [batch_size, channels, height, width]
+    When going through the network, the amount of VRAM taken is generally linear to input's batch_size*height*width.
+    We can't change height and width, but we can change batch_size.
+
+    So we can decide to split the input tensor into smaller batches, which will be smaller than the desired input_size_limit.
+    And this is what we do.
+    """
+    og_bs = input_tensor.size(0)
+
+    splitting_ixs = [0] # contains the left ixs of splits.  Therefore   first_split = tensor[splitting_ixs[0]:splitting_ixs[1]], because the right ix is exclusive.
+    # curr_ix = 0
+    # curr_bs = curr_ix - splitting_ixs[-1]
+
+    next_ix = 1
+    next_bs = next_ix - splitting_ixs[-1]
+
+    while True:
+
+        if next_ix == og_bs:
+            splitting_ixs.append(next_ix)
+            break
+        elif (next_bs * input_tensor.size(2) * input_tensor.size(3)) > input_size_limit:
+            splitting_ixs.append(next_ix)
+        
+        next_ix += 1
+        next_bs = next_ix - splitting_ixs[-1]
+    
+
+    # if og_bs 1, then splitting_ixs will be [0, 1], which is correct.
+    # if og_bs 2, then splitting_ixs will either be [0,2] or [0,1,2], which is correct.
+
+    # The thig is, if   1 * input_tensor.size(2) * input_tensor.size(3) > input_size_limit, then there wouldn't be any acceptable solution.
+    # But what our code would do, is have splitting_ixs = list(range(og_bs)), which is the best approximation.
+    # Because our code splits when the adding one more into the current batch would make the batch too big.
+    # And virtually we start with bs 1, because next_ix += 1. So we will always add at least 1.
+
+    return splitting_ixs
+
+
+def split_along_splitting_ixs(input_tensor, splitting_ixs):
+
+    splits = []
+    for i in range(len(splitting_ixs) - 1):
+        splits.append(input_tensor[splitting_ixs[i]:splitting_ixs[i+1]])
+
+    return splits
+
 
 
 
@@ -451,7 +500,7 @@ if False:
 class TrainingWrapper:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, model, dataloaders_dict, learning_parameters, device):
+    def __init__(self, model, dataloaders_dict, training_wrapper_params, device):
         
         try:
 
@@ -462,25 +511,20 @@ class TrainingWrapper:
 
 
             # self.epochs = learning_parameters["epochs"]
+
+            self.params = training_wrapper_params
     
-            self.loss_fn = learning_parameters["loss_fn"]
-            self.train_epoch_size_limit = learning_parameters["train_epoch_size_limit"]
 
-            self.zero_out_non_sclera_on_predictions = learning_parameters["zero_out_non_sclera_on_predictions"]
+            if self.params["have_patchification"]:
 
-            self.have_patchification = learning_parameters["have_patchification"]
-            if self.have_patchification:
-                pp = learning_parameters["patchification_params"]
+                pp = self.params["patchification_params"]
 
                 self.patch_shape = (pp["patch_y"], pp["patch_x"])
                 self.stride_shape = (int(pp["stride_percent_of_patch_y"] * self.patch_shape[0]), int(pp["stride_percent_of_patch_x"] * self.patch_shape[1]))
                 self.input_size_limit = pp["input_size_limit"]
 
-                self.train_no_reconstruct = pp["train_no_reconstruct"]
-                self.train_no_reconstruct_num_patches_per_img = pp["train_no_reconstruct_num_patches_per_img"]
+                self.num_of_patches_from_img = pp["num_of_patches_from_img"]
 
-            # self.gradient_clipping_norm = learning_parameters["gradient_clipping_norm"]
-            # self.gradient_clip_value = learning_parameters["gradient_clip_value"]
 
 
         except Exception as e:
@@ -502,7 +546,10 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict["train"]
         
-            size = int(min(self.train_epoch_size_limit, len(dataloader.dataset)))
+            size = int(len(dataloader.dataset))
+
+            if self.params["have_patchification"]:
+                size = size * self.num_of_patches_from_img
             
             num_batches = len(dataloader)
             size_so_far = 0
@@ -516,62 +563,21 @@ class TrainingWrapper:
 
             for batch_ix, data_dict in enumerate(dataloader):
                 X = data_dict["images"]
-                y = data_dict["masks"]
+                y = data_dict[self.params["target"]]
                 scleras = data_dict["scleras"]
                 img_names = data_dict["img_names"]
 
 
 
-                if self.have_patchification:
-
-                    pred = None
-
-                    for img in X:
+                # In case of patchification, the train dataloader will give us patches anyway.
+                # So in train we don't do reconstruction, but rather just work with the patches directly.
+                
 
 
-                        patch_dict = patchify(img, self.patch_shape, self.stride_shape)
+                X = X.to(self.device)
 
-                        concated_patches = torch.cat([patch_dict["main_patches"], patch_dict["right_patches"], patch_dict["bottom_patches"], patch_dict["right_bottom_corner"]], dim=0)
-
-                        concated_patches = concated_patches.to(self.device)
-                        curr_pred = self.model(concated_patches)
-
-                        # deconcat patches
-                        num_main = patch_dict["main_patches"].size(0)
-                        num_right = patch_dict["right_patches"].size(0)
-                        num_bottom = patch_dict["bottom_patches"].size(0)
-                        # num_rbc = patch_dict["right_bottom_corner"].size(0)
-
-                        pred_patch_dict = {
-                            "main_patches" : curr_pred[:num_main],
-                            "right_patches" : curr_pred[num_main:num_main + num_right],
-                            "bottom_patches" : curr_pred[num_main + num_right:num_main + num_right + num_bottom],
-                            "right_bottom_corner" : curr_pred[num_main + num_right + num_bottom:],
-
-                            "main_lu_ixs" : patch_dict["main_lu_ixs"],
-                            "right_lu_ixs" : patch_dict["right_lu_ixs"],
-                            "bottom_lu_ixs" : patch_dict["bottom_lu_ixs"],
-                            "right_bottom_corner_lu_ixs" : patch_dict["right_bottom_corner_lu_ixs"]
-                        }
-
-                        final_pred_shape = (2, img.size()[1], img.size()[2])
-
-                        accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, self.patch_shape, pred_patch_dict)
-
-                        reconstructed_img = accumulating_tensor / num_of_addings
-                        reconstructed_img = torch.unsqueeze(reconstructed_img, dim=0) # to give the batch dimension
-
-                        if pred is None:
-                            pred = reconstructed_img
-                        else:
-                            pred = torch.cat([pred, reconstructed_img], dim=0)
-
-
-                else:
-                    X = X.to(self.device)
-
-                    # Compute prediction error
-                    pred = self.model(X)
+                # Compute prediction error
+                pred = self.model(X)
 
 
 
@@ -582,7 +588,7 @@ class TrainingWrapper:
 
 
 
-                if self.zero_out_non_sclera_on_predictions:
+                if self.params["zero_out_non_sclera_on_predictions"]:
                     scleras = scleras.to(self.device)
                     scleras = torch.squeeze(scleras, dim=1)
                     where_sclera_is_zero = scleras == 0
@@ -591,7 +597,7 @@ class TrainingWrapper:
                     # we want to make logits such that we are sure this is not a vein
                     # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
 
-                loss = self.loss_fn(pred, y)
+                loss = self.params["loss_fn"](pred, y)
 
                 curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
                 agg_test_loss += curr_test_loss
@@ -611,8 +617,6 @@ class TrainingWrapper:
                     start = timer()
                     print(f"per-ex loss: {curr_test_loss:>7f}  [{size_so_far:>5d}/{size:>5d}]")
                 
-                if size_so_far >= size:
-                    break
                 
 
                 
@@ -641,7 +645,7 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict["masks"]
+                    y = data_dict[self.params["target"]]
                     img_names = data_dict["img_names"]
                     X, y = X.to(self.device), y.to(self.device)
                     self.model(X)
@@ -672,14 +676,14 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict["masks"]
+                    y = data_dict[self.params["target"]]
                     scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
 
 
 
 
-                    if self.have_patchification:
+                    if self.params["have_patchification"]:
 
                         pred = None
 
@@ -691,7 +695,28 @@ class TrainingWrapper:
                             concated_patches = torch.cat([patch_dict["main_patches"], patch_dict["right_patches"], patch_dict["bottom_patches"], patch_dict["right_bottom_corner"]], dim=0)
 
                             concated_patches = concated_patches.to(self.device)
-                            curr_pred = self.model(concated_patches)
+
+                            # curr_pred = self.model(concated_patches)
+
+                            # If there are too many patches to process, we would run out of VRAM
+                            # So instead, we process them in nice blocks, and then we accumulate them.
+
+                            # This, however, wouldn't work in train. There we don't have torch.no_grad(), so gradients are accumulation.
+
+                            splitting_ixs = split_to_relevant_input_size(concated_patches, self.input_size_limit)
+                            splits = split_along_splitting_ixs(concated_patches, splitting_ixs)
+
+                            curr_pred = None
+
+                            for split in splits:
+                                split_pred = self.model(split)
+                                # I think this will always be 4D, even if bs was just 1.
+                                if curr_pred is None:
+                                    curr_pred = split_pred
+                                else:
+                                    curr_pred = torch.cat([curr_pred, split_pred], dim=0)
+
+
 
                             # deconcat patches
                             num_main = patch_dict["main_patches"].size(0)
@@ -715,9 +740,11 @@ class TrainingWrapper:
 
                             accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, self.patch_shape, pred_patch_dict)
 
-                            reconstructed_img = accumulating_tensor / num_of_addings
-                            reconstructed_img = torch.unsqueeze(reconstructed_img, dim=0) # to give the batch dimension
+                            reconstructed_img = accumulating_tensor / num_of_addings    # probs not necessary, but can't really hurt
 
+
+                            # Pred is the tensor for all images. So when we finish reconstructing one image, we concat it to the pred tensor.
+                            reconstructed_img = torch.unsqueeze(reconstructed_img, dim=0) # to give it the batch dimension, so we can then concat to previous preds
                             if pred is None:
                                 pred = reconstructed_img
                             else:
@@ -739,7 +766,7 @@ class TrainingWrapper:
 
 
 
-                    if self.zero_out_non_sclera_on_predictions:
+                    if self.params["zero_out_non_sclera_on_predictions"]:
                         scleras = scleras.to(self.device)
                         scleras = torch.squeeze(scleras, dim=1)
                         where_sclera_is_zero = scleras == 0
@@ -756,7 +783,7 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    curr_test_loss = self.loss_fn(pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
+                    curr_test_loss = self.params["loss_fn"](pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
                     agg_test_loss += curr_test_loss
 
 
@@ -828,7 +855,7 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict["masks"]
+                    y = data_dict[self.params["target"]]
                     scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
                     
@@ -838,7 +865,7 @@ class TrainingWrapper:
                     print(f"scleras.shape: {scleras.shape}")
 
 
-                    if self.zero_out_non_sclera_on_predictions:
+                    if self.params["zero_out_non_sclera_on_predictions"]:
                         scleras = scleras.to(self.device)
                         scleras = torch.squeeze(scleras, dim=1)
                         where_sclera_is_zero = scleras == 0
@@ -854,7 +881,7 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.loss_fn(pred, y).item()
+                    test_loss += self.params["loss_fn"](pred, y).item()
 
 
 

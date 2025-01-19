@@ -5,6 +5,7 @@
 import os
 import logging
 import python_logger.log_helper as py_log
+import python_logger.log_helper as py_log_always_on
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
@@ -148,7 +149,7 @@ def unfold_3chan(tensor_img, patch_shape, stride: tuple):
         
         return patches, left_upper_ixs
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -246,7 +247,7 @@ def patchify(tensor_img, patch_shape, stride: tuple):
     
 
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -296,7 +297,7 @@ def accumulate_patches(prediction_tensor_shape, patch_shape, stride: tuple, patc
         py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
         return accumulating_tensor, num_of_addings
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -376,7 +377,7 @@ def try_patchification():
         py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
 
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -482,7 +483,7 @@ def naive_patchification():
         py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
 
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -575,7 +576,7 @@ naive_patchification()
                 
 #                 return patches, left_upper_ixs
 #             except Exception as e:
-#                 py_log.log_stack(MY_LOGGER)
+#                 py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
 #                 raise e
 
 
@@ -673,7 +674,7 @@ naive_patchification()
             
 
 #             except Exception as e:
-#                 py_log.log_stack(MY_LOGGER)
+#                 py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
 #                 raise e
 
 
@@ -723,7 +724,7 @@ naive_patchification()
 #                 py_log.log_locals(MY_LOGGER)
 #                 return accumulating_tensor
 #             except Exception as e:
-#                 py_log.log_stack(MY_LOGGER)
+#                 py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
 #                 raise e
 
 
@@ -773,7 +774,7 @@ naive_patchification()
 #         print(f"{accumulating_tensor.shape=}")
 
 #     except Exception as e:
-#         py_log.log_stack(MY_LOGGER)
+#         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
 #         raise e
 
 

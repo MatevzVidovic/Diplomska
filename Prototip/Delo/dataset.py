@@ -47,6 +47,7 @@ import random
 from PIL import Image
 from torchvision import transforms as tf
 import torchvision.transforms.functional as F
+from torchvision import transforms
 import cv2
 
 import matplotlib.pyplot as plt
@@ -66,29 +67,6 @@ np.random.seed(7)
 
 
 
-# def _build_transform(self, hflip=False, vflip=False, rotate=0, scale=1, translate=0, shear=0, brightness_jitter=0, hue_jitter=0, contrast_jitter=0, saturation_jitter=0, transform=None, transform_tensor=None):
-#     transforms = []
-#     if self.image_size is not None:
-#         transforms.append(tf.Resize(self.image_size))
-#     if hflip:
-#         transforms.append(tf.RandomHorizontalFlip(.5 if hflip is True else hflip))
-#     if vflip:
-#         transforms.append(tf.RandomVerticalFlip(.5 if vflip is True else vflip))
-#     if any((rotate, scale - 1, translate, shear)):
-#         if scale != 1 and not is_iterable(scale):
-#             scale = (min(1 / scale, scale), max(1 / scale, scale))
-#         if translate and not is_iterable(translate):
-#             translate = (translate, translate)
-#         transforms.append(tf.RandomAffine(rotate, translate, scale, shear))
-#     if any((brightness_jitter, hue_jitter, contrast_jitter, saturation_jitter)):
-#         transforms.append(tf.ColorJitter(brightness_jitter, contrast_jitter, saturation_jitter, hue_jitter))
-#     if transform is not None:
-#         transforms.append(transform)
-#     transforms.append(tf.ToTensor())
-#     if transform_tensor is not None:
-#         transforms.append(transform_tensor)
-#     return tf.Compose(transforms)
-
 
 
 
@@ -107,6 +85,10 @@ class IrisDataset(Dataset):
         self.output_height = kwargs['output_height']
 
         self.testrun_length = kwargs['testrun_size']
+
+        self.aug_type = kwargs.get('aug_type', 'tf')
+
+
 
         self.zero_out_non_sclera = kwargs.get('zero_out_non_sclera', False)
         self.add_sclera_to_img = kwargs.get('add_sclera_to_img', False)
@@ -173,111 +155,245 @@ class IrisDataset(Dataset):
 
 
 
+
+
+
+    def tf_aug(self, idx, rand_id, show_testrun=False):
+
+
+        img_name_no_suffix = self.img_names_no_suffix[idx]
+
+        image_path = osp.join(self.filepath,'Images',f'{img_name_no_suffix}.jpg')
+        veins_path = osp.join(self.filepath,'Veins', f"{img_name_no_suffix}.png")
+        scleras_path = osp.join(self.filepath,'Scleras', f"{img_name_no_suffix}_sclera.png")
+        bcosfire_path = osp.join(self.filepath,'Bcosfire', f"{img_name_no_suffix}.png")
+        coye_path = osp.join(self.filepath,'Coye', f"{img_name_no_suffix}.png")
+
+        masks = [veins_path, scleras_path, bcosfire_path, coye_path]
+
+        img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+
+        # !!! 2RGB is the main diference from TF augmentation. And this messes up code clenliness.
+        masks = [cv2.cvtColor(cv2.imread(mask), cv2.COLOR_BGR2GRAY) for mask in masks]
+
+
+        img = F.to_tensor(img)
+        masks = [F.to_tensor(mask) for mask in masks]
+
+        # py_log_always_on.log_manual(MY_LOGGER, img=img, masks0=masks[0], masks1=masks[1], masks2=masks[2])
+
+
+
+
+        da_params = {
+            "h_flip" : 0.5,
+            "affine_params" : {
+                "degrees" : 30,
+                "translate" : (0.2, 0.2),
+                "scale" : (0.8, 1.2),
+                "shear" : 10
+            },
+            "color_jitter_params" : {
+                "brightness" : 0.1,
+                "contrast" : 0.1,
+                "saturation" : 0.1,
+                "hue" : 0.1
+            },
+
+        }
+
+
+        #py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+        if show_testrun or self.split == 'train':
+
+            if random.random() > 0.5:
+                img = F.hflip(img)
+                masks = [F.hflip(mask) for mask in masks]
+            
+            affine_transform = tf.RandomAffine(**da_params["affine_params"])
+            params = affine_transform.get_params(
+                affine_transform.degrees, 
+                affine_transform.translate, 
+                affine_transform.scale, 
+                affine_transform.shear,
+                [img.shape[1], img.shape[2]])
+            
+            img = F.affine(img, *params, interpolation=F.InterpolationMode.BILINEAR)
+            masks = [F.affine(mask, *params, interpolation=F.InterpolationMode.NEAREST) for mask in masks]
+
+            #py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+
+            # Only applicable to img
+            img = tf.ColorJitter(**da_params["color_jitter_params"])(img)
+
+            #py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+
+        if show_testrun:
+            save_imgs_quick_figs([img, *masks], f"{idx}_{rand_id}_da_over")
+        
+
+
+        img = smart_conversion(img, "ndarray", "uint8")
+        masks = [smart_conversion(mask, "ndarray", "uint8") for mask in masks]
+
+        return img, masks, img_name_no_suffix
+            
+
+
+
+
+
+
+    def np_aug(self, idx, rand_id, show_testrun=False):
+
+        img_name_no_suffix = self.img_names_no_suffix[idx]
+
+        image_path = osp.join(self.filepath,'Images',f'{img_name_no_suffix}.jpg')
+        veins_path = osp.join(self.filepath,'Veins', f"{img_name_no_suffix}.png")
+        scleras_path = osp.join(self.filepath,'Scleras', f"{img_name_no_suffix}_sclera.png")
+        bcosfire_path = osp.join(self.filepath,'Bcosfire', f"{img_name_no_suffix}.png")
+        coye_path = osp.join(self.filepath,'Coye', f"{img_name_no_suffix}.png")
+
+        masks = [veins_path, scleras_path, bcosfire_path, coye_path]
+
+        img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+
+        # !!! 2RGB is the main diference from TF augmentation. And this messes up code clenliness.
+        masks = [cv2.cvtColor(cv2.imread(mask), cv2.COLOR_BGR2RGB) for mask in masks]
+
+
+        
+        img = smart_conversion(img, 'ndarray', 'uint8')
+        masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
+
+
+
+        save_img_ix = 0
+
+        # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_before_da")
+
+        # Testing
+        if show_testrun:
+
+            img_test = img
+            masks_test = masks
+            
+            py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+            py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_original_image")
+            # py_log_always_on.log_time(MY_LOGGER, "test_da")
+            img_test, masks_test = random_horizontal_flip(img_test, masks_test, prob=1.0)
+            py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_horizontal_flip")
+            py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+
+            ksize = (img_test.shape[0]//20)
+            ksize = ksize+1 if ksize % 2 == 0 else ksize
+            # py_log_always_on.log_time(MY_LOGGER, "test_da")
+            img_test = random_gaussian_blur(img_test, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=1.0)
+            py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_gaussian blur")
+            py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+            # py_log_always_on.log_time(MY_LOGGER, "test_da")
+            img_test, masks_test = random_rotation(img_test, masks_test, max_angle_diff=15, prob=1.0)
+            py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_rotation")
+            py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+            # py_log_always_on.log_time(MY_LOGGER, "test_da")
+            img_test, masks_test = zoom_in_somewhere(img_test, masks_test, max_scale_percent=0.5, prob=1.0)
+            py_log_always_on.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img_test, *masks_test], f"{idx}_{save_img_ix}_zoom_blur")
+            py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+            # py_log_always_on.log_time(MY_LOGGER, "test_da")
+
+            if True:
+                img = img_test
+                masks = masks_test
+
+
+
+
+
+        
+
+        if not show_testrun and self.split == 'train':
+
+            img, masks = random_horizontal_flip(img, masks, prob=0.5)
+
+            ksize = (img.shape[0]//20)
+            ksize = ksize+1 if ksize % 2 == 0 else ksize
+            img = random_gaussian_blur(img, possible_sigma_vals_list=np.linspace(1, 10, 50), ker_size=ksize, prob=0.1)
+
+            img, masks = random_rotation(img, masks, max_angle_diff=30, prob=0.5)
+
+            img, masks = zoom_in_somewhere(img, masks, max_scale_percent=0.3, prob=0.7)
+
+
+
+
+
+        #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da")
+
+
+
+
+
+
+        # Converting img and masks to correct dimensions, binarization, types, and removing unnecessary dimension
+        img = smart_conversion(img, 'ndarray', 'uint8')
+        masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
+
+        masks = [cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY) for mask in masks]
+
+
+
+        #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_converted")
+
+        return img, masks, img_name_no_suffix
+
+
+
     @py_log.autolog(passed_logger=MY_LOGGER)
     def __getitem__(self, idx):
 
         try:
             
-            img_name_no_suffix = self.img_names_no_suffix[idx]
 
-            image_path = osp.join(self.filepath,'Images',f'{img_name_no_suffix}.jpg')
-            veins_path = osp.join(self.filepath,'Veins', f"{img_name_no_suffix}.png")
-            scleras_path = osp.join(self.filepath,'Scleras', f"{img_name_no_suffix}_sclera.png")
-            bcosfire_path = osp.join(self.filepath,'Bcosfire', f"{img_name_no_suffix}.png")
-            coye_path = osp.join(self.filepath,'Coye', f"{img_name_no_suffix}.png")
-
-            masks = [veins_path, scleras_path, bcosfire_path, coye_path]
-
-            img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-            masks = [cv2.cvtColor(cv2.imread(mask), cv2.COLOR_BGR2GRAY) for mask in masks]
-
-            img = F.to_tensor(img)
-            masks = [F.to_tensor(mask) for mask in masks]
-
-            # py_log_always_on.log_manual(MY_LOGGER, img=img, masks0=masks[0], masks1=masks[1], masks2=masks[2])
-
-
-
-
-            da_params = {
-                "h_flip" : 0.5,
-                "affine_params" : {
-                    "degrees" : 30,
-                    "translate" : (0.2, 0.2),
-                    "scale" : (0.8, 1.2),
-                    "shear" : 10
-                },
-                "color_jitter_params" : {
-                    "brightness" : 0.1,
-                    "contrast" : 0.1,
-                    "saturation" : 0.1,
-                    "hue" : 0.1
-                },
-
-            }
-
-
-            #py_log_always_on.log_time(MY_LOGGER, "test_da")
-
-            rand_ix = random.randint(0, 1000)
 
 
             show_testrun = False
+            rand_id = random.randint(0, 1000)
 
-            if show_testrun or self.split == 'train':
-
-                if random.random() > 0.5:
-                    img = F.hflip(img)
-                    masks = [F.hflip(mask) for mask in masks]
-                
-                affine_transform = tf.RandomAffine(**da_params["affine_params"])
-                params = affine_transform.get_params(
-                    affine_transform.degrees, 
-                    affine_transform.translate, 
-                    affine_transform.scale, 
-                    affine_transform.shear,
-                    [img.shape[1], img.shape[2]])
-                
-                img = F.affine(img, *params, interpolation=F.InterpolationMode.BILINEAR)
-                masks = [F.affine(mask, *params, interpolation=F.InterpolationMode.NEAREST) for mask in masks]
-
-                #py_log_always_on.log_time(MY_LOGGER, "test_da")
+            if self.aug_type == 'tf':
+                img, masks, img_name_no_suffix = self.tf_aug(idx, rand_id, show_testrun)
+            elif self.aug_type == 'np':
+                img, masks, img_name_no_suffix = self.np_aug(idx, rand_id, show_testrun)
+            else:
+                raise ValueError(f"Augmentation type not recognized. Given value: {self.aug_type}")
 
 
-                # Only applicable to img
-                img = tf.ColorJitter(**da_params["color_jitter_params"])(img)
-
-                #py_log_always_on.log_time(MY_LOGGER, "test_da")
 
 
-            if show_testrun:
-                save_imgs_quick_figs([img, *masks], f"{idx}_{rand_ix}_da_over")
-            
 
 
-            img = smart_conversion(img, "ndarray", "uint8")
-            masks = [smart_conversion(mask, "ndarray", "uint8") for mask in masks]
-            
-            img = cv2.resize(img, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4)
-            masks = [cv2.resize(mask, (self.input_width, self.input_height), interpolation=cv2.INTER_NEAREST) for mask in masks]
+            # Converting img and masks to correct dimensions, binarization, types, and removing unnecessary dimension
+            img = smart_conversion(img, 'ndarray', 'uint8')
+            masks = [smart_conversion(mask, 'ndarray', 'uint8') for mask in masks]
 
-            # img = F.resize(img, (self.input_height, self.input_width), interpolation=F.InterpolationMode.LANCZOS)
-            # masks = [F.resize(mask, (self.input_height, self.input_width), interpolation=F.InterpolationMode.NEAREST) for mask in masks]
-
-            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_converted")
 
 
             # #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"])
 
             # performing the necessary resizing
+            img = cv2.resize(img, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4)
+            masks = [cv2.resize(mask, (self.input_width, self.input_height), interpolation=cv2.INTER_LANCZOS4) for mask in masks]
 
             if show_testrun:
-
-                py_log_always_on.log_manual(MY_LOGGER, img=img, masks0=masks[0], masks1=masks[1], masks2=masks[2])
-                save_imgs_quick_figs([img, *masks], f"{idx}_{rand_ix}_resize_over")
-
-
-
+                py_log_always_on.log_time(MY_LOGGER, "test_da")
+                save_imgs_quick_figs([img, *masks], f"{idx}_{rand_id}_resize_over")
 
 
             
@@ -293,24 +409,26 @@ class IrisDataset(Dataset):
             bcosfire = np.expand_dims(bcosfire, axis=2)
             coye = np.expand_dims(coye, axis=2)
 
-            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{rand_ix}_{save_img_ix}_after_da_resized")
+            #py_log.log_locals(MY_LOGGER, attr_sets=["size", "math"]); save_img_ix += 1; save_imgs_quick_figs([img, *masks], f"{idx}_{save_img_ix}_after_da_resized")
+
 
             if self.zero_out_non_sclera:
                 sclera_3_channels = np.concatenate([sclera, sclera, sclera], axis=2)
                 where_is_not_sclera = np.where(sclera_3_channels == 0)
                 img[where_is_not_sclera] = 0
 
-            
             # stack img and sclera to get a 4-channel image
             if self.add_sclera_to_img:
                 img = np.concatenate([img, sclera], axis=2)
             # imgXsclera = img * sclera
-            
+
             if self.add_bcosfire_to_img:
                 img = np.concatenate([img, bcosfire], axis=2)
-            
+
             if self.add_coye_to_img:
                 img = np.concatenate([img, coye], axis=2)
+
+
 
 
 
@@ -322,17 +440,18 @@ class IrisDataset(Dataset):
             veins = smart_conversion(veins, 'tensor', "uint8").long() # converts to int64
             
             veins_for_show = veins.clone() * 255
-            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_imgs_quick_figs([img, veins_for_show, sclera], f"{idx}_{rand_ix}_{save_img_ix}_final")
+            # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"]); save_imgs_quick_figs([img, veins_for_show, sclera], f"{idx}_{save_img_ix}_final")
+
+            # veins mustn't have channels. It is a target, not an image.
+            # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
+            # So here we need to return (height, width) veins, not (height, width, 1) veins.
+            veins = veins.squeeze() # This function removes all dimensions of size 1 from the tensor
 
             if show_testrun:
                 bcosfire = smart_conversion(bcosfire, 'tensor', "float32") # converts to float32
                 coye = smart_conversion(coye, 'tensor', "float32") # converts to float32
                 py_log_always_on.log_manual(MY_LOGGER, img=img, veins=veins, sclera=sclera, bcosfire=bcosfire, coye=coye)
-                save_imgs_quick_figs([img[:4, :, :], img[[0,1,2,4], :, :], img[[0,1,2,5], :, :], veins_for_show, sclera, bcosfire, coye], f"{idx}_{rand_ix}_final")
-            # veins mustn't have channels. It is a target, not an image.
-            # And since the output of our network is (batch_size, n_classes, height, width), our target has to be (batch_size, height, width).
-            # So here we need to return (height, width) veins, not (height, width, 1) veins.
-            veins = veins.squeeze() # This function removes all dimensions of size 1 from the tensor
+                save_imgs_quick_figs([img[:4, :, :], img[[0,1,2,4], :, :], img[[0,1,2,5], :, :], veins_for_show, sclera, bcosfire, coye], f"{idx}_{rand_id}_final")
 
 
 
@@ -342,10 +461,6 @@ class IrisDataset(Dataset):
 
             # while True:
             #     plt.pause(0.1)
-
-            #py_log_always_on.log_time(MY_LOGGER, "test_da")
-
-
 
             # Make them nicely concatable in custom_collate_fn
             img = img.unsqueeze(0)
@@ -366,7 +481,7 @@ class IrisDataset(Dataset):
 
 
 
-            return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name_no_suffix}
+            return {'images': img, 'veins': veins, "scleras": sclera , 'img_names': img_name_no_suffix}
         
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -377,15 +492,13 @@ class IrisDataset(Dataset):
 def custom_collate_fn(batch):
     
     images = torch.concat([item['images'] for item in batch], dim=0)
-    masks = torch.concat([item['masks'] for item in batch], dim=0)
+    veins = torch.concat([item['veins'] for item in batch], dim=0)
     scleras = torch.concat([item['scleras'] for item in batch], dim=0)
 
     img_names = []
     for item in batch:
         img_names.extend(item['img_names']) 
-    return {'images': images, 'masks': masks, "scleras" : scleras, 'img_names': img_names}
-
-
+    return {'images': images, 'veins': veins, "scleras" : scleras, 'img_names': img_names}
 
 
 if __name__ == "__main__":
@@ -421,12 +534,12 @@ if __name__ == "__main__":
         
         "transform" : None,
         "n_classes" : 2,
+        "aug_type" : "np",
 
         "zero_out_non_sclera" : True,
         "add_sclera_to_img" : True,
         "add_bcosfire_to_img" : True,
         "add_coye_to_img" : True,
-
 
         "patchify" : True,
         "patch_shape" : (256, 256),
@@ -442,23 +555,21 @@ if __name__ == "__main__":
     train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
 #    for i in range(1000):
     res = train_dataset[0]
-    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['masks'], sclera=res['scleras'], names=res['img_names'])
+    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['veins'], sclera=res['scleras'], names=res['img_names'])
     for i in range(dataloading_args["num_of_patches_from_img"]):
         save_img_quick_figs(res['images'][i, :3, :, :], f"test_{i}.png")
         save_img_quick_figs(res['images'][i, 3:, :, :], f"test_{i}_other_chans.png")
-        save_img_quick_figs(res['masks'][i]*255, f"test_{i}_veins.png")
+        save_img_quick_figs(res['veins'][i]*255, f"test_{i}_veins.png")
         save_img_quick_figs(res['scleras'][i], f"test_{i}_scleras.png")
     res = train_dataset[0]
-    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['masks'], sclera=res['scleras'], names=res['img_names'])
+    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['veins'], sclera=res['scleras'], names=res['img_names'])
     for i in range(dataloading_args["num_of_patches_from_img"]):
         save_img_quick_figs(res['images'][i, :3, :, :], f"test_{i}.png")
         save_img_quick_figs(res['images'][i, 3:, :, :], f"test_{i}_other_chans.png")
-        save_img_quick_figs(res['masks'][i]*255, f"test_{i}_veins.png")
+        save_img_quick_figs(res['veins'][i]*255, f"test_{i}_veins.png")
         save_img_quick_figs(res['scleras'][i], f"test_{i}_scleras.png")
     # res = train_dataset[0]
     # res = train_dataset[0]
     # res = train_dataset[0]
-
-
 
 # %%

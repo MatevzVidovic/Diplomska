@@ -6,7 +6,7 @@
 
 #SBATCH -p frida
 #SBATCH -c 7
-#SBATCH --gpus=A100
+#SBATCH --gpus=A100_80GB
 #SBATCH --mem-per-cpu=8G 
 
 

@@ -55,7 +55,7 @@ from helper_model_vizualization import model_graph
 class ModelWrapper:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, learning_dict: dict, input_example, save_path, device):
+    def __init__(self, model_class, model_parameters: dict, dataloader_dict: dict, model_wrapper_params: dict, training_wrapper_params: dict, input_example, save_path, device):
 
         try:
                 
@@ -126,11 +126,11 @@ class ModelWrapper:
 
 
 
-            self.learning_rate = learning_dict["learning_rate"]
-            self.optimizer_class = learning_dict["optimizer_class"]
+            self.learning_rate = model_wrapper_params["learning_rate"]
+            self.optimizer_class = model_wrapper_params["optimizer_class"]
 
 
-            self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, learning_dict, device)
+            self.training_wrapper = TrainingWrapper(self.model, dataloader_dict, training_wrapper_params, device)
 
             self.initialize_optimizer()
 

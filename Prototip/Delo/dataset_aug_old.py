@@ -37,6 +37,8 @@ from img_augments import random_rotation, zoom_in_somewhere, random_gaussian_blu
 
 from helper_img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_imgs_quick_figs
 
+from helper_patchification import get_random_patches
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -89,6 +91,11 @@ class IrisDataset(Dataset):
         self.add_sclera_to_img = kwargs.get('add_sclera_to_img', False)
         self.add_bcosfire_to_img = kwargs.get('add_bcosfire_to_img', False)
         self.add_coye_to_img = kwargs.get('add_coye_to_img', False)
+
+        self.patchify = kwargs.get('patchify', False)
+        self.patch_shape = kwargs.get('patch_shape', None)
+        self.num_of_patches_from_img = kwargs.get('num_of_patches_from_img', None)
+        self.prob_zero_patch_resample = kwargs.get('prob_zero_patch_resample', None)
 
         
         self.split = split
@@ -298,6 +305,9 @@ class IrisDataset(Dataset):
                 img = np.concatenate([img, coye], axis=2)
 
 
+
+
+
             # Conversion to standard types that pytorch can work with.
             img = smart_conversion(img, "tensor", "float32") # converts to float32
             sclera = smart_conversion(sclera, 'tensor', "float32") # converts to float32
@@ -328,6 +338,23 @@ class IrisDataset(Dataset):
             # while True:
             #     plt.pause(0.1)
 
+            # Make them nicely concatable in custom_collate_fn
+            img = img.unsqueeze(0)
+            veins = veins.unsqueeze(0).unsqueeze(0) # It was only 2d before
+            sclera = sclera.unsqueeze(0)
+            img_name_no_suffix = [img_name_no_suffix]
+
+            if self.patchify:
+                # these become a tensor like [num_of_patches_from_img, channels, height, width]
+                img, veins, sclera = get_random_patches([img, veins, sclera], patch_shape=self.patch_shape, num_of_patches_from_img=self.num_of_patches_from_img, 
+                                                        prob_zero_patch_resample=self.prob_zero_patch_resample, resample_gt=sclera)
+                
+                old_img_name_no_suffix = img_name_no_suffix[0]
+                img_name_no_suffix = [f"{old_img_name_no_suffix}_{i}" for i in range(self.num_of_patches_from_img)]
+
+            veins = veins.squeeze(1) # PyTorch needs img to be 4d, and veins to be 3d. Respectively: [batch_size, channels, height, width] and [batch_size, height, width]
+            # So we need to remove the channel dimension from veins, because it is a target, not an image.
+
 
 
             return {'images': img, 'masks': veins, "scleras": sclera , 'img_names': img_name_no_suffix}
@@ -339,10 +366,14 @@ class IrisDataset(Dataset):
 
 
 def custom_collate_fn(batch):
-    images = torch.stack([item['images'] for item in batch])
-    masks = torch.stack([item['masks'] for item in batch])
-    scleras = torch.stack([item['scleras'] for item in batch])
-    img_names = [item['img_names'] for item in batch]  # Collect image names into a list
+    
+    images = torch.concat([item['images'] for item in batch], dim=0)
+    masks = torch.concat([item['masks'] for item in batch], dim=0)
+    scleras = torch.concat([item['scleras'] for item in batch], dim=0)
+
+    img_names = []
+    for item in batch:
+        img_names.extend(item['img_names']) 
     return {'images': images, 'masks': masks, "scleras" : scleras, 'img_names': img_names}
 
 
@@ -385,6 +416,11 @@ if __name__ == "__main__":
         "add_bcosfire_to_img" : True,
         "add_coye_to_img" : True,
 
+        "patchify" : True,
+        "patch_shape" : (256, 256),
+        "num_of_patches_from_img" : 4,
+        "prob_zero_patch_resample" : 0.8 #1.0
+
     }
 
 
@@ -394,7 +430,19 @@ if __name__ == "__main__":
     train_dataset = IrisDataset(filepath=data_path, split='train', **dataloading_args)
 #    for i in range(1000):
     res = train_dataset[0]
+    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['masks'], sclera=res['scleras'], names=res['img_names'])
+    for i in range(dataloading_args["num_of_patches_from_img"]):
+        save_img_quick_figs(res['images'][i, :3, :, :], f"test_{i}.png")
+        save_img_quick_figs(res['images'][i, 3:, :, :], f"test_{i}_other_chans.png")
+        save_img_quick_figs(res['masks'][i]*255, f"test_{i}_veins.png")
+        save_img_quick_figs(res['scleras'][i], f"test_{i}_scleras.png")
     res = train_dataset[0]
+    py_log_always_on.log_manual(MY_LOGGER, img=res['images'], veins=res['masks'], sclera=res['scleras'], names=res['img_names'])
+    for i in range(dataloading_args["num_of_patches_from_img"]):
+        save_img_quick_figs(res['images'][i, :3, :, :], f"test_{i}.png")
+        save_img_quick_figs(res['images'][i, 3:, :, :], f"test_{i}_other_chans.png")
+        save_img_quick_figs(res['masks'][i]*255, f"test_{i}_veins.png")
+        save_img_quick_figs(res['scleras'][i], f"test_{i}_scleras.png")
     # res = train_dataset[0]
     # res = train_dataset[0]
     # res = train_dataset[0]

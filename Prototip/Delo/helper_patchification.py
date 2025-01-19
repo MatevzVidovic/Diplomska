@@ -4,6 +4,7 @@
 import os
 import logging
 import python_logger.log_helper as py_log
+import python_logger.log_helper as py_log_always_on
 
 
 MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same string, same logger.
@@ -66,9 +67,58 @@ def unfold_3chan(tensor_img, patch_shape, stride: tuple):
         
         return patches, left_upper_ixs
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
+
+def get_random_patches(tensor_imgs_list, patch_shape, num_of_patches_from_img, prob_zero_patch_resample=None, resample_gt=None):
+    """
+    tensor_imgs_list is e.g. [image, veins, sclera]
+    It is a list of same sized 4d tensors, that are describing the same object.
+    These tensors are [1, ch, h, w] shaped.
+    We want to return a list of patches that are shaped:
+    [num_of_patches_from_img, ch, patch_shape[0], patch_shape[1]]
+    The first tensor in the returner corresponds to the first tensor in tensor_imgs_list.
+
+    If prob_zero_patch_resample is not None, then when we chose a point, we look at that point on resample_gt (ground truth).
+    If that point is 0, we resample with probability prob_zero_patch_resample.
+    In our case resample_gt is sclera. We do this, so that our patches won't mostly be of the background.
+    """
+
+    try:
+        returning_list = [None for _ in tensor_imgs_list]
+
+        tensor_img = tensor_imgs_list[0]
+        lu_ixs = [] # left upper ixs
+
+        while len(lu_ixs) < num_of_patches_from_img:
+            y_ix = np.random.randint(0, tensor_img.size(2) - patch_shape[0])
+            x_ix = np.random.randint(0, tensor_img.size(3) - patch_shape[1])
+
+            if prob_zero_patch_resample is not None:
+                mid_y_ix = y_ix + patch_shape[0] // 2
+                mid_x_ix = x_ix + patch_shape[1] // 2
+                if resample_gt[0, 0, mid_y_ix, mid_x_ix] == 0:
+                    if np.random.rand() < prob_zero_patch_resample:
+                        continue
+
+            lu_ixs.append((y_ix, x_ix))
+        
+        for ix, tensor_img in enumerate(tensor_imgs_list):
+            for y_ix, x_ix in lu_ixs:
+                patch = tensor_img[:, :, y_ix:y_ix+patch_shape[0], x_ix:x_ix+patch_shape[1]]
+                if returning_list[ix] is None:
+                    returning_list[ix] = patch
+                else:
+                    returning_list[ix] = torch.cat([returning_list[ix], patch], dim=0)
+
+
+        return returning_list
+
+
+    except Exception as e:
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+        raise e
 
 
 
@@ -134,7 +184,7 @@ def patchify(tensor_img, patch_shape, stride: tuple):
     
 
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 
@@ -194,7 +244,7 @@ def accumulate_patches(prediction_tensor_shape, patch_shape, patch_dict):
         # py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
         return accumulating_tensor, num_of_addings
     except Exception as e:
-        py_log.log_stack(MY_LOGGER)
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
         raise e
 
 

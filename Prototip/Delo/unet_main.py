@@ -35,7 +35,8 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
+import random
 
 import argparse
 
@@ -146,19 +147,20 @@ if __name__ == "__main__":
 
     IS_PRUNING_READY = yaml_dict["is_pruning_ready"]
     PATH_TO_DATA = yaml_dict["path_to_data"]
-    BATCH_SIZE = yaml_dict["batch_size"]
+    TARGET = yaml_dict["target"]
+    TRAIN_EPOCH_SIZE = yaml_dict["train_epoch_size"]
+    TRAIN_BATCH_SIZE = yaml_dict["train_batch_size"]
+    TEST_BATCH_SIZE = yaml_dict["test_batch_size"]
     LEARNING_RATE = yaml_dict["learning_rate"]
     NUM_OF_DATALOADER_WORKERS = yaml_dict["num_of_dataloader_workers"]
-    TRAIN_EPOCH_SIZE_LIMIT = yaml_dict["train_epoch_size_limit"]
 
-    num_ep_per_iter = yaml_dict["num_epochs_per_training_iteration"]
     cleanup_k = yaml_dict["cleanup_k"]
     optimizer = yaml_dict["optimizer_used"]
     ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
     loss_fn_name = yaml_dict["loss_fn_name"]
     alphas = yaml_dict["alphas"]
 
-    DATASET = yaml_dict["dataset_option"]
+    aug_type = yaml_dict["aug_type"]
     zero_out_non_sclera = yaml_dict["zero_out_non_sclera"]
     add_sclera_to_img = yaml_dict["add_sclera_to_img"]
     add_bcosfire_to_img = yaml_dict["add_bcosfire_to_img"]
@@ -201,6 +203,9 @@ if __name__ == "__main__":
 
     if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
         prune_n_kernels_at_once = 1
+
+    if TEST_RUN_AND_SIZE != -1:
+        TRAIN_EPOCH_SIZE = TEST_RUN_AND_SIZE
     
 
 
@@ -290,10 +295,7 @@ print(f"Device: {device}")
 
 
 
-if DATASET == "aug_tf":
-    from dataset_aug_tf import IrisDataset, custom_collate_fn
-elif DATASET == "aug_old":
-    from dataset_aug_old import IrisDataset, custom_collate_fn
+from dataset import IrisDataset, custom_collate_fn
     
     
 
@@ -307,13 +309,14 @@ else:
 optimizer = torch.optim.Adam
 
 
-
-
-learning_parameters = {
+model_wrapper_params = {
     "learning_rate" : LEARNING_RATE,
-    "loss_fn" : loss_fn,
     "optimizer_class" : optimizer,
-    "train_epoch_size_limit" : TRAIN_EPOCH_SIZE_LIMIT,
+}
+
+training_wrapper_params = {
+    "target" : TARGET,
+    "loss_fn" : loss_fn,
     "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS,
     "have_patchification" : have_patchification,
     "patchification_params" : patchification_params
@@ -347,6 +350,7 @@ from unet_original import UNet
 # in and out dims of the model are the same anyways, so i won't say in_x and out_x, but just dim_x.
 dim_y = OUTPUT_DIMS["height"]
 dim_x = OUTPUT_DIMS["width"]
+# We have to set the input dims of the model to the patch dims.
 if have_patchification:
     dim_y = patchification_params["patch_y"]
     dim_x = patchification_params["patch_x"]
@@ -373,6 +377,17 @@ elif MODEL == "64_1_6":
         "expansion" : 1,
         "depth" : 6,
         }
+elif MODEL == "4_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 2,
+        "depth" : 4,
+        }
 
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
@@ -385,11 +400,8 @@ INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
 
 dataloading_args = {
 
-
-    # DataLoader params
-    # Could have separate "train_batch_size" and "eval_batch_size" (for val and test)
-    #  since val and test use torch.no_grad() and therefore use less memory. 
-    "batch_size" : BATCH_SIZE,
+    "train_batch_size" : TRAIN_BATCH_SIZE,
+    "test_batch_size" : TEST_BATCH_SIZE, # val and test use torch.no_grad() so they use less memory
     "shuffle" : False, # TODO shuffle??
     "num_workers" : NUM_OF_DATALOADER_WORKERS,
 }
@@ -410,6 +422,7 @@ dataset_args = {
     "path_to_sclera_data" : PATH_TO_DATA,
     # "transform" : transform,
     "n_classes" : OUTPUT_DIMS["channels"],
+    "aug_type" : aug_type,
 
     "zero_out_non_sclera" : zero_out_non_sclera,
     "add_sclera_to_img" : add_sclera_to_img,
@@ -418,26 +431,73 @@ dataset_args = {
 
 }
 
+train_dataset_args = dataset_args.copy()
+
+if have_patchification:
+
+    train_dataset_args['patchify'] = True
+    train_dataset_args['patch_shape'] = (patchification_params['patch_y'], patchification_params['patch_x'])
+    train_dataset_args['num_of_patches_from_img'] = patchification_params['num_of_patches_from_img']
+    train_dataset_args['prob_zero_patch_resample'] = patchification_params['prob_zero_patch_resample']
 
 
-def get_data_loaders(**dataloading_args):
+
+
+class ResamplingSampler(Sampler):
+    def __init__(self, data_source, num_samples):
+        self.data_source = data_source
+        self.num_samples = num_samples
+
+    def __iter__(self):
+        # Generate random indices with replacement
+        return iter(random.choices(range(len(self.data_source)), k=self.num_samples))
+
+    def __len__(self):
+        return self.num_samples
+
+
+class BalancedRandomSampler(Sampler):
+    def __init__(self, data_source, num_samples):
+        self.data_source = data_source
+        self.num_samples = num_samples
+
+    def __iter__(self):
+        # Generate random indices with replacement
+        items = []
+        diff = self.num_samples - len(self.data_source)
+        while diff > 0:
+            random_permutation = random.sample(range(len(self.data_source)), len(self.data_source))
+            items += random_permutation[:diff] # will take all elements, unless diff is smaller than len(random_permutation)
+            diff -= len(random_permutation)
+
+        return iter(items)
+
+    def __len__(self):
+        return self.num_samples
+
+
+
+def get_data_loaders():
     
     data_path = dataset_args["path_to_sclera_data"]
     # n_classes = 4 if 'sip' in args.dataset.lower() else 2
 
     print('path to file: ' + str(data_path))
 
-    train_dataset = IrisDataset(filepath=data_path, split='train', **dataset_args)
+
+    train_dataset = IrisDataset(filepath=data_path, split='train', **train_dataset_args)
+
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataset_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataset_args)
 
-    trainloader = DataLoader(train_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"], drop_last=False)
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["batch_size"], collate_fn=custom_collate_fn, shuffle=False, num_workers=dataloading_args["num_workers"], drop_last=False)
-    # https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
-    # I'm not sure why we're dropping last, but okay.
-
-    # Actually, no. Let's not drop last.
+    sampler = BalancedRandomSampler(train_dataset, num_samples=TRAIN_EPOCH_SIZE)
+    trainloader = DataLoader(train_dataset, sampler=sampler, batch_size=dataloading_args["train_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
+    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["test_batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"])
+    testloader = DataLoader(test_dataset, batch_size=dataloading_args["test_batch_size"], collate_fn=custom_collate_fn, shuffle=False, num_workers=dataloading_args["num_workers"])
+    # in test_dataloader shuffle is False, because we want to keep the order of the images in test_showcase so they are easier to compare 
+    # (But now we pass img_names through the dataloader anyway, so it doesn't matter anymore)
+    
+    # Let's not drop last.
     # it makes no sense. i think this might have been done because the IPAD fn was done only on the last batch, and so that
     # batch needed to be big.
 
@@ -458,7 +518,7 @@ def get_data_loaders(**dataloading_args):
 
 
 
-train_dataloader, valid_dataloader, test_dataloader = get_data_loaders(**dataloading_args)# 
+train_dataloader, valid_dataloader, test_dataloader = get_data_loaders() 
 
 dataloader_dict = {
     "train" : train_dataloader,
@@ -1083,7 +1143,7 @@ if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device)
+    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
 
 
 
@@ -1267,7 +1327,7 @@ if __name__ == "__main__":
     
     train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, 
                         max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleanup_k=cleanup_k,
-                         num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
+                         num_of_epochs_per_training=1, pruning_kwargs_dict=pruning_kwargs)
 
 
 
