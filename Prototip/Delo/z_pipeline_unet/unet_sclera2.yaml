@@ -27,7 +27,7 @@ loss_fn_name: "Tversky"
 loss_params:
   fp_imp: 0.05
   fn_imp: 0.95
-  equalize: False
+  equalize: True
 
 # Dataset parameters
 dataset_type: simple    # Options: simple, vasd

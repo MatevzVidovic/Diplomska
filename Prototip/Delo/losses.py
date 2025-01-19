@@ -50,16 +50,16 @@ class MultiClassDiceLoss(nn.Module):
         self.smooth = smooth
         self.background_adjustment = background_adjustment
 
-    def forward(self, inputs, targets):
+    def forward(self, preds, targets):
 
         try:
 
-            if len(inputs.shape) == 3:
-                inputs = inputs.unsqueeze(0)
+            if len(preds.shape) == 3:
+                preds = preds.unsqueeze(0)
 
 
-            # Apply softmax to inputs if they are logits
-            inputs = torch.softmax(inputs, dim=1) # Apply softmax across the class dimension
+            # Apply softmax to preds if they are logits
+            preds = torch.softmax(preds, dim=1) # Apply softmax across the class dimension
 
 
             # Initialize Dice Loss
@@ -73,15 +73,15 @@ class MultiClassDiceLoss(nn.Module):
             
 
             # Iterate over each class
-            for c in range(inputs.shape[1]):
+            for c in range(preds.shape[1]):
                 
                 # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
                 # So in the return we also divide with one less.
                 if c == 0:
                     continue
 
-                input_to_be_flat = inputs[:,c,:,:].squeeze(1)
-                input_flat = input_to_be_flat.reshape(-1)
+                pred_to_be_flat = preds[:,c,:,:].squeeze(1)
+                pred_flat = pred_to_be_flat.reshape(-1)
                 
                 target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
                 target_flat = target_to_be_flat.reshape(-1)
@@ -94,35 +94,35 @@ class MultiClassDiceLoss(nn.Module):
                 # So the model doesn't want to move towards predicting classes, because it is too safe to just predict background.
 
                 # We want to keep our loss between 0 and 1, so we can interpret it better and it is nicely graphable.
-                # The reason dice loss is between 0 and 1 is because at each pixel, input_flat is between 0 and 1, and target_flat is 0 or 1.
+                # The reason dice loss is between 0 and 1 is because at each pixel, pred_flat is between 0 and 1, and target_flat is 0 or 1.
                 # This per pixel quality should stay the same.
 
-                # We should simply pretend that our input_to_be_flat was closer to 0 than it actually was, when the target is 0.
+                # We should simply pretend that our pred_to_be_flat was closer to 0 than it actually was, when the target is 0.
                 # This way, we don't discourage predictions of some actual class in the background spots.
                 # We don't punish it as much.  
                 
                 if self.background_adjustment is not None:
-                    background_distanes = input_flat.clone()
+                    background_distanes = pred_flat.clone()
                     # The distances to zero are simply the values.
                     background_distanes[is_background_flat] = 0
                     # We then decide what percentage of these distances we would like to help the model with.
                     background_distanes = background_distanes * self.background_adjustment
-                    # Then we actually go and adjust the input_flat, so the model will be penalised less for those.
-                    input_flat = input_flat - background_distanes
+                    # Then we actually go and adjust the pred_flat, so the model will be penalised less for those.
+                    pred_flat = pred_flat - background_distanes
 
 
                 # Compute intersection
-                intersection = (input_flat * target_flat)
+                intersection = (pred_flat * target_flat)
                 intersection = intersection.sum()
                 
                 # Compute Dice Coefficient for this class
-                dice = (2. * intersection + self.smooth) / (input_flat.sum() + target_flat.sum() + self.smooth)
+                dice = (2. * intersection + self.smooth) / (pred_flat.sum() + target_flat.sum() + self.smooth)
                 
                 # Accumulate Dice Loss
                 dice_loss += 1 - dice
             
             # Average over all classes
-            dice_loss =  dice_loss / (inputs.shape[1] - 1) # -1 because we skip the background class
+            dice_loss =  dice_loss / (preds.shape[1] - 1) # -1 because we skip the background class
 
             return dice_loss
 
@@ -133,6 +133,96 @@ class MultiClassDiceLoss(nn.Module):
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
+        
+
+
+
+
+class TverskyLoss(nn.Module):
+    def __init__(self, fp_imp=0.5, fn_imp=0.5, equalize=False, smooth=1e-6):
+        super(TverskyLoss, self).__init__()
+        self.fp_imp = fp_imp
+        self.fn_imp = fn_imp
+        self.equalize = equalize
+        self.smooth = smooth
+
+    def forward(self, preds, targets):
+
+        try:
+
+            if len(preds.shape) == 3:
+                preds = preds.unsqueeze(0)
+
+
+            # Apply softmax to preds if they are logits
+            preds = torch.softmax(preds, dim=1) # Apply softmax across the class dimension
+
+
+            # Initialize Dice Loss
+            tversky_loss = 0.0
+
+
+
+            # Iterate over each class
+            for c in range(preds.shape[1]):
+                
+                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+                # So in the return we also divide with one less.
+                if c == 0:
+                    continue
+
+                pred_to_be_flat = preds[:,c,:,:].squeeze(1)
+                pred_flat = pred_to_be_flat.reshape(-1)
+                
+                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
+                target_flat = target_to_be_flat.reshape(-1)
+
+                inv_target_flat = 1 - target_flat
+                pos_num = target_flat.sum()
+                neg_num = inv_target_flat.sum()
+
+
+
+                # Calculate true positives, false positives, and false negatives
+
+                if not self.equalize:
+                    true_pos = (pred_flat * target_flat).sum()
+                    false_neg = ((1 - pred_flat) * target_flat).sum()
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum()
+
+
+                else:
+                    # I think this might completely mess up the loss, because then it becomes completely irrelevant how many of which case there is.
+                    # but I could be wrong.
+
+                    true_pos = (pred_flat * target_flat).sum() / pos_num
+                    false_neg = ((1 - pred_flat) * target_flat).sum() / pos_num
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum() / neg_num
+
+                    # The division should put them on equal grounds - otherwise a huge imbalance will make it hard to set alpha and beta in a way 
+                    # that we can be sure to make either recall or precision higher.
+
+
+
+                # Calculate Tversky index
+                tversky_index = (true_pos + self.smooth) / (true_pos + self.fp_imp * false_pos + self.fn_imp * false_neg + self.smooth)
+
+                # Accumulate Tversky loss
+                tversky_loss += 1 - tversky_index
+
+
+            # Average over all classes
+            tversky_loss =  tversky_loss / (preds.shape[1] - 1) # -1 because we skip the background class
+            
+            return tversky_loss
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
+        
 
 
 

@@ -58,7 +58,6 @@ class Pruner:
 
 
             self.tree_ix_2_list_of_initial_kernel_ixs = {}
-            print(other_zeroth_dim_ixs)
             # one example of other_zeroth_dim_ixs is the batchnorms
             for tree_ix in conv_tree_ixs + other_zeroth_dim_ixs:
                 # weight dimensions: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]

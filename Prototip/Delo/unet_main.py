@@ -44,7 +44,7 @@ from min_resource_percentage import MinResourcePercentage
 from model_wrapper import ModelWrapper
 
 from training_support import *
-from losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss
+from losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss, TverskyLoss
 
 import ast
 
@@ -149,8 +149,10 @@ if __name__ == "__main__":
     PATH_TO_DATA = yaml_dict["path_to_data"]
     TARGET = yaml_dict["target"]
     TRAIN_EPOCH_SIZE = yaml_dict["train_epoch_size"]
+    VAL_EPOCH_SIZE = yaml_dict["val_epoch_size"]
+    TEST_EPOCH_SIZE = yaml_dict["test_epoch_size"]
     TRAIN_BATCH_SIZE = yaml_dict["train_batch_size"]
-    TEST_BATCH_SIZE = yaml_dict["test_batch_size"]
+    EVAL_BATCH_SIZE = yaml_dict["eval_batch_size"]
     LEARNING_RATE = yaml_dict["learning_rate"]
     NUM_OF_DATALOADER_WORKERS = yaml_dict["num_of_dataloader_workers"]
 
@@ -158,8 +160,9 @@ if __name__ == "__main__":
     optimizer = yaml_dict["optimizer_used"]
     ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
     loss_fn_name = yaml_dict["loss_fn_name"]
-    alphas = yaml_dict["alphas"]
-
+    loss_params = yaml_dict["loss_params"]
+    
+    dataset_type = yaml_dict["dataset_type"]
     aug_type = yaml_dict["aug_type"]
     zero_out_non_sclera = yaml_dict["zero_out_non_sclera"]
     add_sclera_to_img = yaml_dict["add_sclera_to_img"]
@@ -226,10 +229,10 @@ if __name__ == "__main__":
     # These are the specifications.
     # This is how we guard against wrong callings.
 
-    sth_wrong = OUTPUT_CHANNELS != 2 or optimizer != "Adam" or alphas != []
-    if sth_wrong:
-        print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam, alphas: {alphas}, should be [].")
-        raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
+    # sth_wrong = OUTPUT_CHANNELS != 2 or optimizer != "Adam"
+    # if sth_wrong:
+    #     print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam.")
+    #     raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
 
 
 
@@ -294,13 +297,21 @@ print(f"Device: {device}")
 
 
 
+if dataset_type == "vasd":
+    from dataset import IrisDataset, custom_collate_fn
+elif dataset_type == "simple":
+    from dataset_simple import IrisDataset, custom_collate_fn
+else:
+    raise ValueError("Dataset type not recognized.")
 
-from dataset import IrisDataset, custom_collate_fn
-    
     
 
 if loss_fn_name == "MCDL":
     loss_fn = MultiClassDiceLoss()
+elif loss_fn_name == "MCDLW":
+    loss_fn = MultiClassDiceLoss(background_adjustment=loss_params["bg_adj"])
+elif loss_fn_name == "Tversky":
+    loss_fn = TverskyLoss(fp_imp=loss_params["fp_imp"], fn_imp=loss_params["fn_imp"], equalize=loss_params["equalize"])
 elif loss_fn_name == "JACCARD":
     loss_fn = JaccardLoss()
 else:
@@ -388,6 +399,8 @@ elif MODEL == "4_2_4":
         "expansion" : 2,
         "depth" : 4,
         }
+else:
+    raise ValueError("Model not recognized.")
 
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
@@ -401,7 +414,7 @@ INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
 dataloading_args = {
 
     "train_batch_size" : TRAIN_BATCH_SIZE,
-    "test_batch_size" : TEST_BATCH_SIZE, # val and test use torch.no_grad() so they use less memory
+    "eval_batch_size" : EVAL_BATCH_SIZE, # val and test use torch.no_grad() so they use less memory
     "shuffle" : False, # TODO shuffle??
     "num_workers" : NUM_OF_DATALOADER_WORKERS,
 }
@@ -446,7 +459,7 @@ if have_patchification:
 class ResamplingSampler(Sampler):
     def __init__(self, data_source, num_samples):
         self.data_source = data_source
-        self.num_samples = num_samples
+        self.num_samples = min(num_samples, len(data_source))
 
     def __iter__(self):
         # Generate random indices with replacement
@@ -459,16 +472,35 @@ class ResamplingSampler(Sampler):
 class BalancedRandomSampler(Sampler):
     def __init__(self, data_source, num_samples):
         self.data_source = data_source
-        self.num_samples = num_samples
+        self.num_samples = min(num_samples, len(data_source))
 
     def __iter__(self):
         # Generate random indices with replacement
         items = []
-        diff = self.num_samples - len(self.data_source)
+        diff = self.num_samples - len(items)
         while diff > 0:
             random_permutation = random.sample(range(len(self.data_source)), len(self.data_source))
             items += random_permutation[:diff] # will take all elements, unless diff is smaller than len(random_permutation)
-            diff -= len(random_permutation)
+            diff = self.num_samples - len(items)
+
+        return iter(items)
+
+    def __len__(self):
+        return self.num_samples
+
+
+class LimitedSampler(Sampler):
+    def __init__(self, data_source, num_samples, shuffle=False):
+        self.data_source = data_source
+        self.num_samples = min(num_samples, len(data_source))
+        self.shuffle = shuffle
+
+    def __iter__(self):
+        
+        if self.shuffle:
+            items = random.sample(range(len(self.num_samples)), self.num_samples)
+        else:
+            items = list(range(self.num_samples))
 
         return iter(items)
 
@@ -479,7 +511,7 @@ class BalancedRandomSampler(Sampler):
 
 def get_data_loaders():
     
-    data_path = dataset_args["path_to_sclera_data"]
+    data_path = PATH_TO_DATA
     # n_classes = 4 if 'sip' in args.dataset.lower() else 2
 
     print('path to file: ' + str(data_path))
@@ -490,10 +522,13 @@ def get_data_loaders():
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataset_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataset_args)
 
-    sampler = BalancedRandomSampler(train_dataset, num_samples=TRAIN_EPOCH_SIZE)
-    trainloader = DataLoader(train_dataset, sampler=sampler, batch_size=dataloading_args["train_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
-    validloader = DataLoader(valid_dataset, batch_size=dataloading_args["test_batch_size"], collate_fn=custom_collate_fn, shuffle=True, num_workers=dataloading_args["num_workers"])
-    testloader = DataLoader(test_dataset, batch_size=dataloading_args["test_batch_size"], collate_fn=custom_collate_fn, shuffle=False, num_workers=dataloading_args["num_workers"])
+    train_sampler = BalancedRandomSampler(train_dataset, num_samples=TRAIN_EPOCH_SIZE)
+    val_sampler = LimitedSampler(valid_dataset, num_samples=VAL_EPOCH_SIZE, shuffle=False)
+    test_sampler = LimitedSampler(test_dataset, num_samples=TEST_EPOCH_SIZE, shuffle=False)
+
+    trainloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=dataloading_args["train_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
+    validloader = DataLoader(valid_dataset, sampler=val_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
+    testloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
     # in test_dataloader shuffle is False, because we want to keep the order of the images in test_showcase so they are easier to compare 
     # (But now we pass img_names through the dataloader anyway, so it doesn't matter anymore)
     
@@ -518,12 +553,21 @@ def get_data_loaders():
 
 
 
-train_dataloader, valid_dataloader, test_dataloader = get_data_loaders() 
+train_dataloader, valid_dataloader, test_dataloader = get_data_loaders()
+
+save_preds_DL = None
+save_preds_path = osp.join(PATH_TO_DATA, "save_preds")
+if osp.exists(save_preds_path):
+    from dataset_for_save_preds import SavePredsDataset, save_preds_collate_fn
+    save_preds_dataset = SavePredsDataset(filepath=PATH_TO_DATA, split='save_preds', **dataset_args)
+    save_preds_sampler = LimitedSampler(save_preds_dataset, num_samples=TEST_EPOCH_SIZE, shuffle=False)
+    save_preds_DL = DataLoader(save_preds_dataset, sampler=save_preds_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=save_preds_collate_fn, num_workers=dataloading_args["num_workers"])
 
 dataloader_dict = {
     "train" : train_dataloader,
     "validation" : valid_dataloader,
     "test" : test_dataloader,
+    "save_preds" : save_preds_DL
 }
 
 

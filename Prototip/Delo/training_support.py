@@ -470,6 +470,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
                         Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                        Enter sp to do a save_preds from the data_path/save_preds directory, and re-ask for input.
+                        Enter da to do a data augmentation showcase and re-ask for input.
                         Enter ts to do a test showcase of the model and re-ask for input.
                         Enter "resource_graph" to trigger resource_graph() and re-ask for input.
                         Enter s to save the model and re-ask for input.
@@ -479,6 +481,22 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")
+            
+            
+            if inp == "sp":
+                model_wrapper.training_wrapper.save_preds(path_to_save_to=osp.join(main_save_path, f"{train_iter}_save_preds"))
+
+                inp = input(f"""
+                            Enter da to do a data augmentation showcase and re-ask for input.
+                            Enter ts to do a test showcase of the model and re-ask for input.
+                            Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                            Enter s to save the model and re-ask for input.
+                            Enter g to show the graph of the model and re-ask for input.
+                            Enter r to trigger show_results() and re-ask for input.
+                            Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                            Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                            Press Enter to continue training.
+                            Enter any other key to stop.\n""")
 
             if inp == "da":
                 
@@ -547,6 +565,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")
             
+            
+            
             if inp == "ts":
                 model_wrapper.training_wrapper.test_showcase(path_to_save_to=osp.join(main_save_path, f"{train_iter}_test_showcase"))
                 inp = input(f"""
@@ -558,6 +578,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")
+            
+
             
             if inp == "resource_graph":
                 res = resource_graph(main_save_path, model_wrapper.save_path)

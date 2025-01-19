@@ -191,9 +191,13 @@ def get_conf_matrix(predictions, targets, num_classes=2):
         # print(label)  # vector composed of 0, 1, 2, 3 (in the multilabel case)
         count = np.bincount(label, minlength=num_classes ** 2)  # number of repetitions of each unique value
         # print(count) # [14359   475    98  1452]
-        # so [predBGisBG, predBGisFG, predFGisBG, predFGisFG]
+        # so [predBGisBG, predFGisBG, predBGisFG, predFGisFG]
         confusion_matrix = count.reshape(num_classes, num_classes)
-
+        # so [[predBGisBG, predFGisBG], 
+        #     [predBGisFG, predFGisFG]]
+        # which is: [[TN, FP], 
+        #           [FN, TP]]
+        # Which is correct.
 
         return confusion_matrix
 
@@ -374,8 +378,8 @@ def conf_matrix_to_F1_prec_rec(confusion_matrix):
     try:
 
         TN = confusion_matrix[0][0]
-        FN = confusion_matrix[0][1]
-        FP = confusion_matrix[1][0]
+        FN = confusion_matrix[1][0]
+        FP = confusion_matrix[0][1]
         TP = confusion_matrix[1][1]
 
 
@@ -546,7 +550,7 @@ class TrainingWrapper:
 
             dataloader = self.dataloaders_dict["train"]
         
-            size = int(len(dataloader.dataset))
+            size = int(len(dataloader.sampler))
 
             if self.params["have_patchification"]:
                 size = size * self.num_of_patches_from_img
@@ -862,8 +866,6 @@ class TrainingWrapper:
                     X, y = X.to(self.device), y.to(self.device)
                     pred = self.model(X)
 
-                    print(f"scleras.shape: {scleras.shape}")
-
 
                     if self.params["zero_out_non_sclera_on_predictions"]:
                         scleras = scleras.to(self.device)
@@ -888,7 +890,6 @@ class TrainingWrapper:
                     pred_binary = pred[:, 1] > pred[:, 0]
 
 
-                    n_cl = 2
                     confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
                     aggregated_conf_matrix += confusion_matrix
 
@@ -1013,6 +1014,73 @@ class TrainingWrapper:
                 aggregated_conf_matrix = aggregated_conf_matrix / aggregated_conf_matrix.sum()
                 aggregated_conf_matrix_df = pd.DataFrame(aggregated_conf_matrix)
                 aggregated_conf_matrix_df.to_csv(osp.join(path_to_save_to, "aggregated_conf_matrix.csv"), index=False)
+
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
+
+
+
+
+    
+
+
+
+
+
+
+    def save_preds(self, path_to_save_to, dataloader_name="save_preds"):
+
+        try:
+
+            dataloader = self.dataloaders_dict[dataloader_name]
+
+            self.model.eval()
+            
+            with torch.no_grad():
+                for batch_ix, data_dict in enumerate(dataloader):
+                    X = data_dict["images"]
+                    img_names = data_dict["img_names"]
+                    
+                    X = X.to(self.device)
+                    pred = self.model(X)
+
+
+                    if self.params["zero_out_non_sclera_on_predictions"]:
+                        scleras = data_dict["scleras"]
+                        scleras = scleras.to(self.device)
+                        scleras = torch.squeeze(scleras, dim=1)
+                        where_sclera_is_zero = scleras == 0
+                        pred[:, 0, :, :][where_sclera_is_zero] = 1_000_000
+                        pred[:, 1, :, :][where_sclera_is_zero] = -1_000_000
+                        # we want to make logits such that we are sure this is not a vein
+                        # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
+
+
+
+
+                    # pred_binary = pred[:, 1] > pred[:, 0]
+
+                    # X and y are tensors of a batch, so we have to go over them all
+                    for i in range(X.shape[0]):
+
+                        img_name = img_names[i]
+
+                        pred_binary = pred[i][1] > pred[i][0]
+
+                        
+                        pred_binary_cpu_np = (pred_binary.cpu()).numpy()
+                        
+                        # Here we actually have bool, surprisingly. Again, lets just multiply by 255
+                        pred_binary_cpu_np_255 = pred_binary_cpu_np.astype(np.uint8)
+                        pred_binary_cpu_np_255 = pred_binary_cpu_np_255 * 255
+                        save_img(pred_binary_cpu_np_255, path_to_save_to, f"{img_name}_pred.png")
+
+
+
+
 
 
 
