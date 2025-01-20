@@ -399,6 +399,73 @@ elif MODEL == "4_2_4":
         "expansion" : 2,
         "depth" : 4,
         }
+elif MODEL == "8_2_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 2,
+        "depth" : 5,
+        }
+elif MODEL == "8_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif MODEL == "6_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 6,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif MODEL == "4_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif MODEL == "8_1.5_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 1.5,
+        "depth" : 5,
+        }
+elif MODEL == "8_1.5_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 1.5,
+        "depth" : 6,
+        }
+    
 else:
     raise ValueError("Model not recognized.")
 

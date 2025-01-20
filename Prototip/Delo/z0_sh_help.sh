@@ -24,7 +24,7 @@ data_aug=$(mktemp)
 printf "da\n\n\n\n\n1\n\n\n\n\n2\n\n\n\n\nstop\nstop\n" > "$data_aug"
 
 save_preds=$(mktemp)
-printf "sp\nstop\nstop\n" > "$test_showcase"
+printf "sp\nstop\nstop\n" > "$save_preds"
 
 
 

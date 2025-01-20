@@ -17,9 +17,6 @@
 
 # srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh sclera2 unet_sclera2_train > x_ts_sclera2_train.txt
 
-# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh sclera_4_1.5_4 unet_sclera_4_1.5_4_train > x_ts_sclera_4_1.5_4_train.txt
-
-
 
 id=$1
 sd_name=$2

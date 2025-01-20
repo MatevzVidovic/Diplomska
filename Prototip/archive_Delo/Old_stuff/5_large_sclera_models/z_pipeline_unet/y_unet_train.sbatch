@@ -5,7 +5,7 @@
 #SBATCH --time=0-5:00:00
 
 #SBATCH -p frida
-#SBATCH -c 32
+#SBATCH -c 64
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G 
 
