@@ -8,7 +8,6 @@
 #SBATCH -c 7
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
-#SBATCH --output=x_unet_test_quick.txt
 
 
 # #SBATCH -w ana
@@ -36,7 +35,7 @@ fi
 source z_pipeline_unet/z0_main_name.sh
 
 # training phase
-python3 ${main_name} --tras 2 --mti 2 --sd test_quick --yaml z_pipeline_unet/unet_${id}.yaml --yo z_pipeline_unet/overriding_yamls/small.yaml 
+python3 ${main_name} --tras 2 --mti 2 --sd test_quick_${id} --yaml z_pipeline_unet/unet_${id}.yaml --yo z_pipeline_unet/overriding_yamls/small.yaml   > x_unet_test_quick_${id}.txt
 
 
 # pruning_phase

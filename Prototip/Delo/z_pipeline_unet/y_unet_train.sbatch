@@ -7,7 +7,7 @@
 #SBATCH -p frida
 #SBATCH -c 32
 #SBATCH --gpus=A100
-#SBATCH --mem-per-cpu=8G 
+#SBATCH --mem-per-cpu=4G 
 
 
 # #SBATCH -w ana

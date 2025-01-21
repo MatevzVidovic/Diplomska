@@ -8,7 +8,6 @@
 #SBATCH -c 7
 #SBATCH --gpus=A100_80GB
 #SBATCH --mem-per-cpu=8G
-#SBATCH --output=x_test_main.txt
 
 
 # #SBATCH -w ana
@@ -34,7 +33,7 @@ fi
 source z_pipeline_unet/z0_main_name.sh
 
 create_empty_folder test_main_vein
-python3 ${main_name} --tras 3 --mti 2 --sd test_main_vein --yaml z_pipeline_unet/unet_${id}.yaml           2>&1 | tee "${rfn}/curr/${obn}_${cbi}_${cn}.txt"; cn=$((cn + 1))
+python3 ${main_name} --tras 3 --mti 2 --sd test_main_vein_${id} --yaml z_pipeline_unet/unet_${id}.yaml      > x_test_main_${id}.txt
 
 
 

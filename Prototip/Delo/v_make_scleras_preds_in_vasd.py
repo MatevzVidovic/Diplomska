@@ -31,4 +31,4 @@ for split in splits:
     imgs = os.listdir(p)
     imgs_no_suffix = [img.removesuffix(".jpg") for img in imgs]
     for img in imgs_no_suffix:
-        sh.copy(osp.join(preds, f"{img}_pred.png"), osp.join(vasd, split, "Scleras", f"{img}.png"))
+        sh.copy(osp.join(preds, f"{img}_pred.png"), osp.join(vasd, split, "Scleras", f"{img}_sclera.png"))

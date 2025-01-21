@@ -49,6 +49,7 @@ pruned_models_*/
 ana_*/
 x_*.out
 environment.yml
+archive_Delo/
 
 # Probs not needed anymore:
 # saved/
