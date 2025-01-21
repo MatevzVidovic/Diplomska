@@ -19,9 +19,6 @@
 
 # srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh sclera_4_1.5_4 unet_sclera_4_1.5_4_train > x_ts_sclera_4_1.5_4_train.txt
 
-# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh small_sclera_recall_2 unet_small_sclera_recall_train > x_ts_small_sclera_recall.txt
-
-
 
 
 id=$1

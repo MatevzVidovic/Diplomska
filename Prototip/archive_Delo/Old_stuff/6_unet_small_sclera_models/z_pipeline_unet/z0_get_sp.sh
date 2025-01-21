@@ -3,10 +3,7 @@
 
 
 
-# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_sp.sh sclera2 unet_sclera2_train > x_sp_sclera2_train.txt
-
-# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_sp.sh small_sclera_recall_2 unet_small_sclera_recall_train > x_sp_small_sclera_recall.txt
-
+# srun -c 10 --gpus=A100:1 bash z_pipeline_unet/z0_get_ts.sh sclera2 unet_sclera2_train > x_sp_sclera2_train.txt
 
 
 id=$1

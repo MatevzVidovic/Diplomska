@@ -627,7 +627,7 @@ save_preds_path = osp.join(PATH_TO_DATA, "save_preds")
 if osp.exists(save_preds_path):
     from dataset_for_save_preds import SavePredsDataset, save_preds_collate_fn
     save_preds_dataset = SavePredsDataset(filepath=PATH_TO_DATA, split='save_preds', **dataset_args)
-    save_preds_sampler = LimitedSampler(save_preds_dataset, num_samples=TEST_EPOCH_SIZE, shuffle=False)
+    save_preds_sampler = LimitedSampler(save_preds_dataset, num_samples=int(1e9), shuffle=False)
     save_preds_DL = DataLoader(save_preds_dataset, sampler=save_preds_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=save_preds_collate_fn, num_workers=dataloading_args["num_workers"])
 
 dataloader_dict = {
