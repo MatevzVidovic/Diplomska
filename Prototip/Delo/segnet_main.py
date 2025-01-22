@@ -1054,6 +1054,12 @@ if __name__ == "__main__":
 
     if IS_PRUNING_READY:
 
+
+
+
+
+
+
         tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
 
@@ -1064,8 +1070,6 @@ if __name__ == "__main__":
 
         
 
-
-        
 
 
         # Here we abuse the min_res_percentage class to disallow certain prunings.
@@ -1081,39 +1085,44 @@ if __name__ == "__main__":
         generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
         disallowed_dict = {
-            model_wrapper.conv_tree_ixs[26] : 1.1
+            model_wrapper.conv_tree_ixs[25] : 1.1
         }
         generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
 
 
 
+
+
+
+
         # Choice disallowing:
         # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-        
-        # For segnet:
-        # conv_tree_ixs = model_wrapper.conv_tree_ixs
-        # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+        conv_tree_ixs = model_wrapper.conv_tree_ixs
+        CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
         # The reasoning for this choice comes from kernel_connection_fn:
         # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
         # Because the kernel nums must match.
-        # """
-        # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+        """
+        # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
-        # # Pairs of conv ixs:
-        # # 1 23
-        # # 3 21
-        # # 6 18
-        # # 9 15
-        # """
-        
-        # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-        #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-        # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+        # Pairs of conv ixs:
+        # 1 23
+        # 3 21
+        # 6 18
+        # 9 15
+        """
+        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
+
+        for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+            disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+        choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
         
         
+
+
+
 
 
 
