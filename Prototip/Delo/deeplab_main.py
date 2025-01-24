@@ -129,12 +129,18 @@ if __name__ == "__main__":
     IS_TEST_RUN = TEST_RUN_AND_SIZE != -1
     TEST_PRUNING = args.tp
 
+
+
+
+
+
     yaml_path = args.yaml
 
     yaml_overrides = args.yo
 
 
     yaml_dict = yh.read_yaml(yaml_path)
+    yd = yaml_dict
 
     if yaml_overrides is not None:
         for path in yaml_overrides:
@@ -324,6 +330,7 @@ optimizer = torch.optim.Adam
 model_wrapper_params = {
     "learning_rate" : LEARNING_RATE,
     "optimizer_class" : optimizer,
+    "is_resource_calc_ready": yd["is_resource_calc_ready"]
 }
 
 training_wrapper_params = {
@@ -352,10 +359,7 @@ OUTPUT_DIMS = {
 
 
 
-
-
-
-from segnet import SegNet
+from deeplab import DeepLabv3
 
 # patchification changesthings only for the model
 # The dataset is giving the same exact images as usual.
@@ -370,45 +374,16 @@ if have_patchification:
     dim_y = patchification_params["patch_y"]
     dim_x = patchification_params["patch_x"]
 
-    
 
-if MODEL == "64_2":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-    }
-elif MODEL == "64_1":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-    }
-elif MODEL == "4_1":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 1,
-    }
 
-else:
-    raise ValueError(f"MODEL not recognized: {MODEL}.")
+model_parameters = {
+    "in_channels": INPUT_DIMS["channels"],
+    "out_channels": OUTPUT_DIMS["channels"],
+    "assp_out_channels": MODEL
+}
 
+print(f"Model parameters: {model_parameters}")
+print(f"{type(model_parameters['out_channels'])=}")
 
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
@@ -587,474 +562,10 @@ dataloader_dict = {
 
 
 
-
-
-
-
-
-
-"""
-THIS HERE IS THE START OF BUILDING A CONNECTION fn
-based on the _get_next_conv_id_list_recursive()
-It is very early stage.
-"""
-
-
-
-
-
-
-def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
-    # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
-
-    # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
-    
-    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model initially (before pruning).
-    # And it returns a list of tuples giving the following modules tree_ixs and the input_slice_ix
-    # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
-
-
-    conn_destinations = []
-
-    # we kind of only care about convolutional modules.
-    # We just need to prune there (and possibly something with the batch norm layer)
-    # So it would make sense to transform the tree_ix to the ordinal number of 
-    # the convolutional module, and work with that ix instead.
-
-
-
-    # doesn't have skip connections, so we only need to prunte the input slice of the following layer
-
-    conv_ix = None
-    if tree_ix in conv_tree_ixs:
-        conv_ix = conv_tree_ixs.index(tree_ix)
-        conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
-
-    
-    
-    return conn_destinations
-
-
-    
-
-
-
-def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
-    # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
-    
-    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
-    # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
-    # for layers which are inextricably linked with the convolutional layer.
-
-    # Meant for batchnorm and special cases.
-
-    # Inextricably linked are in direct connection with the conv's current (not intitial) kernel_ix, so they don't need the more complex fn.
-    # We could have treated them in the regular way (through initial ixs), but this way is better,
-    # because, in the pruner, we don't need to keep track of the initial ixs (although we do anyways for accounting reasons).
-    # Also it's simpler and conceptually makes more sense - which is the main reason.
-
-    # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
-    # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
-    # There are possibly more such layers and more types of such layers, so we made this function more general.
-
-
-
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # This is the additional way that SegNet needs to be pruned besides batchnorms.
-
-    # CONV DE 12 JE TREBA INEEXTRICABLY PRUNEAT, če prunaš 0-ti conv v networku.
-    # Pač ta princip je, da mora izhod tega dela potem bit enak, da lahko unpool dela s tem.
-    # Ker unpool tu dela z incices. Ne postavi vseh zadev equally spaced in samo dela bilinear interpolacijo.
-    # Ampak postavi številke na iste pozicije kot so bile v poolingu. In potem naredi interpolacijo.
-
-    # In saj v height in width smereh mi nič ne prunamo. Tako da sam mehanizem tega nas ne rabi skrbet.
-    # Samo pač input poolinga in output poolinga imata neko število kernelov. In tako število kernelov imajo tudi indices.
-    # In zato mora vhod v unpool tudi imeti toliko kernelov.
-
-    # In zato se zgodi ta inextricable connection.
-
-
-
-    # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
-
-    # Pairs of conv ixs:
-    # 1 23
-    # 3 21
-    # 6 18
-    # 9 15
-
-
-
-
-
-
-
-
-
-
-    # doesn't have skip connections
-    # Only prune batchnorm
-    
-    conn_destinations = []
-
-    LLM_ix = None
-    if tree_ix in lowest_level_modules:
-        LLM_ix = lowest_level_modules.index(tree_ix)
-
-
-    # conv_ix = None
-    if tree_ix in conv_tree_ixs:
-
-        conv_ix = conv_tree_ixs.index(tree_ix)
-
-        # # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
-        # # out.conv doesn't have a batchnorm after it.
-        # if conv_ix < 18:
-
-        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
-
-        if conv_ix == 1:
-            conn_destinations.append((conv_tree_ixs[23], kernel_ix))
-        elif conv_ix == 3:
-            conn_destinations.append((conv_tree_ixs[21], kernel_ix))
-        elif conv_ix == 6:
-            conn_destinations.append((conv_tree_ixs[18], kernel_ix))
-        elif conv_ix == 9:
-            conn_destinations.append((conv_tree_ixs[15], kernel_ix))
-
-
-
-    # for batchnorm, conn_destinations is simply empty
-    
-
-    
-    return conn_destinations
-
-
-
-
-# When each batch is processed, the averaging_objects function is called.
-# Here you define how you would like to create your averaging objects through one epoch of training.
-# This function shows how we would like to update our average of the activations (outputs)
-# for the convolutional layers (because in the background this is only set for convolutional layers).
-# At each iteration the mean is corrects so far. So at the end the mean is also correct.
-# It is better to train with larger batch sizes so numerical errors of the iterative mean calculation are smaller.
-
-# Proof:
-# The first mean is correct so far. It is avg_0 = \sum x_i / n_0 where n_0 is the number of elements of the 0-th iteration.
-# by the same logic, avg_1 is also correct (the average of just the next batch).
-# The second mean avg_{1,2} is (n_0 * avg _0 + n_1 * avg_1) / (n_0 + n_1) = 
-# (n_0 * (\sum x_i / n_0) + n_1 * (\sum x_j / n_1)) / (n_0 + n_1) =
-# ( \sum x_i + \sum x_j ) / (n_0 + n_1)
-# # Which is the correct mean of all the elements. By induction, the same logic applies to all iterations.  
-
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# IF USING INPUT OR MODULE WEIGHTS, YOU HAVE TO DETACH THEM!!!!!
-# Also, input is a tuple, so you have to figure out what it really is first - I haven't looked into it.
-# The output has already been detached, so we don't need to worry about backpropagation.
-# You can do .detach() again, which won't change anything, it's idempotent.
-# If they weren't detached, they remain in the computational graph and keep being in the gradient calculation during loss.backward().
-# Because of pruning, this shows an error like so:
-#  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py", line 424, in train
-#     loss.backward()
-#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/_tensor.py", line 522, in backward
-#     torch.autograd.backward(
-#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 266, in backward
-#     Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-# RuntimeError: Function ConvolutionBackward0 returned an invalid gradient at index 1 - got [128, 255, 3, 3] but expected shape compatible with [128, 256, 3, 3]
-
-# We would like to also use weights in our importance calculation.
-# The easiest and conceptually best place to put them is in the averaging function (outside of making their own function).
-# It doesn't make sense to average them, so we would just save them when the first average is made.
-
-
-INITIAL_AVG_OBJECT = (0, None, None)
-def averaging_function(module, input, output, prev_avg_object):
-    
-    batch_size = output.shape[0]
-    batch_mean = output.mean(dim=(0))
-
-    if prev_avg_object[1] is None:
-        new_avg_object = (batch_size, batch_mean, module.weight.data.detach().clone())
-        return new_avg_object
-
-    new_avg_object = (prev_avg_object[0] + batch_size, 
-                      (prev_avg_object[0] * prev_avg_object[1] + batch_size * batch_mean) / (prev_avg_object[0] + batch_size),
-                        prev_avg_object[2])
-
-    return new_avg_object 
-
-
-# averaging_mechanism = {
-#     "initial_averaging_object" : INITIAL_AVG_OBJECT,
-#     "averaging_function" : averaging_function
-# }
-
-
-
-# An additional function could be applied in between the averaging function and the importance function.
-# If we were, for example, interested in a specific interaction between the active outputs (not the averaged ones)
-# with our averaging object. For example, to calculate the correlation between the output and our average activations.
-# Then the averaging function would be applied in the first pass through the network and we would make our averaging objects.
-# Then this middle function would be used and we would calculate our batch_importances (correlations) for each batch.
-# Then the final importance function we see below us would only be used to combine these batch_importances.
-# For example to average them or to sum them.
-# But this is not currently implemented.
-
-
-
-
-
-def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
-    assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
-    
-    
-    def IPAD_kernel_importance_fn(averaging_objects: dict, conv_tree_ixs):
-        # Returns dict tree_ix_2_list_of_kernel_importances
-        # The ix-th importance is for the kernel currently on the ix-th place.
-        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
-        # state of active kernels.
-
-        tree_ix_2_kernels_importances = {}
-        for tree_ix in conv_tree_ixs:
-
-            kernels_average_activation = averaging_objects[tree_ix][1]
-            # print(kernels_average_activation.shape)
-            # print(kernels_average_activation)
-            overall_average_activation = kernels_average_activation.mean(dim=(0))
-            # print(overall_average_activation)
-            # print(overall_average_activation.shape)
-            # print(overall_average_activation)
-            h = kernels_average_activation.shape[1]
-            w = kernels_average_activation.shape[2]
-            diff = kernels_average_activation - overall_average_activation
-            L1_ADC = torch.abs(diff).sum(dim=(1,2)) / (h*w)
-            L2_ADC = (diff).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
-            kernels_importances = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
-            # print(f"L1_ADC: {L1_ADC}")
-            # print(f"L2_ADC: {L2_ADC}")
-            # print(kernels_importances.shape)
-            # print(kernels_importances)
-
-            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
-        
-        
-        return tree_ix_2_kernels_importances
-        
-    
-    return IPAD_kernel_importance_fn
-
-
-
-
-def weights_importance_fn_generator(L1_over_L2_alpha):
-    assert L1_over_L2_alpha > 0 and L1_over_L2_alpha < 1, "L1_over_L2_alpha must be between 0 and 1."
-    
-    def weights_importance_fn(averaging_objects: dict, conv_tree_ixs):
-        # Returns dict tree_ix_2_list_of_kernel_importances
-        # The ix-th importance is for the kernel currently on the ix-th place.
-        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
-        # state of active kernels.
-
-        tree_ix_2_kernels_importances = {}
-        for tree_ix in conv_tree_ixs:
-            
-            # [num_of_kernels, depth, h, w]
-            kernels_weights = averaging_objects[tree_ix][2]
-            overall_weights = kernels_weights.mean(dim=(0))
-            d = kernels_weights.shape[1]
-            h = kernels_weights.shape[2]
-            w = kernels_weights.shape[3]
-            L1 = torch.abs(kernels_weights - overall_weights).sum(dim=(1,2,3)) / (d*h*w)
-            L2 = (kernels_weights - overall_weights).pow(2).sum(dim=(1,2,3)).sqrt() / (d*h*w)
-            kernels_importances = L1_over_L2_alpha * L1 + (1 - L1_over_L2_alpha) * L2
-
-            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
-        
-        
-        return tree_ix_2_kernels_importances
-        
-    
-    return weights_importance_fn
-
-
-
-def IPAD_and_weights(IPAD_over_weights_alpha, IPAD_L1_ADC_weight, weights_L1_over_L2_alpha):
-    assert IPAD_over_weights_alpha > 0 and IPAD_over_weights_alpha < 1, "IPAD_over_weights_alpha must be between 0 and 1."
-
-    IPAD_fn = IPAD_kernel_importance_fn_generator(IPAD_L1_ADC_weight)
-    weights_fn = weights_importance_fn_generator(weights_L1_over_L2_alpha)
-
-    def joined_imporance_fn(averaging_objects: dict, conv_tree_ixs):
-        IPAD_importances = IPAD_fn(averaging_objects, conv_tree_ixs)
-        weights_importances = weights_fn(averaging_objects, conv_tree_ixs)
-
-        joined_importances = {}
-        for tree_ix in conv_tree_ixs:
-            joined_importances[tree_ix] = IPAD_over_weights_alpha * IPAD_importances[tree_ix] + (1 - IPAD_over_weights_alpha) * weights_importances[tree_ix]
-
-        return joined_importances
-
-    return joined_imporance_fn
-
-
-
-def random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
-    tree_ix_2_kernel_importances = {}
-    for tree_ix in conv_tree_ixs:
-        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
-        kernel_importance = torch.rand(num_of_kernels)
-        tree_ix_2_kernel_importances[tree_ix] = kernel_importance
-
-    return tree_ix_2_kernel_importances
-
-
-
-
-# Da imamo najmanjše importance v layerju, čigar curr_conv_ix (ix v conv_tree_ixs) je enak oziroma njabližje CURR_PRUNING_IX.
-# Znotraj layerja pa imajo kernels v V shapeu - da se vedno na sredini prunea (saj uniform pruning bi bil, da vedno 0-tega prunaš.- Ampak mi ni všeč, da se vedno the edge one prunea. Raje da vedno the middle one.)
-# Za posamezen layer določimo oddaljenost od trenutnega pruninga:
-# curr_dist = abs(curr_conv_ix - CURR_PRUNING_IX)
-# Naredi torej recimo, da kernel importances iz sredine proti robu rastejo med:
-# curr_dist in curr_dist+1.
-
-CURRENT_PRUNING_IX = 0
-def uniform_random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
-
-    global CURRENT_PRUNING_IX
-
-    tree_ix_2_kernel_importances = {}
-    for ix, tree_ix in enumerate(conv_tree_ixs):
-        
-        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
-        curr_dist = abs(ix - CURRENT_PRUNING_IX)
-
-        middle_kernel_ix = num_of_kernels // 2
-        ixs = torch.arange(num_of_kernels)
-        kernel_distances = torch.abs(ixs - middle_kernel_ix)
-        
-        # should look sth like: [1.0, 0.97,...,0.0, 0.02, ... 1.0]
-        base_importances = kernel_distances.float() / kernel_distances.max().float()
-        # and now we put them in the right bracket based on distance of the layer from the current pruning ix
-        final_importances = base_importances + curr_dist
-        
-        tree_ix_2_kernel_importances[tree_ix] = final_importances
-    
-    CURRENT_PRUNING_IX += 1
-    if CURRENT_PRUNING_IX >= len(conv_tree_ixs):
-        CURRENT_PRUNING_IX = 0
-
-
-    return tree_ix_2_kernel_importances
-
-
-
-
-
-
-if IMPORTANCE_FN_DEFINER == "random":
-    IMPORTANCE_FN = random_pruning_importance_fn
-elif IMPORTANCE_FN_DEFINER == "uniform":
-    IMPORTANCE_FN = uniform_random_pruning_importance_fn
-elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
-    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
-else:
-    raise ValueError(f"IMPORTANCE_FN_DEFINER must be 'random', 'uniform' or 'IPAD_eq'. Was: {IMPORTANCE_FN_DEFINER}")
-
-
-
-
-
-
-
-
-
-
-def set_averaging_objects_hooks(model_wrapper, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc, tree_ixs: list):
-        
-    
-    def get_activation(tree_ix):
-        
-        def hook(module, input, output):
-            
-            detached_output = output.detach()
-
-            if tree_ix not in averaging_objects:
-                averaging_objects[tree_ix] = initial_averaging_object
-
-            averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
-
-        return hook
-
-    tree_ix_2_hook_handle = {}
-    for tree_ix in tree_ixs:
-        module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
-    
-    model_wrapper.tree_ix_2_hook_handle = tree_ix_2_hook_handle
-    
-
-
-
-def remove_hooks(model_wrapper):
-    
-    if model_wrapper.tree_ix_2_hook_handle is None:
-        raise ValueError("In remove_hooks: model_wrapper.tree_ix_2_hook_handle is already None")
-    
-    for hook_handle in model_wrapper.tree_ix_2_hook_handle.values():
-        hook_handle.remove()
-    
-    model_wrapper.tree_ix_2_hook_handle = None
-
-
-def get_importance_dict(model_wrapper: ModelWrapper):
-
-    model_wrapper.averaging_objects = {}
-    set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
-
-    model_wrapper.epoch_pass(dataloader_name="train")
-    # maybe doing this on val, because it is faster and it kind of makes more sense
-    # model_wrapper.epoch_pass(dataloader_name="validation")
-
-    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
-    model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
-
-    importance_dict = IMPORTANCE_FN(model_wrapper.averaging_objects, model_wrapper.conv_tree_ixs)
-    remove_hooks(model_wrapper)
-    model_wrapper.averaging_objects = {}
-
-    return importance_dict
-
-
-def dummy_get_importance_dict(model_wrapper: ModelWrapper):
-    # This is used for uniform and random pruning. Because we don't actually need to do the epoch pass.
-    # And --pnkao needs to be 1 so we get the importance dict after pruning each kernel. So epoch pass would be too slow.
-    
-    fake_avg_objects = {}
-    for tree_ix in model_wrapper.conv_tree_ixs:
-        weight_dims = model_wrapper.resource_calc.module_tree_ix_2_module_itself[tree_ix].weight.data.detach().size()
-        fake_avg_objects[tree_ix] = (None, torch.zeros(weight_dims), None)
-
-
-    importance_dict = IMPORTANCE_FN(fake_avg_objects, model_wrapper.conv_tree_ixs)
-    return importance_dict
-
-
-
-GET_IMPORTANCE_DICT_FN = get_importance_dict
-if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
-    GET_IMPORTANCE_DICT_FN = dummy_get_importance_dict
-
-
-
-
-
-
-
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
+    model_wrapper = ModelWrapper(DeepLabv3, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
 
 
 
@@ -1062,12 +573,6 @@ if __name__ == "__main__":
 
 
     if IS_PRUNING_READY:
-
-
-
-
-
-
 
         tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
@@ -1079,6 +584,8 @@ if __name__ == "__main__":
 
         
 
+
+        
 
 
         # Here we abuse the min_res_percentage class to disallow certain prunings.
@@ -1094,44 +601,39 @@ if __name__ == "__main__":
         generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
         disallowed_dict = {
-            model_wrapper.conv_tree_ixs[25] : 1.1
+            model_wrapper.conv_tree_ixs[26] : 1.1
         }
         generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
 
 
 
-
-
-
-
         # Choice disallowing:
         # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-        conv_tree_ixs = model_wrapper.conv_tree_ixs
-        CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
+        
+        # For segnet:
+        # conv_tree_ixs = model_wrapper.conv_tree_ixs
+        # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
         # The reasoning for this choice comes from kernel_connection_fn:
         # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
         # Because the kernel nums must match.
-        """
-        # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+        # """
+        # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
-        # Pairs of conv ixs:
-        # 1 23
-        # 3 21
-        # 6 18
-        # 9 15
-        """
-        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-
-        for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-            disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-        choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+        # # Pairs of conv ixs:
+        # # 1 23
+        # # 3 21
+        # # 6 18
+        # # 9 15
+        # """
+        
+        # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+        #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+        # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
         
         
-
-
-
 
 
 
@@ -1175,7 +677,7 @@ if __name__ == "__main__":
 
 
 
-        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, segnet_input_slice_connection_fn, segnet_kernel_connection_fn, pruning_disallowments, [])
+        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
 
 
 

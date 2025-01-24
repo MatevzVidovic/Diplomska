@@ -116,6 +116,7 @@ class ConvResourceCalc():
             print(f"x: {x}")
             print(f"self.module_tree_ix_2_name[tree_ix]: {self.module_tree_ix_2_name[tree_ix]}")
             print(f"self.calculate_layer_tree_ix_set_bug_prevention: {self.calculate_layer_tree_ix_set_bug_prevention}")
+            print(f"{self.calculate_layer_tree_ix_set_bug_prevention=}")
             
             raise ValueError("Tree_ix already in set.")
 

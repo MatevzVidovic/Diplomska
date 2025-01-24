@@ -6,7 +6,7 @@
 # Training parameters
 
 # Model parameters that need to be set in stone for pruning
-model: "64_1_6"
+model: "4_1_4"
 input_width: 256
 input_height: 256
 

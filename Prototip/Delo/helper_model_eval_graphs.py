@@ -63,8 +63,8 @@ def show_results(main_save_path):
         tl_name = jh.load(tl_j_path)[f"prev_training_logs"]
         pl_name = jh.load(pl_j_path)[f"prev_pruning_logs"]
 
-        training_logs_path = osp.join(main_save_path, tl_name)
-        pruning_logs_path = osp.join(main_save_path, pl_name)
+        training_logs_path = osp.join(main_save_path, "training_logs", tl_name)
+        pruning_logs_path = osp.join(main_save_path, "pruning_logs", pl_name)
 
         training_logs = pickle.load(open(training_logs_path, "rb"))
         pruning_logs = pickle.load(open(pruning_logs_path, "rb"))
@@ -170,8 +170,8 @@ def resource_graph(main_save_path, saved_model_wrapper_path):
 
         pl_j_path = osp.join(main_save_path, "prev_pruning_logs_name.json")
         pl_name = jh.load(pl_j_path)[f"prev_pruning_logs"]
+        pruning_logs_path = osp.join(main_save_path, "pruning_logs", pl_name)
 
-        pruning_logs_path = osp.join(main_save_path, pl_name)
         irc_path = osp.join(saved_model_wrapper_path, "initial_conv_resource_calc.pkl")
 
         pruning_logs = pickle.load(open(pruning_logs_path, "rb"))

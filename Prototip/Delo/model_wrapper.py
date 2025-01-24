@@ -136,17 +136,18 @@ class ModelWrapper:
 
 
 
+            if model_wrapper_params["is_resource_calc_ready"]:
 
-            self.resource_calc = ConvResourceCalc(self.training_wrapper)
+                self.resource_calc = ConvResourceCalc(self.training_wrapper)
 
-            self.input_example = input_example
-            self.resource_calc.calculate_resources(self.input_example)
+                self.input_example = input_example
+                self.resource_calc.calculate_resources(self.input_example)
 
-            # these two are set here because they are useful in some other tasks in the main script - such as when setting disallowed conv layers
-            # or in functions that take model_wrapper as an argument.
-            # Just ctrl f  for model_wrapper.conv_tree_ixs
-            self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
-            self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
+                # these two are set here because they are useful in some other tasks in the main script - such as when setting disallowed conv layers
+                # or in functions that take model_wrapper as an argument.
+                # Just ctrl f  for model_wrapper.conv_tree_ixs
+                self.conv_tree_ixs = self.resource_calc.get_ordered_list_of_tree_ixs_for_layer_name("Conv2d")
+                self.lowest_level_modules = self.resource_calc.get_lowest_level_module_tree_ixs()
 
 
 
