@@ -27,6 +27,11 @@ save_preds=$(mktemp)
 printf "sp\nstop\nstop\n" > "$save_preds"
 
 
+batch_size_train=$(mktemp)
+printf "bst\nstop\nstop\n" > "$batch_size_train"
+
+batch_size_eval=$(mktemp)
+printf "bse\nstop\nstop\n" > "$batch_size_eval"
 
 
 

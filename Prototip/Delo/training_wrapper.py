@@ -1080,14 +1080,127 @@ class TrainingWrapper:
 
 
 
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
 
 
+
+
+    def batch_size_train(self, dataloader_name="train"):
+
+        try:
+
+            dataloader = self.dataloaders_dict[dataloader_name]
+
+            num_batches = len(dataloader)
+
+            curr_bs = 2 # so that BatchNorm doesn't fail (if 1, it cant have variance)
+
+            self.model.train()
+
+
+            aggregate_batch = None
+            
+
+            data_dict = next(iter(dataloader)) # just get the first one, that's good enough
+
+
+            print("Starting batch_size_train loop")
+
+            while True:
+
+                while aggregate_batch is None or aggregate_batch[0].size(0) < curr_bs:
+                
+                    X = data_dict["images"]
+                    y = data_dict[self.params["target"]]
+
+                    if aggregate_batch is None:
+                        aggregate_batch = (X[:curr_bs], y[:curr_bs])
+                    else:
+                        curr_diff = curr_bs - aggregate_batch[0].size(0)
+                        aggregate_batch = (torch.cat([aggregate_batch[0], X[:curr_diff]], dim=0), torch.cat([aggregate_batch[1], y[:curr_diff]], dim=0))
+                        
+
+
+                assert aggregate_batch[0].size(0) == curr_bs and aggregate_batch[1].size(0) == curr_bs
+
+
+                X = aggregate_batch[0].to(self.device)
+                y = aggregate_batch[1].to(self.device)
+
+                pred = self.model(X)
+
+
+                loss = self.params["loss_fn"](pred, y)
+
+                curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
+
+                # Backpropagation
+                loss.backward()
+                self.optimizer.zero_grad()
+
+                print(f"Train batch size that still worked: {curr_bs}")
+                curr_bs += 1
 
 
         except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
+    
 
+
+    def batch_size_eval(self, dataloader_name="validation"):
+
+        try:
+
+            dataloader = self.dataloaders_dict[dataloader_name]
+
+            num_batches = len(dataloader)
+
+            self.model.eval()
+
+            curr_bs = 1
+
+            aggregate_batch = None
+
+            data_dict = next(iter(dataloader)) # just get the first one, that's good enough
+
+            print("Starting batch_size_eval loop")
+
+            while True:
+
+                with torch.no_grad():
+                    
+                    while aggregate_batch is None or aggregate_batch[0].size(0) < curr_bs:
+                    
+                        X = data_dict["images"]
+                        y = data_dict[self.params["target"]]
+
+                        if aggregate_batch is None:
+                            aggregate_batch = (X[:curr_bs], y[:curr_bs])
+                        else:
+                            curr_diff = curr_bs - aggregate_batch[0].size(0)
+                            aggregate_batch = (torch.cat([aggregate_batch[0], X[:curr_diff]], dim=0), torch.cat([aggregate_batch[1], y[:curr_diff]], dim=0))
+                        
+
+
+                    assert aggregate_batch[0].size(0) == curr_bs and aggregate_batch[1].size(0) == curr_bs
+
+
+                    X = aggregate_batch[0].to(self.device)
+                    y = aggregate_batch[1].to(self.device)
+
+                    pred = self.model(X)
+
+                    print(f"Eval batch size that still worked: {curr_bs}")
+                    curr_bs += 1
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
+    
 
 
 

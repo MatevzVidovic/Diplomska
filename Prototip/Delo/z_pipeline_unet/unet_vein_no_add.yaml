@@ -6,6 +6,7 @@
 # Training parameters
 
 # More situationally changed parameters
+is_resource_calc_ready: True
 is_pruning_ready: False   # set to false to skip all prun
 path_to_data: "./Data/vein_and_sclera_data"
 target: "veins"

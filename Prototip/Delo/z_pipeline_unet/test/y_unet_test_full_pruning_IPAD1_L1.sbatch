@@ -8,7 +8,7 @@
 #SBATCH -c 7
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
-#SBATCH --output=x_deeplab_test_full_pruning_IPAD.txt
+#SBATCH --output=x_unet_test_full_pruning_IPAD.txt
 
 
 # #SBATCH -w ana
@@ -35,12 +35,12 @@ if [[ $# -ne $param_num ]]; then
     exit 1
 fi
 
-source z_pipeline_deeplab/z0_main_name.sh
+source z_pipeline_unet/z0_main_name.sh
 
 # pruning_phase
-python3 ${main_name} --ntibp 1 --tras 2 --ifn IPAD_eq -p --sd $sd_name --yaml z_pipeline_deeplab/deeplab_${id}.yaml
+python3 ${main_name} --ntibp 1 --tras 2 --ifn IPAD1_L1 -p --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml
 
-bash z_pipeline_deeplab/z0_get_graphs.sh $sd_name
-python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_deeplab/deeplab_${id}.yaml    < "$save_and_stop"
+bash z_pipeline_unet/z0_get_graphs.sh $sd_name
+python3 ${main_name} --ips 0 --sd $sd_name --yaml z_pipeline_unet/unet_${id}.yaml    < "$save_and_stop"
 
 
