@@ -7,7 +7,7 @@ import argparse
 
 import os.path as osp
 
-import y_helpers.helper_json_handler as jh
+import y_helpers.json_handler as jh
 
 
 import pickle

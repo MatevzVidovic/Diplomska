@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 
 
-from y_helpers.helper_padding import pad_to_larger, pad_or_resize_to_second_arg, pad_or_resize_to_dims
+from y_helpers.padding import pad_to_larger, pad_or_resize_to_second_arg, pad_or_resize_to_dims
 
 
 

@@ -36,10 +36,10 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
 
 
 
-from img_augments import horizontal_flip, rotation, gaussian_blur
+from y_datasets.img_augments import horizontal_flip, rotation, gaussian_blur
 
 
-from y_helpers.helper_img_and_fig_tools import smart_conversion, save_plt_fig_quick_figs
+from y_helpers.img_and_fig_tools import smart_conversion, save_plt_fig_quick_figs
 
 from enum import Enum
 

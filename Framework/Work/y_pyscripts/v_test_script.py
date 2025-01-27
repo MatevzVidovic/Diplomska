@@ -20,7 +20,7 @@ handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_s
 
 
 
-from dataset import IrisDataset
+from y_datasets.dataset_all import IrisDataset
 
 
 
@@ -101,7 +101,7 @@ print(real_imgs)
 
 
 
-from y_helpers.helper_img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_imgs_quick_figs
+from y_helpers.img_and_fig_tools import smart_conversion, show_image, save_img_quick_figs, save_imgs_quick_figs
 
 import numpy as np
 import torch

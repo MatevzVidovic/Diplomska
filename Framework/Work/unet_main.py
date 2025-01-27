@@ -41,17 +41,19 @@ import random
 
 import argparse
 
-from min_resource_percentage import MinResourcePercentage
-from model_wrapper import ModelWrapper
+from y_framework.min_resource_percentage import MinResourcePercentage
+from y_framework.model_wrapper import ModelWrapper
 
-from training_support import *
-from losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss, TverskyLoss
+from y_framework.training_support import *
+from y_helpers.losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss, TverskyLoss
 
 import ast
 
-import y_helpers.helper_yaml_handler as yh
+import y_helpers.yaml_handler as yh
 
-from y_helpers.helper_pruning_importance import *
+from y_helpers.pruning_importance import *
+
+from y_helpers.samplers import BalancedRandomSampler, LimitedSampler
 
 
 
@@ -118,80 +120,38 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    print(f"Args: {args}")
-
+    args_dict = vars(args)
 
     SAVE_DIR = args.sd
-    max_train_iters = args.mti
-    max_total_train_iters = args.mtti
-    is_pruning_ph = args.pruning_phase
+    MAX_TRAIN_ITERS = args.mti
+    MAX_TOTAL_TRAIN_ITERS = args.mtti
+    IS_PRUNING_PH = args.pruning_phase
     IMPORTANCE_FN_DEFINER = args.ifn
-    iter_possible_stop = args.ips
+    ITER_POSSIBLE_STOP = args.ips
 
     TEST_RUN_AND_SIZE = args.tras
     IS_TEST_RUN = TEST_RUN_AND_SIZE != -1
     TEST_PRUNING = args.tp
 
-    yaml_path = args.yaml
 
+
+    yaml_path = args.yaml
     yaml_overrides = args.yo
 
-
-    yaml_dict = yh.read_yaml(yaml_path)
-    yd = yaml_dict
+    YD = yh.read_yaml(yaml_path)
 
     if yaml_overrides is not None:
         for path in yaml_overrides:
             yo_dict = yh.read_yaml(path)
             for key, val in yo_dict.items():
-                yaml_dict[key] = val
+                YD[key] = val
 
-
-    print(f"YAML: {yaml_dict}")
-
-    IS_PRUNING_READY = yaml_dict["is_pruning_ready"]
-    PATH_TO_DATA = yaml_dict["path_to_data"]
-    TARGET = yaml_dict["target"]
-    TRAIN_EPOCH_SIZE = yaml_dict["train_epoch_size"]
-    VAL_EPOCH_SIZE = yaml_dict["val_epoch_size"]
-    TEST_EPOCH_SIZE = yaml_dict["test_epoch_size"]
-    TRAIN_BATCH_SIZE = yaml_dict["train_batch_size"]
-    EVAL_BATCH_SIZE = yaml_dict["eval_batch_size"]
-    LEARNING_RATE = yaml_dict["learning_rate"]
-    NUM_OF_DATALOADER_WORKERS = yaml_dict["num_of_dataloader_workers"]
-
-    cleanup_k = yaml_dict["cleanup_k"]
-    optimizer = yaml_dict["optimizer_used"]
-    ZERO_OUT_NON_SCLERA_ON_PREDICTIONS = yaml_dict["zero_out_non_sclera_on_predictions"]
-    loss_fn_name = yaml_dict["loss_fn_name"]
-    loss_params = yaml_dict["loss_params"]
     
-    dataset_type = yaml_dict["dataset_type"]
-    aug_type = yaml_dict["aug_type"]
-    zero_out_non_sclera = yaml_dict["zero_out_non_sclera"]
-    add_sclera_to_img = yaml_dict["add_sclera_to_img"]
-    add_bcosfire_to_img = yaml_dict["add_bcosfire_to_img"]
-    add_coye_to_img = yaml_dict["add_coye_to_img"]
-
-    MODEL = yaml_dict["model"]
-    INPUT_WIDTH = yaml_dict["input_width"]
-    INPUT_HEIGHT = yaml_dict["input_height"]
-    INPUT_CHANNELS = yaml_dict["input_channels"]
-    OUTPUT_CHANNELS = yaml_dict["output_channels"]
-
-    have_patchification = yaml_dict["have_patchification"]
-    patchification_params = yaml_dict["patchification_params"]
 
 
-    NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = yaml_dict["num_train_iters_between_prunings"]
-    max_auto_prunings = yaml_dict["max_auto_prunings"]
-    proportion_to_prune = yaml_dict["proportion_to_prune"]
-    
-    prune_by_original_percent = yaml_dict["prune_by_original_percent"]
-    num_to_prune = yaml_dict["num_filters_to_prune"]
-    prune_n_kernels_at_once = yaml_dict["prune_n_kernels_at_once"]
-    resource_name = yaml_dict["resource_name_to_prune_by"]
-    conv2d_prune_limit = yaml_dict["conv2d_prune_limit"]
+    # OG_YD = YD.copy()
+    # print(f"Initial overridden YAML: {yh.get_readable_dict_str(OG_YD)}")
+
 
 
 
@@ -199,21 +159,23 @@ if __name__ == "__main__":
 
     # For writing tests:
     if args.ntibp is not None:
-        NUM_TRAIN_ITERS_BETWEEN_PRUNINGS = args.ntibp
+        YD["num_train_iters_between_prunings"] = args.ntibp
     if args.ptp is not None:
-        proportion_to_prune = args.ptp
+        YD["proportion_to_prune"] = args.ptp
     if args.map is not None:
-        max_auto_prunings = args.map
+        YD["max_auto_prunings"] = args.map
 
 
 
     # Parameter changes to prevent wrongness.
 
     if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
-        prune_n_kernels_at_once = 1
+        YD["prune_n_kernels_at_once"] = 1
 
     if TEST_RUN_AND_SIZE != -1:
-        TRAIN_EPOCH_SIZE = TEST_RUN_AND_SIZE
+        YD["train_epoch_size"] = TEST_RUN_AND_SIZE
+        YD["val_epoch_size"] = TEST_RUN_AND_SIZE
+        YD["test_epoch_size"] = TEST_RUN_AND_SIZE
     
 
 
@@ -223,55 +185,342 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-    # For pruning to work the functions need to be written to some specific model. We choose to make them after the model that proved to be successful in the training phase.
-    # These are the specifications.
-    # This is how we guard against wrong callings.
-
-    # sth_wrong = OUTPUT_CHANNELS != 2 or optimizer != "Adam"
-    # if sth_wrong:
-    #     print(f"OUTPUT_CHANNELS: {OUTPUT_CHANNELS}, should be 2, optimizer: {optimizer}, should be Adam.")
-    #     raise ValueError("Some of the parameters are hardcoded and can't be changed. Please check the script and set the parameters to the right values.")
-
-
-
-
-
-
-
-
-    # print("Currently disregarding the args. They are hardcoded in the script.")
-
-    # is_pruning_ph = IS_PRUNING_PH
-    # prune_n_kernels_at_once = PRUNE_N_KERNELS_AT_ONCE
-    # prune_by_original_percent = PRUNE_BY_ORIGINAL_PERCENT
-    # max_train_iters = MAX_TRAIN_ITERS
-    # max_auto_prunings = MAX_AUTO_PRUNINGS
-    # err_ix = ERR_IX
-    # resource_name = RESOURCE_NAME
-    # proportion_to_prune = PROPORTION_TO_PRUNE
-
-
-
-
-
-    pruning_kwargs = {
-        "prune_by_original_percent": prune_by_original_percent,
-        "prune_n_kernels_at_once": prune_n_kernels_at_once,
-        "num_of_prunes": num_to_prune,
-        "resource_name": resource_name,
-        "original_proportion_to_prune": proportion_to_prune
+    PRUNING_KWARGS = {
+        "prune_by_original_percent": YD["prune_by_original_percent"],
+        "prune_n_kernels_at_once": YD["prune_n_kernels_at_once"],
+        "num_of_prunes": YD["num_filters_to_prune"],
+        "resource_name": YD["prune_n_kernels_at_once"],
+        "original_proportion_to_prune": YD["proportion_to_prune"]
     }
 
-    print(f"Validation phase: {is_pruning_ph}")
-    print(args)
 
+
+    print(f"\n\n\nIs pruning phase: {IS_PRUNING_PH}")
+    print(f"\nArgs_dict:\n{yh.get_readable_dict_str(args_dict)}\n")
+    print(f"\nFinal YD:\n{yh.get_readable_dict_str(YD)}\n")
+
+
+
+
+
+
+
+
+
+    # We used to take everything from the yaml dict and put it into variables first.
+    # This increased clarity, because you could see all the parameters at the top of the script.
+    # But it also complicated adding new params and keeping track of them and such.
+    
+    # Instead, we can now just copy this script, put it into an LLM 
+    # and ask it to give us a documentation of the YD parameters, even with possible values for them.
+    # And then of course check that it didn't halucinate,
+    # but still, quick and easy.
+
+    # E.g.:    Give all the parameters a yaml file is supposed to have here (YD dict) and group them in meaningful groups based on appearing in the same parts of the code / for the same function.
+    #          With the wither possible options for the parameter if those are defined, or just the type of the parameter if they are not.
+    # Take this as an example output:
+
+    """"
+    Model Architecture Parameters
+
+    model: "64_2_6"  # Options: "64_2_6", "64_1_6", "4_1_4", "4_2_4", "8_2_5", "8_2_4", "6_2_4", "8_1.5_5", "8_1.5_6"
+    input_height: int  # Height of input images
+    input_width: int   # Width of input images
+
+    Training Parameters
+
+    learning_rate: float
+    train_batch_size: int
+    eval_batch_size: int
+    num_of_dataloader_workers: int
+    train_epoch_size: int
+    val_epoch_size: int
+    test_epoch_size: int
+
+    Loss Function Configuration
+
+    loss_fn_name: str  # Options: "MCDL", "MCDLW", "Tversky", "JACCARD"
+    loss_params:
+    bg_adj: float  # For MCDLW
+    fp_imp: float  # For Tversky
+    fn_imp: float  # For Tversky
+    equalize: bool # For Tversky
+
+    Dataset Configuration
+
+    dataset_type: str  # Options: "vasd", "simple"
+    path_to_data: str
+    zero_out_non_sclera: bool
+    add_sclera_to_img: bool
+    add_bcosfire_to_img: bool
+    add_coye_to_img: bool
+    aug_type: str
+    target: str
+
+    Pruning Configuration
+
+    is_pruning_ready: bool
+    is_resource_calc_ready: bool
+    conv2d_prune_limit: float
+    num_train_iters_between_prunings: int
+    max_auto_prunings: int
+    cleanup_k: int
+    prune_by_original_percent: bool
+    prune_n_kernels_at_once: int
+    num_filters_to_prune: int
+    proportion_to_prune: float
+
+    Patchification Parameters
+
+    have_patchification: bool
+    patchification_params:
+    patch_y: int
+    patch_x: int
+    num_of_patches_from_img: int
+    prob_zero_patch_resample: float
+
+    Output Processing
+
+    zero_out_non_sclera_on_predictions: bool
+
+
+
+
+
+    Here's an example of how this would look in a YAML file:
+
+    # Model Architecture
+    model: "64_2_6"
+    input_height: 256
+    input_width: 256
+
+    # Training Parameters
+    learning_rate: 0.001
+    train_batch_size: 32
+    eval_batch_size: 64
+    num_of_dataloader_workers: 4
+    train_epoch_size: 1000
+    val_epoch_size: 200
+    test_epoch_size: 200
+
+    # Loss Function Configuration
+    loss_fn_name: "MCDL"
+    loss_params:
+    bg_adj: 0.5
+    fp_imp: 0.5
+    fn_imp: 0.5
+    equalize: true
+
+    # Dataset Configuration
+    dataset_type: "vasd"
+    path_to_data: "/path/to/data"
+    zero_out_non_sclera: false
+    add_sclera_to_img: false
+    add_bcosfire_to_img: false
+    add_coye_to_img: false
+    aug_type: "standard"
+    target: "sclera"
+
+    # Pruning Configuration
+    is_pruning_ready: true
+    is_resource_calc_ready: true
+    conv2d_prune_limit: 0.25
+    num_train_iters_between_prunings: 100
+    max_auto_prunings: 50
+    cleanup_k: 5
+    prune_by_original_percent: true
+    prune_n_kernels_at_once: 1
+    num_filters_to_prune: 100
+    proportion_to_prune: 0.75
+
+    # Patchification Parameters
+    have_patchification: false
+    patchification_params:
+    patch_y: 64
+    patch_x: 64
+    num_of_patches_from_img: 10
+    prob_zero_patch_resample: 0.1
+
+    # Output Processing
+    zero_out_non_sclera_on_predictions: false
+    """
+
+
+
+
+
+
+
+
+
+
+
+
+
+from y_models.unet_original import UNet
+
+
+
+# In our UNet implementation the dims can be whatever you want.
+# You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
+INPUT_DIMS = {
+    "width" : YD["input_width"],
+    "height" : YD["input_height"],
+    "channels" : YD["input_channels"]
+}
+
+# In our UNet the output width and height have to be the same as the input width and height. 
+OUTPUT_DIMS = {
+    "width" : INPUT_DIMS["width"],
+    "height" : INPUT_DIMS["height"],
+    "channels" : 2
+}
+
+
+
+
+# patchification changesthings only for the model
+# The dataset is giving the same exact images as usual.
+# It's just that we do special things in the TrainingWrapper,
+# and consequently patches get fed into the model.
+
+# in and out dims of the model are the same anyways, so i won't say in_x and out_x, but just dim_x.
+dim_y = OUTPUT_DIMS["height"]
+dim_x = OUTPUT_DIMS["width"]
+# We have to set the input dims of the model to the patch dims.
+if YD["have_patchification"]:
+    dim_y = YD["patchification_params"]["patch_y"]
+    dim_x = YD["patchification_params"]["patch_x"]
+
+if YD["model"] == "64_2_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+        "depth" : 6,
+        }
+elif YD["model"] == "64_1_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 1,
+        "depth" : 6,
+        }
+elif YD["model"] == "4_1_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 1,
+        "depth" : 4,
+        }
+elif YD["model"] == "4_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif YD["model"] == "8_2_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 2,
+        "depth" : 5,
+        }
+elif YD["model"] == "8_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif YD["model"] == "6_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 6,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif YD["model"] == "4_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif YD["model"] == "8_1.5_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 1.5,
+        "depth" : 5,
+        }
+elif YD["model"] == "8_1.5_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 1.5,
+        "depth" : 6,
+        }
+    
+elif YD["model"] == "small":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 1,
+        "depth" : 4,
+        }
+else:
+    raise ValueError("Model not recognized.")
+
+print(f"{INPUT_DIMS['channels']=}")
+print(f"{dim_x=}")
+print(f"{dim_y=}")
+INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
 
 
 
@@ -298,26 +547,15 @@ device = (
 # self.device = "cpu" # for debugging purposes
 print(f"Device: {device}")
 
-
-
-
-
-if dataset_type == "vasd":
-    from dataset import IrisDataset, custom_collate_fn
-elif dataset_type == "simple":
-    from dataset_simple import IrisDataset, custom_collate_fn
-else:
-    raise ValueError("Dataset type not recognized.")
-
     
 
-if loss_fn_name == "MCDL":
+if YD["loss_fn_name"] == "MCDL":
     loss_fn = MultiClassDiceLoss()
-elif loss_fn_name == "MCDLW":
-    loss_fn = MultiClassDiceLoss(background_adjustment=loss_params["bg_adj"])
-elif loss_fn_name == "Tversky":
-    loss_fn = TverskyLoss(fp_imp=loss_params["fp_imp"], fn_imp=loss_params["fn_imp"], equalize=loss_params["equalize"])
-elif loss_fn_name == "JACCARD":
+elif YD["loss_fn_name"] == "MCDLW":
+    loss_fn = MultiClassDiceLoss(background_adjustment=YD["loss_params"]["bg_adj"])
+elif YD["loss_fn_name"] == "Tversky":
+    loss_fn = TverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], equalize=YD["loss_params"]["equalize"])
+elif YD["loss_fn_name"] == "JACCARD":
     loss_fn = JaccardLoss()
 else:
     raise ValueError("Loss function not recognized.")
@@ -326,168 +564,33 @@ optimizer = torch.optim.Adam
 
 
 model_wrapper_params = {
-    "learning_rate" : LEARNING_RATE,
+    "model_class" : UNet,
+    "input_example" : INPUT_EXAMPLE,
+    "save_path" : save_path,
+    "device" : device,
+    "learning_rate" : YD["learning_rate"],
     "optimizer_class" : optimizer,
-    "is_resource_calc_ready": yd["is_resource_calc_ready"]
+    "is_resource_calc_ready": YD["is_resource_calc_ready"]
 }
 
 training_wrapper_params = {
-    "target" : TARGET,
+    "device" : device,
+    "target" : YD["target"],
     "loss_fn" : loss_fn,
-    "zero_out_non_sclera_on_predictions" : ZERO_OUT_NON_SCLERA_ON_PREDICTIONS,
-    "have_patchification" : have_patchification,
-    "patchification_params" : patchification_params
-}
-
-
-# In our UNet implementation the dims can be whatever you want.
-# You could even change them between training iterations - but it might be a bad idea because all the weights had been learnt at the scale of the previous dims.
-INPUT_DIMS = {
-    "width" : INPUT_WIDTH,
-    "height" : INPUT_HEIGHT,
-    "channels" : INPUT_CHANNELS
-}
-
-# In our UNet the output width and height have to be the same as the input width and height. 
-OUTPUT_DIMS = {
-    "width" : INPUT_DIMS["width"],
-    "height" : INPUT_DIMS["height"],
-    "channels" : 2
+    "zero_out_non_sclera_on_predictions" : YD["zero_out_non_sclera_on_predictions"],
+    "have_patchification" : YD["have_patchification"],
+    "patchification_params" : YD["patchification_params"]
 }
 
 
 
-from unet_original import UNet
-
-# patchification changesthings only for the model
-# The dataset is giving the same exact images as usual.
-# It's just that we do special things in the TrainingWrapper,
-# and consequently patches get fed into the model.
-
-# in and out dims of the model are the same anyways, so i won't say in_x and out_x, but just dim_x.
-dim_y = OUTPUT_DIMS["height"]
-dim_x = OUTPUT_DIMS["width"]
-# We have to set the input dims of the model to the patch dims.
-if have_patchification:
-    dim_y = patchification_params["patch_y"]
-    dim_x = patchification_params["patch_x"]
-
-if MODEL == "64_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif MODEL == "64_1_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 1,
-        "depth" : 6,
-        }
-elif MODEL == "4_1_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 1,
-        "depth" : 4,
-        }
-elif MODEL == "4_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif MODEL == "8_2_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 5,
-        }
-elif MODEL == "8_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif MODEL == "6_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 6,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif MODEL == "4_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif MODEL == "8_1.5_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 5,
-        }
-elif MODEL == "8_1.5_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 6,
-        }
-    
-else:
-    raise ValueError("Model not recognized.")
 
 
-INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
+
+
+
+
+
 
 
 
@@ -497,10 +600,10 @@ INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
 
 dataloading_args = {
 
-    "train_batch_size" : TRAIN_BATCH_SIZE,
-    "eval_batch_size" : EVAL_BATCH_SIZE, # val and test use torch.no_grad() so they use less memory
+    "train_batch_size" : YD["train_batch_size"],
+    "eval_batch_size" : YD["eval_batch_size"], # val and test use torch.no_grad() so they use less memory
     "shuffle" : False, # TODO shuffle??
-    "num_workers" : NUM_OF_DATALOADER_WORKERS,
+    "num_workers" : YD["num_of_dataloader_workers"],
 }
 
 
@@ -516,86 +619,41 @@ dataset_args = {
     "output_height" : OUTPUT_DIMS["height"],
     
     # iris dataset params
-    "path_to_sclera_data" : PATH_TO_DATA,
+    "path_to_sclera_data" : YD["path_to_data"],
     # "transform" : transform,
     "n_classes" : OUTPUT_DIMS["channels"],
-    "aug_type" : aug_type,
+    "aug_type" : YD["aug_type"],
 
-    "zero_out_non_sclera" : zero_out_non_sclera,
-    "add_sclera_to_img" : add_sclera_to_img,
-    "add_bcosfire_to_img" : add_bcosfire_to_img,
-    "add_coye_to_img" : add_coye_to_img
+    "zero_out_non_sclera" : YD["zero_out_non_sclera"],
+    "add_sclera_to_img" : YD["add_sclera_to_img"],
+    "add_bcosfire_to_img" : YD["add_bcosfire_to_img"],
+    "add_coye_to_img" : YD["add_coye_to_img"]
 
 }
 
 train_dataset_args = dataset_args.copy()
 
-if have_patchification:
+if YD["have_patchification"]:
 
     train_dataset_args['patchify'] = True
-    train_dataset_args['patch_shape'] = (patchification_params['patch_y'], patchification_params['patch_x'])
-    train_dataset_args['num_of_patches_from_img'] = patchification_params['num_of_patches_from_img']
-    train_dataset_args['prob_zero_patch_resample'] = patchification_params['prob_zero_patch_resample']
+    train_dataset_args['patch_shape'] = (YD["patchification_params"]['patch_y'], YD["patchification_params"]['patch_x'])
+    train_dataset_args['num_of_patches_from_img'] = YD["patchification_params"]['num_of_patches_from_img']
+    train_dataset_args['prob_zero_patch_resample'] = YD["patchification_params"]['prob_zero_patch_resample']
 
 
 
 
-class ResamplingSampler(Sampler):
-    def __init__(self, data_source, num_samples):
-        self.data_source = data_source
-        self.num_samples = num_samples
-
-    def __iter__(self):
-        # Generate random indices with replacement
-        return iter(random.choices(range(len(self.data_source)), k=self.num_samples))
-
-    def __len__(self):
-        return self.num_samples
-
-
-class BalancedRandomSampler(Sampler):
-    def __init__(self, data_source, num_samples):
-        self.data_source = data_source
-        self.num_samples = num_samples
-
-    def __iter__(self):
-        # Generate random indices with replacement
-        items = []
-        diff = self.num_samples - len(items)
-        while diff > 0:
-            random_permutation = random.sample(range(len(self.data_source)), len(self.data_source))
-            items += random_permutation[:diff] # will take all elements, unless diff is smaller than len(random_permutation)
-            diff = self.num_samples - len(items)
-
-        return iter(items)
-
-    def __len__(self):
-        return self.num_samples
-
-
-class LimitedSampler(Sampler):
-    def __init__(self, data_source, num_samples, shuffle=False):
-        self.data_source = data_source
-        self.num_samples = min(num_samples, len(data_source))
-        self.shuffle = shuffle
-
-    def __iter__(self):
-        
-        if self.shuffle:
-            items = random.sample(range(len(self.num_samples)), self.num_samples)
-        else:
-            items = list(range(self.num_samples))
-
-        return iter(items)
-
-    def __len__(self):
-        return self.num_samples
-
+if YD["dataset_type"] == "vasd":
+    from y_datasets.dataset_all import IrisDataset, custom_collate_fn
+elif YD["dataset_type"] == "simple":
+    from y_datasets.dataset_simple import IrisDataset, custom_collate_fn
+else:
+    raise ValueError("Dataset type not recognized.")
 
 
 def get_data_loaders():
     
-    data_path = PATH_TO_DATA
+    data_path = YD["path_to_data"]
     # n_classes = 4 if 'sip' in args.dataset.lower() else 2
 
     print('path to file: ' + str(data_path))
@@ -606,9 +664,9 @@ def get_data_loaders():
     valid_dataset = IrisDataset(filepath=data_path, split='val', **dataset_args)
     test_dataset = IrisDataset(filepath=data_path, split='test', **dataset_args)
 
-    train_sampler = BalancedRandomSampler(train_dataset, num_samples=TRAIN_EPOCH_SIZE)
-    val_sampler = LimitedSampler(valid_dataset, num_samples=VAL_EPOCH_SIZE, shuffle=False)
-    test_sampler = LimitedSampler(test_dataset, num_samples=TEST_EPOCH_SIZE, shuffle=False)
+    train_sampler = BalancedRandomSampler(train_dataset, num_samples=YD["train_epoch_size"])
+    val_sampler = LimitedSampler(valid_dataset, num_samples=YD["val_epoch_size"], shuffle=False)
+    test_sampler = LimitedSampler(test_dataset, num_samples=YD["val_epoch_size"], shuffle=False)
 
     trainloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=dataloading_args["train_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
     validloader = DataLoader(valid_dataset, sampler=val_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=custom_collate_fn, num_workers=dataloading_args["num_workers"])
@@ -640,10 +698,10 @@ def get_data_loaders():
 train_dataloader, valid_dataloader, test_dataloader = get_data_loaders()
 
 save_preds_DL = None
-save_preds_path = osp.join(PATH_TO_DATA, "save_preds")
+save_preds_path = osp.join(YD["path_to_data"], "save_preds")
 if osp.exists(save_preds_path):
-    from dataset_for_save_preds import SavePredsDataset, save_preds_collate_fn
-    save_preds_dataset = SavePredsDataset(filepath=PATH_TO_DATA, split='save_preds', **dataset_args)
+    from y_datasets.dataset_for_save_preds import SavePredsDataset, save_preds_collate_fn
+    save_preds_dataset = SavePredsDataset(filepath=YD["path_to_data"], split='save_preds', **dataset_args)
     save_preds_sampler = LimitedSampler(save_preds_dataset, num_samples=int(1e9), shuffle=False)
     save_preds_DL = DataLoader(save_preds_dataset, sampler=save_preds_sampler, batch_size=dataloading_args["eval_batch_size"], collate_fn=save_preds_collate_fn, num_workers=dataloading_args["num_workers"])
 
@@ -665,264 +723,220 @@ dataloader_dict = {
 
 
 
+INPUT_SLICE_CONNECTION_FN = None
+KERNEL_CONNECTION_FN = None
+
+if YD["model"] == "64_2_6":
 
 
 
+    # Since using 2dConvTransopse (upconvolutions) instead of simple upsampling, a few things have changed:
+        # The upconvolution is a channel buffer,
+        # so when the previous layer in the Up path is pruned, you have to prune the in-channels of the upconvolution, but you then mustn't
+        # prune the actual next conv layer.
 
-
-# Since using 2dConvTransopse (upconvolutions) instead of simple upsampling, a few things have changed:
-    # The upconvolution is a channel buffer,
-    # so when the previous layer in the Up path is pruned, you have to prune the in-channels of the upconvolution, but you then mustn't
-    # prune the actual next conv layer.
-
-    # But the thing is, upconvs have weights like: (in_channels, out_channels, kernel_height, kernel_width)
-    # So it's easier to fit them in as if they were batchnorms and have them prning in the kernel pruning function, even though we are pruning the input slice.
-    
-    # Bad idea:
-    # But it makes more sense to do this: also prune the out-channels of the up-convolution and prune the in-channels of the next conv layer (as is done already).
-    # But, the up-convolution is taking 2k channels to k channels.
-    # So it doesn't make sense to just always also prune the up-convolution. Also, which channel would you even prune?!?
-
-    # So let's just do the input slice pruning, and lets just remove the input slice pruning of the next conv layer.
-
-UPCONV_LLM_IXS = [48, 55, 62, 69, 76, 83]
-
-
-
-
-
-
-
-# Go see model graph to help you construct these connection functions.
-# model_wrapper.model_graph()
-
-
-def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
-    #    tree_ix -> skip_conn_starting_index
-
-    # It could be done programatically, however:
-    # Assuming the layers that have skip connections have only one source of them,
-    # we could calculate how many inputs come from the previous layer.
-    # That is then the starting ix of skip connections.
-
-    # To make this function, go look in the drawn matplotlib graph.
-    # On the upstream, just look at the convolution's weight dimensions.
-    # They are: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
-    # (output_dimensions - input_dimensions) is the ix of the first skip connection
-
-
-
-    # Oh, I see. This is easily programmable.
-    # Just use "initial_conv_resource_calc.pkl" and use 
-    # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
-    # And that's it haha.
-
-    conv_ix = None
-    if tree_ix in conv_tree_ixs:
-        conv_ix = conv_tree_ixs.index(tree_ix)
-
-        if conv_ix == 24:
-            
-            return 64
-        elif conv_ix == 22:
-            
-            return 128
-        elif conv_ix == 20:
-            
-            return 256
-        elif conv_ix == 18:
-            
-            return 512
-
-        elif conv_ix == 16:
-            
-            return 1024
+        # But the thing is, upconvs have weights like: (in_channels, out_channels, kernel_height, kernel_width)
+        # So it's easier to fit them in as if they were batchnorms and have them prning in the kernel pruning function, even though we are pruning the input slice.
         
-        elif conv_ix == 14:
-            return 2048
+        # Bad idea:
+        # But it makes more sense to do this: also prune the out-channels of the up-convolution and prune the in-channels of the next conv layer (as is done already).
+        # But, the up-convolution is taking 2k channels to k channels.
+        # So it doesn't make sense to just always also prune the up-convolution. Also, which channel would you even prune?!?
+
+        # So let's just do the input slice pruning, and lets just remove the input slice pruning of the next conv layer.
+
+    UPCONV_LLM_IXS = [48, 55, 62, 69, 76, 83]
 
 
-    else:
+
+
+
+
+
+    # Go see model graph to help you construct these connection functions.
+    # model_wrapper.model_graph()
+
+
+    def unet_tree_ix_2_skip_connection_start(tree_ix, conv_tree_ixs):
+        #    tree_ix -> skip_conn_starting_index
+
+        # It could be done programatically, however:
+        # Assuming the layers that have skip connections have only one source of them,
+        # we could calculate how many inputs come from the previous layer.
+        # That is then the starting ix of skip connections.
+
+        # To make this function, go look in the drawn matplotlib graph.
+        # On the upstream, just look at the convolution's weight dimensions.
+        # They are: [output_channels (num of kernels), input_channels (depth of kernels), kernel_height, kernel_width]
+        # (output_dimensions - input_dimensions) is the ix of the first skip connection
+
+
+
+        # Oh, I see. This is easily programmable.
+        # Just use "initial_conv_resource_calc.pkl" and use 
+        # (output_dimensions - input_dimensions) where output_dimensions > input_dimensions.
+        # And that's it haha.
+
+        conv_ix = None
+        if tree_ix in conv_tree_ixs:
+            conv_ix = conv_tree_ixs.index(tree_ix)
+
+            if conv_ix == 24:
+                
+                return 64
+            elif conv_ix == 22:
+                
+                return 128
+            elif conv_ix == 20:
+                
+                return 256
+            elif conv_ix == 18:
+                
+                return 512
+
+            elif conv_ix == 16:
+                
+                return 1024
+            
+            elif conv_ix == 14:
+                return 2048
+
+
+        else:
+            
+            return None
         
-        return None
-    
 
 
 
 
 
-"""
-THIS HERE IS THE START OF BUILDING A CONNECTION fn
-based on the _get_next_conv_id_list_recursive()
-It is very early stage.
-"""
+    """
+    THIS HERE IS THE START OF BUILDING A CONNECTION fn
+    based on the _get_next_conv_id_list_recursive()
+    It is very early stage.
+    """
 
 
 
-def unet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
-    # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
+    def unet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+        # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
 
-    # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
-    
-    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model initially (before pruning).
-    # And it returns a list of tuples giving the following modules tree_ixs and the input_slice_ix
-    # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
+        # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
+        
+        # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model initially (before pruning).
+        # And it returns a list of tuples giving the following modules tree_ixs and the input_slice_ix
+        # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
 
 
 
-    conn_destinations = []
-
-    # we kind of only care about convolutional modules.
-    # We just need to prune there (and possibly something with the batch norm layer)
-    # So it would make sense to transform the tree_ix to the ordinal number of 
-    # the convolutional module, and work with that ix instead.
-
-    conv_ix = None
-    if tree_ix in conv_tree_ixs:
-        conv_ix = conv_tree_ixs.index(tree_ix)
-        conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
-    
-    # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
-    # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
-    # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
-    # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
-    # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
-
-    # So here we just prevent the wrong input slice connection pruning:
-    if conv_ix in [13, 15, 17, 19, 21, 23]:
         conn_destinations = []
 
+        # we kind of only care about convolutional modules.
+        # We just need to prune there (and possibly something with the batch norm layer)
+        # So it would make sense to transform the tree_ix to the ordinal number of 
+        # the convolutional module, and work with that ix instead.
 
+        conv_ix = None
+        if tree_ix in conv_tree_ixs:
+            conv_ix = conv_tree_ixs.index(tree_ix)
+            conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
+        
+        # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
+        # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
+        # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
+        # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
+        # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
 
-
-
-    # We made it so that for conv layers who receive as input the previous layer and a skip connection
-    # the first inpute slices are of the previous layer. This makes the line above as elegant as it is.
-    # We will, however, have to deal with more trouble with skip connections. 
-
-    
-    # (however, we included in a different way, because it is more elegant and makes more sense that way) 
-    # For the more general option (e.g. to include pruning of some other affected layers)
-    # we can instead work with "lowest_level_modules" indexes.
-    # These are modules that appear the lowest in the tree, and are the ones that actually 
-    # do the work. Data passes through them. They arent just composites of less complex modules.
-    # They are the actual building blocks.
-
-    # LLM_ix = None
-    # if tree_ix in lowest_level_modules:
-    #     LLM_ix = lowest_level_modules.index(tree_ix)
-
-
-
-
-    # We already handled the regular connections for convolutional networks.
-    # Now, here come skip connections.
-    # For explanation, look at the graphic in the original U-net paper.
-    
-    # We have to know where the skip connections start.
-    # What real index is the zeroth index of the skip connections for the goal layer?
-    # In this way we can then use the tree_ix to get the base ix.
-
-    # For this, we will for now create a second function where we hardcode this.
-    # It could be done programatically, however:
-    # Assuming the layers that have skip connections have only one source of them,
-    # we could calculate how many inputs come from the previous layer.
-    # That is then the starting ix of skip connections.
-
-    # To do this, we look at the code where the skip connections of the model are defined:
-    # def forward(self, x):
-        # x1 = self.inc(x)
-        # x2 = self.down1(x1)
-        # x3 = self.down2(x2)
-        # x4 = self.down3(x3)
-        # x5 = self.down4(x4)
-        # x = self.up1(x5, x4)
-        # x = self.up2(x, x3)
-        # x = self.up3(x, x2)
-        # x = self.up4(x, x1)
-        # logits = self.outc(x)
-        # return logits
-    
-    # We then look at the graphic of our network. We see that the inc block and first three down blocks create skip connections.
-    # Therefore the last (second) convolution in those blocks will be senging the skip connection forward.
-    # This is how we identify the particular convolutional modules (LLMs) that are involved in skip connections.
-    
-
-    # if conv_ix in [1, 3, 5, 7]:
-    
-    goal_conv_ix = None
-    if conv_ix == 1:
-        goal_conv_ix = 24
-    elif conv_ix == 3:
-        goal_conv_ix = 22
-    elif conv_ix == 5:
-        goal_conv_ix = 20
-    elif conv_ix == 7:
-        goal_conv_ix = 18
-    elif conv_ix == 9:
-        goal_conv_ix = 16
-    elif conv_ix == 11:
-        goal_conv_ix = 14
-    
-    # adding the kernel ix
-    if goal_conv_ix is not None:
-        goal_input_slice_ix = kernel_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_conv_ix], conv_tree_ixs)
-        conn_destinations.append((conv_tree_ixs[goal_conv_ix], goal_input_slice_ix))
-
-
-    # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
-    # outc has no next convolution
-    # if conv_ix == 26:
-        # conn_destinations = []
-    
-    
-    return conn_destinations
+        # So here we just prevent the wrong input slice connection pruning:
+        if conv_ix in [13, 15, 17, 19, 21, 23]:
+            conn_destinations = []
 
 
 
 
 
+        # We made it so that for conv layers who receive as input the previous layer and a skip connection
+        # the first inpute slices are of the previous layer. This makes the line above as elegant as it is.
+        # We will, however, have to deal with more trouble with skip connections. 
+
+        
+        # (however, we included in a different way, because it is more elegant and makes more sense that way) 
+        # For the more general option (e.g. to include pruning of some other affected layers)
+        # we can instead work with "lowest_level_modules" indexes.
+        # These are modules that appear the lowest in the tree, and are the ones that actually 
+        # do the work. Data passes through them. They arent just composites of less complex modules.
+        # They are the actual building blocks.
+
+        # LLM_ix = None
+        # if tree_ix in lowest_level_modules:
+        #     LLM_ix = lowest_level_modules.index(tree_ix)
 
 
 
 
-def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
-    # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
-    
-    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
-    # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
-    # for layers which are inextricably linked with the convolutional layer.
+        # We already handled the regular connections for convolutional networks.
+        # Now, here come skip connections.
+        # For explanation, look at the graphic in the original U-net paper.
+        
+        # We have to know where the skip connections start.
+        # What real index is the zeroth index of the skip connections for the goal layer?
+        # In this way we can then use the tree_ix to get the base ix.
 
-    # Meant for batchnorm and special cases.
+        # For this, we will for now create a second function where we hardcode this.
+        # It could be done programatically, however:
+        # Assuming the layers that have skip connections have only one source of them,
+        # we could calculate how many inputs come from the previous layer.
+        # That is then the starting ix of skip connections.
 
-    # Inextricably linked are in direct connection with the conv's current (not intitial) kernel_ix, so they don't need the more complex fn.
-    # We could have treated them in the regular way (through initial ixs), but this way is better,
-    # because, in the pruner, we don't need to keep track of the initial ixs (although we do anyways for accounting reasons).
-    # Also it's simpler and conceptually makes more sense - which is the main reason.
+        # To do this, we look at the code where the skip connections of the model are defined:
+        # def forward(self, x):
+            # x1 = self.inc(x)
+            # x2 = self.down1(x1)
+            # x3 = self.down2(x2)
+            # x4 = self.down3(x3)
+            # x5 = self.down4(x4)
+            # x = self.up1(x5, x4)
+            # x = self.up2(x, x3)
+            # x = self.up3(x, x2)
+            # x = self.up4(x, x1)
+            # logits = self.outc(x)
+            # return logits
+        
+        # We then look at the graphic of our network. We see that the inc block and first three down blocks create skip connections.
+        # Therefore the last (second) convolution in those blocks will be senging the skip connection forward.
+        # This is how we identify the particular convolutional modules (LLMs) that are involved in skip connections.
+        
 
-    # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
-    # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
-    # There are possibly more such layers and more types of such layers, so we made this function more general.
-    
-    conn_destinations = []
+        # if conv_ix in [1, 3, 5, 7]:
+        
+        goal_conv_ix = None
+        if conv_ix == 1:
+            goal_conv_ix = 24
+        elif conv_ix == 3:
+            goal_conv_ix = 22
+        elif conv_ix == 5:
+            goal_conv_ix = 20
+        elif conv_ix == 7:
+            goal_conv_ix = 18
+        elif conv_ix == 9:
+            goal_conv_ix = 16
+        elif conv_ix == 11:
+            goal_conv_ix = 14
+        
+        # adding the kernel ix
+        if goal_conv_ix is not None:
+            goal_input_slice_ix = kernel_ix + unet_tree_ix_2_skip_connection_start(conv_tree_ixs[goal_conv_ix], conv_tree_ixs)
+            conn_destinations.append((conv_tree_ixs[goal_conv_ix], goal_input_slice_ix))
 
-    LLM_ix = None
-    if tree_ix in lowest_level_modules:
-        LLM_ix = lowest_level_modules.index(tree_ix)
-
-
-
-
-
-    # All convolutions have batchnorms right after them and those need to be pruned.
-    conv_ix = None
-    if tree_ix in conv_tree_ixs:
-        conv_ix = conv_tree_ixs.index(tree_ix)
 
         # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
-        # out.conv doesn't have a batchnorm after it.
-        # if conv_ix < 26:
-        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
+        # outc has no next convolution
+        # if conv_ix == 26:
+            # conn_destinations = []
+        
+        
+        return conn_destinations
 
 
 
@@ -930,25 +944,79 @@ def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_mo
 
 
 
-    # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
-    # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
-    # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
-    # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
-    # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
 
 
-    # The upconvolutions have LLM idxs , 48, 55, 62, 69, 76, 83
-    # and corresponding in the order as the convs are listed below.
-    if conv_ix in [13, 15, 17, 19, 21, 23]:
-        ordered_ix = [13, 15, 17, 19, 21, 23].index(conv_ix)
-        conn_destinations.append((lowest_level_modules[UPCONV_LLM_IXS[ordered_ix]], kernel_ix))
-    
+    def unet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+        # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
+        
+        # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
+        # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
+        # for layers which are inextricably linked with the convolutional layer.
+
+        # Meant for batchnorm and special cases.
+
+        # Inextricably linked are in direct connection with the conv's current (not intitial) kernel_ix, so they don't need the more complex fn.
+        # We could have treated them in the regular way (through initial ixs), but this way is better,
+        # because, in the pruner, we don't need to keep track of the initial ixs (although we do anyways for accounting reasons).
+        # Also it's simpler and conceptually makes more sense - which is the main reason.
+
+        # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
+        # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
+        # There are possibly more such layers and more types of such layers, so we made this function more general.
+        
+        conn_destinations = []
+
+        LLM_ix = None
+        if tree_ix in lowest_level_modules:
+            LLM_ix = lowest_level_modules.index(tree_ix)
 
 
 
-    # for batchnorm, conn_destinations is simply empty
-    
-    return conn_destinations
+
+
+        # All convolutions have batchnorms right after them and those need to be pruned.
+        conv_ix = None
+        if tree_ix in conv_tree_ixs:
+            conv_ix = conv_tree_ixs.index(tree_ix)
+
+            # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
+            # out.conv doesn't have a batchnorm after it.
+            # if conv_ix < 26:
+            conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
+
+
+
+
+
+
+
+        # These are the convolutions right befor Upconvolutions. So here we actually shouldn't do this pruning.
+        # Instead we have to only prune the in-channels of the Upconvolution. But this will be done in the kernel pruning function.
+        # (the reason we do it that way is that the upconvolutions have weights dims: (in_channels, out_channels, kernel_height, kernel_width)
+        # And normal Conv2d have weights dims: (out_channels, in_channels, kernel_height, kernel_width)
+        # So pruning the input slice of Upconvolution is the same mechanic as pruning the outchannels of a regular Conv2d.
+
+
+        # The upconvolutions have LLM idxs , 48, 55, 62, 69, 76, 83
+        # and corresponding in the order as the convs are listed below.
+        if conv_ix in [13, 15, 17, 19, 21, 23]:
+            ordered_ix = [13, 15, 17, 19, 21, 23].index(conv_ix)
+            conn_destinations.append((lowest_level_modules[UPCONV_LLM_IXS[ordered_ix]], kernel_ix))
+        
+
+
+
+        # for batchnorm, conn_destinations is simply empty
+        
+        return conn_destinations
+
+
+
+    INPUT_SLICE_CONNECTION_FN = unet_input_slice_connection_fn
+    KERNEL_CONNECTION_FN = unet_kernel_connection_fn
+
+
+
 
 
 
@@ -1020,14 +1088,14 @@ if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(UNet, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
+    model_wrapper = ModelWrapper(model_wrapper_params, model_parameters, dataloader_dict, training_wrapper_params)
 
 
 
 
 
 
-    if IS_PRUNING_READY:
+    if YD["is_pruning_ready"]:
 
         tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
@@ -1096,7 +1164,7 @@ if __name__ == "__main__":
 
 
         FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        FLOPS_min_res_percents.set_by_name("Conv2d", conv2d_prune_limit)
+        FLOPS_min_res_percents.set_by_name("Conv2d", YD["conv2d_prune_limit"])
 
         # tree_ix_2_percentage_dict = {
         #     (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
@@ -1111,7 +1179,7 @@ if __name__ == "__main__":
 
 
         weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        weights_min_res_percents.set_by_name("Conv2d", conv2d_prune_limit)
+        weights_min_res_percents.set_by_name("Conv2d", YD["conv2d_prune_limit"])
 
         if TEST_PRUNING:
             weights_min_res_percents.set_by_name("Conv2d", 0.999999)
@@ -1132,7 +1200,7 @@ if __name__ == "__main__":
 
 
 
-        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
+        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, INPUT_SLICE_CONNECTION_FN, KERNEL_CONNECTION_FN, pruning_disallowments, UPCONV_LLM_IXS)
 
 
 
@@ -1171,7 +1239,7 @@ if __name__ == "__main__":
         
         # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
 
-        if (curr_train_iter - last_pruning_train_iter) >= NUM_TRAIN_ITERS_BETWEEN_PRUNINGS:
+        if (curr_train_iter - last_pruning_train_iter) >= YD["num_train_iters_between_prunings"]:
             return True
         
         return False
@@ -1202,9 +1270,9 @@ if __name__ == "__main__":
 
 
     
-    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=max_train_iters, max_total_training_iters=max_total_train_iters, 
-                        max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleanup_k=cleanup_k,
-                         num_of_epochs_per_training=1, pruning_kwargs_dict=pruning_kwargs)
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=MAX_TRAIN_ITERS, max_total_training_iters=MAX_TOTAL_TRAIN_ITERS, 
+                        max_auto_prunings=YD["max_auto_prunings"], train_iter_possible_stop=ITER_POSSIBLE_STOP, pruning_phase=IS_PRUNING_PH, cleanup_k=YD["cleanup_k"],
+                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS)
 
 
 

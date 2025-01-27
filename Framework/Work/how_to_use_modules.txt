@@ -1,0 +1,105 @@
+
+TL;DR:
+- A file you run always have its import-path/operational path where it resides:
+python3 ./mod_folder/file3.py   will have ./mod_folder as the folder.
+- beware that bash files don't do this. bash ./some_dir/file.sh will have its path in . not in ./some_dir
+- A file you import always has the import_path/op-path of the importing folder:
+import mod_folder.file3 will have the path of main.py
+- if you want to run submodule files on their own (they presume to have the import-path of the main file, because it is the one importing them), run as module:
+python3 -m mod_folder.file3
+- if you want your submodule files to always make files in their folder, no matter where they are imported from, use abspath:
+current_dir = os.path.dirname(os.path.abspath(__file__))
+- if you want your directory to be a proper module so you can do import mod_folder, look into __init__.py
+
+Lets imagine:
+main_folder
+    file1.py
+    file2.py
+    mod_folder/
+        file3.py
+        file4.py
+
+When you run a file, it has a sys.path list - contains all paths we have access to.
+On the 0th index is the import-path. This is also the base path of the file - where it operates. This path is where the file resides.
+If you run
+python3 ~/main_folder/file1.py
+The import path is ~/main_folder/ 
+If you run
+python3 ~/main_folder/mod_folder/file3.py
+The import path is ~/main_folder/mod_folder
+
+But when you import a file, the imported file always has as import-path the import-path of the file that imported it. Even if the file is in a subdirectory.
+In file1.py you do:
+import mod_folder.file3
+Then file3 also has as import-path and base path ~/main_folder/, even though the file resides in ~/main_folder/mod_folder
+
+So if file3 is imported and it wants to import file2.py and file4.py, it has to do:
+import file2
+import mod_folder.file4
+
+But if you were to run this file3 with these imports as
+python3 ~/main_folder/mod_folder/file3.py
+It would throw an error. There is no ~/main_folder/mod_folder/mod_folder/file4.py
+
+So how would you run it as a standalone script?
+You have to run it as a module with the -m flag.
+Your terminal is in ~/main_folder/. You run:
+python3 -m mod_folder.file3.py
+And now it works.
+
+But what if your script wants to always make a txt file in the folder it resides in?
+You simply use:
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+How bash is different:
+When you run a bash file, if you are in ~/main_folder/ and you run
+bash mod_folder/sh_file.sh
+The base folder it uses will be ~/main_folder/
+Remember this.
+
+
+
+
+Modules and __init__.py:
+{
+This is only needed if the module is really a self-standing unit, and you wouldn't want to be importing with: import mod_folder.file3, but instead just do: import mod_folder.
+
+Every file is a module. Every directory that holds files is also a module. The files it holds are modules. These files are submodules to the directory.
+A directory can have an __init__.py
+It runs when you do either
+import module
+or
+import module.module1
+It simply sets up the module namespace.
+Example __init__.py:
+# __init__.py
+__all__ = ["module1", "module2"]
+from . import module1
+from . import module2
+
+This defines the namespace of 
+If you do
+import module.module1
+These imports don't really get imported into your main.py. Only the namespace gets set up, idk exactly what it means, but anyway, module2 won't be loaded.
+If you do:
+import module
+Then both module1 and modul2 will be loaded, and can be accassed with:
+module.module1 and module.module2
+If you do:
+from module import *
+Then __all__ gets involved. You won't have to use module.module1.some_fn()
+Instead you can just use module1.some_fn()
+
+Also, if you would want your module to have some constants, like:
+__version__ = "1.0.0"
+DEFAULT_CONFIG = {
+    "timeout": 30,
+    "retries": 3
+    }
+or to have some other imports:
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+This can all be done in __init__.py
+Look it up more if you need that kind of behaviour.
+}

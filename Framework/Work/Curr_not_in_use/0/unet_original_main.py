@@ -40,15 +40,15 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from min_resource_percentage import MinResourcePercentage
-from model_wrapper import ModelWrapper
+from y_framework.min_resource_percentage import MinResourcePercentage
+from y_framework.model_wrapper import ModelWrapper
 
-from training_support import *
-from losses import MultiClassDiceLoss, WeightedLosses
+from y_framework.training_support import *
+from y_helpers.losses import MultiClassDiceLoss, WeightedLosses
 
 import ast
 
-import y_helpers.helper_yaml_handler as yh
+import y_helpers.yaml_handler as yh
 
 c=5
 py_log.log_manual(MY_LOGGER, "brbr", c, a="Starting the program.", enm=c)
@@ -314,7 +314,7 @@ OUTPUT_DIMS = {
 
 
 
-from unet_original import UNet
+from y_models.unet_original import UNet
 
 model_parameters = {
     # layer sizes

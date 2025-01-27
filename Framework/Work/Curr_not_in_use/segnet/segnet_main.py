@@ -51,6 +51,8 @@ import ast
 
 import y_helpers.yaml_handler as yh
 
+from y_helpers.pruning_importance import *
+
 
 
 if __name__ == "__main__":
@@ -129,11 +131,6 @@ if __name__ == "__main__":
     TEST_RUN_AND_SIZE = args.tras
     IS_TEST_RUN = TEST_RUN_AND_SIZE != -1
     TEST_PRUNING = args.tp
-
-
-
-
-
 
     yaml_path = args.yaml
 
@@ -360,7 +357,10 @@ OUTPUT_DIMS = {
 
 
 
-from deeplab import DeepLabv3
+
+
+
+from y_models.segnet import SegNet
 
 # patchification changesthings only for the model
 # The dataset is giving the same exact images as usual.
@@ -375,16 +375,45 @@ if have_patchification:
     dim_y = patchification_params["patch_y"]
     dim_x = patchification_params["patch_x"]
 
+    
 
+if MODEL == "64_2":
+        
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+    }
+elif MODEL == "64_1":
+        
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+    }
+elif MODEL == "4_1":
+        
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 4,
+        "expansion" : 1,
+    }
 
-model_parameters = {
-    "in_channels": INPUT_DIMS["channels"],
-    "out_channels": OUTPUT_DIMS["channels"],
-    "assp_out_channels": MODEL
-}
+else:
+    raise ValueError(f"MODEL not recognized: {MODEL}.")
 
-print(f"Model parameters: {model_parameters}")
-print(f"{type(model_parameters['out_channels'])=}")
 
 
 INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], dim_y, dim_x)
@@ -563,10 +592,221 @@ dataloader_dict = {
 
 
 
+
+
+
+
+
+
+"""
+THIS HERE IS THE START OF BUILDING A CONNECTION fn
+based on the _get_next_conv_id_list_recursive()
+It is very early stage.
+"""
+
+
+
+
+
+
+def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+    # f(tree_ix, initial_kernel_ix) -> [(goal_tree_ix_1, goal_initial_input_slice_ix_1), (goal_tree_ix_2, goal_initial_input_slice_ix_2),...]
+
+    # TL;DR -  for skip connections, where the input channels need to be pruned, because the output channels of this layer were pruned
+    
+    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model initially (before pruning).
+    # And it returns a list of tuples giving the following modules tree_ixs and the input_slice_ix
+    # (where the effect of the above-mentioned kernel is in the input tensor) in the initial model (before pruning).
+
+
+    conn_destinations = []
+
+    # we kind of only care about convolutional modules.
+    # We just need to prune there (and possibly something with the batch norm layer)
+    # So it would make sense to transform the tree_ix to the ordinal number of 
+    # the convolutional module, and work with that ix instead.
+
+
+
+    # doesn't have skip connections, so we only need to prunte the input slice of the following layer
+
+    conv_ix = None
+    if tree_ix in conv_tree_ixs:
+        conv_ix = conv_tree_ixs.index(tree_ix)
+        conn_destinations.append((conv_tree_ixs[conv_ix+1], kernel_ix))
+
+    
+    
+    return conn_destinations
+
+
+    
+
+
+
+def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
+    # f(tree_ix, real_kernel_ix) -> [(goal_tree_ix_1, goal_real_kernel_ix_1), (goal_tree_ix_2, goal_real_kernel_ix_2),...]
+    
+    # This functions takes the tree_ix and the ix of where the kernel we are concerned with was in the model RIGHT NOW, NOT INITIALLY.
+    # And it returns a list of tuples giving the tree_ixs and "kernel_ixs" in the model RIGHT NOW, NOT INITIALLY.
+    # for layers which are inextricably linked with the convolutional layer.
+
+    # Meant for batchnorm and special cases.
+
+    # Inextricably linked are in direct connection with the conv's current (not intitial) kernel_ix, so they don't need the more complex fn.
+    # We could have treated them in the regular way (through initial ixs), but this way is better,
+    # because, in the pruner, we don't need to keep track of the initial ixs (although we do anyways for accounting reasons).
+    # Also it's simpler and conceptually makes more sense - which is the main reason.
+
+    # The batchnorm is such a layer - for it, the "kernel_ix" isn't really a kernel ix.
+    # It is, however, the position we need to affect due to pruning the kernel_ix in the convolutional layer.
+    # There are possibly more such layers and more types of such layers, so we made this function more general.
+
+
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # This is the additional way that SegNet needs to be pruned besides batchnorms.
+
+    # CONV DE 12 JE TREBA INEEXTRICABLY PRUNEAT, če prunaš 0-ti conv v networku.
+    # Pač ta princip je, da mora izhod tega dela potem bit enak, da lahko unpool dela s tem.
+    # Ker unpool tu dela z incices. Ne postavi vseh zadev equally spaced in samo dela bilinear interpolacijo.
+    # Ampak postavi številke na iste pozicije kot so bile v poolingu. In potem naredi interpolacijo.
+
+    # In saj v height in width smereh mi nič ne prunamo. Tako da sam mehanizem tega nas ne rabi skrbet.
+    # Samo pač input poolinga in output poolinga imata neko število kernelov. In tako število kernelov imajo tudi indices.
+    # In zato mora vhod v unpool tudi imeti toliko kernelov.
+
+    # In zato se zgodi ta inextricable connection.
+
+
+
+    # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+
+    # Pairs of conv ixs:
+    # 1 23
+    # 3 21
+    # 6 18
+    # 9 15
+
+
+
+
+
+
+
+
+
+
+    # doesn't have skip connections
+    # Only prune batchnorm
+    
+    conn_destinations = []
+
+    LLM_ix = None
+    if tree_ix in lowest_level_modules:
+        LLM_ix = lowest_level_modules.index(tree_ix)
+
+
+    # conv_ix = None
+    if tree_ix in conv_tree_ixs:
+
+        conv_ix = conv_tree_ixs.index(tree_ix)
+
+        # # OUTC MUSTN'T BE PRUNED ANYWAY!!!!!!!!, BECAUSE IT IS THE OUTPUT OF THE NETWORK
+        # # out.conv doesn't have a batchnorm after it.
+        # if conv_ix < 18:
+
+        conn_destinations.append((lowest_level_modules[LLM_ix+1], kernel_ix))
+
+        if conv_ix == 1:
+            conn_destinations.append((conv_tree_ixs[23], kernel_ix))
+        elif conv_ix == 3:
+            conn_destinations.append((conv_tree_ixs[21], kernel_ix))
+        elif conv_ix == 6:
+            conn_destinations.append((conv_tree_ixs[18], kernel_ix))
+        elif conv_ix == 9:
+            conn_destinations.append((conv_tree_ixs[15], kernel_ix))
+
+
+
+    # for batchnorm, conn_destinations is simply empty
+    
+
+    
+    return conn_destinations
+
+
+
+
+
+
+
+
+
+if IMPORTANCE_FN_DEFINER == "random":
+    IMPORTANCE_FN = random_pruning_importance_fn
+elif IMPORTANCE_FN_DEFINER == "uniform":
+    IMPORTANCE_FN = uniform_random_pruning_importance_fn
+elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
+    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
+else:
+    raise ValueError(f"IMPORTANCE_FN_DEFINER must be 'random', 'uniform' or 'IPAD_eq'. Was: {IMPORTANCE_FN_DEFINER}")
+
+
+
+
+
+
+
+
+def get_importance_dict(model_wrapper: ModelWrapper):
+
+    model_wrapper.averaging_objects = {}
+    set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
+
+    model_wrapper.epoch_pass(dataloader_name="train")
+    # maybe doing this on val, because it is faster and it kind of makes more sense
+    # model_wrapper.epoch_pass(dataloader_name="validation")
+
+    # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
+    model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
+
+    importance_dict = IMPORTANCE_FN(model_wrapper.averaging_objects, model_wrapper.conv_tree_ixs)
+    remove_hooks(model_wrapper)
+    model_wrapper.averaging_objects = {}
+
+    return importance_dict
+
+
+def dummy_get_importance_dict(model_wrapper: ModelWrapper):
+    # This is used for uniform and random pruning. Because we don't actually need to do the epoch pass.
+    # And --pnkao needs to be 1 so we get the importance dict after pruning each kernel. So epoch pass would be too slow.
+    
+    fake_avg_objects = {}
+    for tree_ix in model_wrapper.conv_tree_ixs:
+        weight_dims = model_wrapper.resource_calc.module_tree_ix_2_module_itself[tree_ix].weight.data.detach().size()
+        fake_avg_objects[tree_ix] = (None, torch.zeros(weight_dims), None)
+
+
+    importance_dict = IMPORTANCE_FN(fake_avg_objects, model_wrapper.conv_tree_ixs)
+    return importance_dict
+
+
+
+GET_IMPORTANCE_DICT_FN = get_importance_dict
+if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
+    GET_IMPORTANCE_DICT_FN = dummy_get_importance_dict
+
+
+
+
+
+
+
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(DeepLabv3, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
+    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, model_wrapper_params, training_wrapper_params, INPUT_EXAMPLE, save_path, device)
 
 
 
@@ -574,6 +814,12 @@ if __name__ == "__main__":
 
 
     if IS_PRUNING_READY:
+
+
+
+
+
+
 
         tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
@@ -585,8 +831,6 @@ if __name__ == "__main__":
 
         
 
-
-        
 
 
         # Here we abuse the min_res_percentage class to disallow certain prunings.
@@ -602,39 +846,44 @@ if __name__ == "__main__":
         generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
         disallowed_dict = {
-            model_wrapper.conv_tree_ixs[26] : 1.1
+            model_wrapper.conv_tree_ixs[25] : 1.1
         }
         generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
 
 
 
+
+
+
+
         # Choice disallowing:
         # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-        
-        # For segnet:
-        # conv_tree_ixs = model_wrapper.conv_tree_ixs
-        # CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+        conv_tree_ixs = model_wrapper.conv_tree_ixs
+        CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
         # The reasoning for this choice comes from kernel_connection_fn:
         # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
         # Because the kernel nums must match.
-        # """
-        # # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
+        """
+        # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
-        # # Pairs of conv ixs:
-        # # 1 23
-        # # 3 21
-        # # 6 18
-        # # 9 15
-        # """
-        
-        # for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-        #     disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-        # choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+        # Pairs of conv ixs:
+        # 1 23
+        # 3 21
+        # 6 18
+        # 9 15
+        """
+        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
+
+        for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+            disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+        choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
         
         
+
+
+
 
 
 
@@ -678,7 +927,7 @@ if __name__ == "__main__":
 
 
 
-        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, unet_input_slice_connection_fn, unet_kernel_connection_fn, pruning_disallowments, UPCONV_LLM_IXS)
+        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, segnet_input_slice_connection_fn, segnet_kernel_connection_fn, pruning_disallowments, [])
 
 
 

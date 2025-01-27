@@ -40,11 +40,11 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from min_resource_percentage import MinResourcePercentage
-from model_wrapper import ModelWrapper
+from y_framework.min_resource_percentage import MinResourcePercentage
+from y_framework.model_wrapper import ModelWrapper
 
-from training_support import train_automatically, TrainingLogs, PruningLogs
-from losses import MultiClassDiceLoss, WeightedLosses
+from y_framework.training_support import train_automatically, TrainingLogs, PruningLogs
+from y_helpers.losses import MultiClassDiceLoss, WeightedLosses
 
 import ast
 
@@ -518,7 +518,7 @@ dataloader_dict = {
 
 
 
-from segnet import SegNet
+from y_models.segnet import SegNet
 
 if MODEL == "default":
 

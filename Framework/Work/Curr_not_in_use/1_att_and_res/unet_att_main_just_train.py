@@ -40,15 +40,15 @@ from torch.utils.data import DataLoader
 
 import argparse
 
-from min_resource_percentage import MinResourcePercentage
-from model_wrapper import ModelWrapper
+from y_framework.min_resource_percentage import MinResourcePercentage
+from y_framework.model_wrapper import ModelWrapper
 
-from training_support import *
-from losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss
+from y_framework.training_support import *
+from y_helpers.losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss
 
 import ast
 
-import y_helpers.helper_yaml_handler as yh
+import y_helpers.yaml_handler as yh
 
 c=5
 py_log.log_manual(MY_LOGGER, "brbr", c, a="Starting the program.", enm=c)

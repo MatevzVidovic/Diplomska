@@ -44,10 +44,10 @@ import argparse
 # from dataset import IrisDataset, transform
 from my_dataset import IrisDataset, transform
 
-from min_resource_percentage import MinResourcePercentage
-from model_wrapper import ModelWrapper
+from y_framework.min_resource_percentage import MinResourcePercentage
+from y_framework.model_wrapper import ModelWrapper
 
-from training_support import *
+from y_framework.training_support import *
 
 
 
