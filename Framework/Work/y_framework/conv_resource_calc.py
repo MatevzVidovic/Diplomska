@@ -51,7 +51,7 @@ class ConvResourceCalc():
         else:
             self.target_modules = target_modules
         
-
+        self.module_tree_ixs = set()
         self.module_tree_ix_2_children_tree_ix_list = {}
         self.module_tree_ix_2_all_parents_to_root_tree_ix_list = {}
         self.module_tree_ix_2_name = {}
@@ -207,6 +207,7 @@ class ConvResourceCalc():
 
             module_name = type(module).__name__    #.lower()
 
+            self.module_tree_ixs.add(curr_tree_ix)
             self.module_tree_ix_2_children_tree_ix_list[curr_tree_ix] = []
             self.module_tree_ix_2_name[curr_tree_ix] = module_name
             self.module_tree_ix_2_module_itself[curr_tree_ix] = module
@@ -345,7 +346,6 @@ class ConvResourceCalc():
 
 
 
-
     def get_lowest_level_module_tree_ixs(self):
 
         lowest_level_modules_tree_ixs = []
@@ -371,3 +371,4 @@ class ConvResourceCalc():
 
         
         return sorted_applicable_tree_ixs
+    

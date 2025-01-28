@@ -12,7 +12,7 @@ results_and_stop=$(mktemp)
 printf "r\nstop\n" > "$results_and_stop"
 
 graph_and_stop=$(mktemp)
-printf "g\nstop\n" > "$graph_and_stop"
+printf "g\n\nstop\n" > "$graph_and_stop"    # needs another \n because of input("wait")
 
 resource_graph_and_stop=$(mktemp)
 printf "resource_graph\nstop\n" > "$resource_graph_and_stop"

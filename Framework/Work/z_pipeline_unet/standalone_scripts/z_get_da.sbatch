@@ -42,7 +42,7 @@ pipeline_name=z_pipeline_unet
 
 
 source ${pipeline_name}/z_constants.sh
-source z0_sh_help.sh
+source z_sh_help.sh
 check_param_num $param_num $num_optional "$@"
 yo_paths=$(get_yo_paths ${pipeline_name} "$yo_ids")
 

@@ -63,6 +63,12 @@ if __name__ == "__main__":
     
 
 
+    # These are all behavioural arguments.
+    # They don't define the model or what the fundemental things about the way it should work are - that is all done through yaml.
+    # These args just define what behaviour it should exhibit at this specific time of calling.
+    # This is also how we keep num of params we have to explicitly pass low.
+
+
     # Working with more then 5 arguments is a headache. With each argument you add the headache increases quadratically.
 
     parser.add_argument("--sd", type=str, help='SAVE_DIR', required=True)
@@ -720,8 +726,17 @@ dataloader_dict = {
 
 
 
+MODEL_GRAPH_BREAKUP_PARAM = 0.05 # When getting model graph through breaking, 
+# if a module in the graph would take up less width as a proportion of total width than this value, 
+# then the graph is broken up recursively into more graphs. 
+# This makes svgs viewable.
+# For plt min fontsize is 1, and fontsize is in points, which are absolute units of space.
+# So we need to do this breakup if we want the text to surely fit into the boxes. 
 
-
+# Another way to solve the fontsize problem is to simply make the graph extremely huge.
+# This way with smallere annd smaller rects (in terms of proportion to the entire plot) the fontsize will keep being over 1.
+# But there are RAM problems and img size problems and such if this number is too big.
+ONE_BIG_SVG_WIDTH = 700
 
 INPUT_SLICE_CONNECTION_FN = None
 KERNEL_CONNECTION_FN = None
@@ -1272,7 +1287,7 @@ if __name__ == "__main__":
     
     train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=MAX_TRAIN_ITERS, max_total_training_iters=MAX_TOTAL_TRAIN_ITERS, 
                         max_auto_prunings=YD["max_auto_prunings"], train_iter_possible_stop=ITER_POSSIBLE_STOP, pruning_phase=IS_PRUNING_PH, cleanup_k=YD["cleanup_k"],
-                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS)
+                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS, model_graph_breakup_param=MODEL_GRAPH_BREAKUP_PARAM, one_big_svg_width=ONE_BIG_SVG_WIDTH)
 
 
 

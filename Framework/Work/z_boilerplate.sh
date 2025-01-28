@@ -17,12 +17,12 @@ yo_paths=$(get_yo_paths ${pipeline_name} "$yo_ids")
 yo_str=$(get_yo_str "$yo_ids")
 echo "yo_paths: $yo_paths"
 
-sd_name=${sbatch_id}_${yaml_id}${yo_str}
+sd_name=${model}_${sbatch_id}_${yaml_id}${yo_str}
 if [[ $retain_savedir == "false" ]]; then
     echo "Maybe overwriting ${sd_name}." >&2
     create_empty_folder $sd_name
 fi
 
-base_name=x_${model}_${sd_name}
+base_name=x_${sd_name}
 out_name=$(get_out_name $base_name $protect_out_files)
 create_empty_file $out_name

@@ -403,7 +403,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 @py_log.autolog(passed_logger=MY_LOGGER)
 def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
                         max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_key="loss", 
-                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}):
+                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}, model_graph_breakup_param=0.05, one_big_svg_width=500):
 
 
     # to prevent an error I had, where even the last model would somehow get deleted (which is another error on top of that, because that should never happen)
@@ -657,9 +657,52 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             
             if inp == "g":
-                fig, _ = model_wrapper.model_graph()
-                graph_save_path = osp.join(main_save_path, "graphs")
-                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph")
+
+                graph_save_path = osp.join(main_save_path, f"graphs")
+
+                # make the plt pickle verion (for viewing thee moddel graph by opening the picke and interacting through plt)
+                model_graph_args_dict = {
+                    "width": 10,
+                }
+                list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+                fig = list_of_fig_ax_id_tuples[0][0]
+                fig.show()
+                input("wait")
+                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"pkl"})
+
+
+                # one big svg
+                model_graph_args_dict = {
+                    "width": one_big_svg_width,
+                    "for_img_dict" : {
+                        "min_child_width_limit": 0.0
+                    }
+                }
+                list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+                fig = list_of_fig_ax_id_tuples[0][0]
+                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"svg"})
+
+
+
+                # broken up svgs
+                # change up min_child_width_limit until you find a nice value for where the graphs split up 
+                model_graph_args_dict = {
+                    "width": 100,
+                    "for_img_dict" : {
+                        "min_child_width_limit": model_graph_breakup_param
+                    }
+                }
+                list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+                save_path_for_collection = osp.join(graph_save_path, f"{train_iter}_broken_up_svgs")
+                for fig, _, curr_id in list_of_fig_ax_id_tuples:
+                    save_plt_fig(fig, save_path_for_collection, f"{train_iter}_model_graph_{curr_id}", formats={"svg"})
+
+
+
+
+
+
+                
                 inp = input("""
                         Enter r to trigger show_results() and re-ask for input.
                         Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
@@ -715,17 +758,54 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
                 inp = input("""
-                        Enter g to show the graph of the model and re-ask for input.
                         Press Enter to continue training.
                         Enter any other key to stop.\n""")
 
-            if inp == "g":
-                fig, _ = model_wrapper.model_graph()
-                graph_save_path = osp.join(main_save_path, "graphs")
-                save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph_later")
-                inp = input("""
-                        Press Enter to continue training.
-                        Enter any other key to stop.\n""")
+            # if inp == "g":
+
+            #     graph_save_path = osp.join(main_save_path, f"graphs")
+
+            #     # make the plt pickle verion (for viewing thee moddel graph by opening the picke and interacting through plt)
+            #     model_graph_args_dict = {
+            #         "width": 10,
+            #     }
+            #     list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+            #     fig = list_of_fig_ax_id_tuples[0][0]
+            #     fig.show()
+            #     input("wait")
+            #     save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"pkl"})
+
+
+            #     # one big svg
+            #     model_graph_args_dict = {
+            #         "width": 800,
+            #         "for_img_dict" : {
+            #             "min_child_width_limit": 0.0
+            #         }
+            #     }
+            #     list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+            #     fig = list_of_fig_ax_id_tuples[0][0]
+            #     save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"svg"})
+
+
+
+            #     # broken up svgs
+            #     # change up min_child_width_limit until you find a nice value for where the graphs split up 
+            #     model_graph_args_dict = {
+            #         "width": 100,
+            #         "for_img_dict" : {
+            #             "min_child_width_limit": 0.08
+            #         }
+            #     }
+            #     list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
+            #     save_path_for_collection = osp.join(graph_save_path, f"{train_iter}_broken_up_svgs")
+            #     for fig, _, curr_id in list_of_fig_ax_id_tuples:
+            #         save_plt_fig(fig, save_path_for_collection, f"{train_iter}_model_graph_{curr_id}", formats={"svg"})
+
+
+            #     inp = input("""
+            #             Press Enter to continue training.
+            #             Enter any other key to stop.\n""")
             
 
             if inp != "":

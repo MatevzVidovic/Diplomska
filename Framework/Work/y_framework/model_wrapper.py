@@ -344,9 +344,9 @@ class ModelWrapper:
         return test_result
     
 
-    def model_graph(self):
-        fig, ax = model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance)
-        return fig, ax
+    def model_graph(self, model_graph_params_dict):
+        list_of_fig_ax_tuples = model_graph(self.resource_calc, self.initial_resource_calc, self.pruner_instance, **model_graph_params_dict)
+        return list_of_fig_ax_tuples
 
     def print_logs(self):
         
