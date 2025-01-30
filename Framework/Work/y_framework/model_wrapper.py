@@ -48,6 +48,8 @@ from y_helpers.model_vizualization import model_graph
 
 
 
+from y_framework.params_dataclasses import *
+
 
 
 
@@ -56,14 +58,16 @@ from y_helpers.model_vizualization import model_graph
 class ModelWrapper:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, model_wrapper_params: dict, model_parameters: dict, dataloader_dict: dict, training_wrapper_params: dict):
+    def __init__(self, model_wrapper_params: ModelWrapperParams, model_parameters: dict, dataloader_dict: dict, training_wrapper_params: dict):
 
         try:
+            
+            self.params = model_wrapper_params
                 
-            self.model_class = model_wrapper_params["model_class"]
+            self.model_class = self.params.model_class
             
             # self.save_path = osp.join(osp.dirname(__file__), "saved")
-            save_path = model_wrapper_params["save_path"]
+            save_path = self.params.save_path
             self.save_path = osp.join(save_path, "saved_model_wrapper")
             os.makedirs(self.save_path, exist_ok=True)
 
@@ -105,7 +109,7 @@ class ModelWrapper:
             
 
 
-            device = model_wrapper_params["device"]
+            device = self.params.device
 
             if self.prev_model_path is not None and osp.exists(self.prev_model_path):
                 print("Loaded model path: ", self.prev_model_path)
@@ -129,8 +133,8 @@ class ModelWrapper:
 
 
 
-            self.learning_rate = model_wrapper_params["learning_rate"]
-            self.optimizer_class = model_wrapper_params["optimizer_class"]
+            self.learning_rate = self.params.learning_rate
+            self.optimizer_class = self.params.optimizer_class
 
 
             self.training_wrapper = TrainingWrapper(training_wrapper_params, self.model, dataloader_dict)
@@ -139,11 +143,11 @@ class ModelWrapper:
 
 
 
-            if model_wrapper_params["is_resource_calc_ready"]:
+            if self.params.is_resource_calc_ready:
 
                 self.resource_calc = ConvResourceCalc(self.training_wrapper)
 
-                self.input_example = model_wrapper_params["input_example"]
+                self.input_example = self.params.input_example
                 self.resource_calc.calculate_resources(self.input_example)
 
                 # these two are set here because they are useful in some other tasks in the main script - such as when setting disallowed conv layers

@@ -51,14 +51,10 @@ source z_boilerplate.sh
 
 
 
-
-
-
-
 # pruning_phase
 python3 $main_name --ntibp 1 --tras 2 --ifn ${ifn} -p --sd $sd_name --yaml ${pipeline_name}/${yaml_id}.yaml --yo $yo_paths   >> $out_name 2>&1
 
-bash ${pipeline_name}/standalone_scripts/z_get_graphs.sh $id $sd_name "$yo_ids"
+bash ${pipeline_name}/standalone_scripts/z_get_graphs.sbatch $yaml_id $sd_name "$yo_ids"    >> $out_name 2>&1
 python3 $main_name --ips 0 --sd $sd_name --yaml ${pipeline_name}/${yaml_id}.yaml --yo $yo_paths   >> $out_name 2>&1    < "$save_and_stop"
 
 

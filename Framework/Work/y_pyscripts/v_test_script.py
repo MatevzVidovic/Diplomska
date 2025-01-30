@@ -12,8 +12,6 @@ MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same strin
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
-python_logger_path = os.path.join(os.path.dirname(__file__), 'python_logger')
-handlers = py_log.file_handler_setup(MY_LOGGER, python_logger_path, add_stdout_stream=False)
 
 
 
@@ -33,7 +31,7 @@ INPUT_DIMS = {
     "channels" : 5
 }
 
-# In our UNet the output width and height have to be the same as the input width and height. 
+# In our UNet the output width and height have to be the same as the input width and height.
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
@@ -65,7 +63,7 @@ dataset_args = {
     "input_height" : INPUT_DIMS["height"],
     "output_width" : OUTPUT_DIMS["width"],
     "output_height" : OUTPUT_DIMS["height"],
-    
+
     # iris dataset params
     "path_to_sclera_data" : "Data/vein_and_sclera_data",
     # "transform" : transform,
@@ -133,7 +131,7 @@ def unfold_3chan(tensor_img, patch_shape, stride: tuple):
             y_ix += stride[0]
         else:
             return None
-        
+
 
         while x_ix + patch_shape[1] <= tensor_img.size(2):
             while y_ix + patch_shape[0] <= tensor_img.size(1):
@@ -144,7 +142,7 @@ def unfold_3chan(tensor_img, patch_shape, stride: tuple):
                 y_ix += stride[0]
             y_ix = 0
             x_ix += stride[1]
-        
+
         return patches, left_upper_ixs
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -217,7 +215,7 @@ def patchify(tensor_img, patch_shape, stride: tuple):
         print(f"{right_bottom_lu_ixs=}")
 
 
-        
+
         # patch_dict = {
         #     "main_patches" : tensor_img_unf,
         #     "main_lu_ixs" : patch_indices,
@@ -242,7 +240,7 @@ def patchify(tensor_img, patch_shape, stride: tuple):
 
         py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
         return patch_dict
-    
+
 
     except Exception as e:
         py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -253,7 +251,7 @@ def patchify(tensor_img, patch_shape, stride: tuple):
 def accumulate_patches(prediction_tensor_shape, patch_shape, stride: tuple, patch_dict):
 
     try:
-    
+
         accumulating_tensor = torch.zeros(prediction_tensor_shape)
         num_of_addings = torch.zeros(prediction_tensor_shape)
         print(f"{accumulating_tensor=}")
@@ -273,9 +271,9 @@ def accumulate_patches(prediction_tensor_shape, patch_shape, stride: tuple, patc
         #     y1, x1 = lu_ix
         #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
         #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-        
+
         # for i, (lu_ix, patch) in enumerate(zip(patch_dict["right_lu_ixs"], patch_dict["right_patches"])):
-            
+
         #     y1, x1 = lu_ix
         #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
         #     accumulating_tensor[:, y1:y2, x1:x2] += patch
@@ -285,13 +283,13 @@ def accumulate_patches(prediction_tensor_shape, patch_shape, stride: tuple, patc
         #     y1, x1 = lu_ix
         #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
         #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-        
+
         # for i, (lu_ix, patch) in enumerate(zip(patch_dict["right_bottom_corner_lu_ixs"], patch_dict["right_bottom_corner"])):
-            
+
         #     y1, x1 = lu_ix
         #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
         #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-        
+
         py_log.log_locals(MY_LOGGER, attr_sets=["size", "math", "hist"])
         return accumulating_tensor, num_of_addings
     except Exception as e:
@@ -560,7 +558,7 @@ naive_patchification()
 #                     y_ix += stride[0]
 #                 else:
 #                     return None
-                
+
 
 #                 while x_ix + patch_shape[1] <= tensor_img.size(2):
 #                     while y_ix + patch_shape[0] <= tensor_img.size(1):
@@ -571,7 +569,7 @@ naive_patchification()
 #                         y_ix += stride[0]
 #                     y_ix = 0
 #                     x_ix += stride[1]
-                
+
 #                 return patches, left_upper_ixs
 #             except Exception as e:
 #                 py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -644,7 +642,7 @@ naive_patchification()
 #                 print(f"{right_bottom_lu_ixs=}")
 
 
-                
+
 #                 # patch_dict = {
 #                 #     "main_patches" : tensor_img_unf,
 #                 #     "main_lu_ixs" : patch_indices,
@@ -669,7 +667,7 @@ naive_patchification()
 
 #                 py_log.log_locals(MY_LOGGER)
 #                 return patch_dict
-            
+
 
 #             except Exception as e:
 #                 py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
@@ -680,7 +678,7 @@ naive_patchification()
 #         def accumulate_patches(prediction_tensor_shape, patch_shape, stride: tuple, patch_dict):
 
 #             try:
-            
+
 #                 accumulating_tensor = torch.zeros(prediction_tensor_shape)
 #                 num_of_addings = torch.zeros(prediction_tensor_shape)
 #                 print(f"{accumulating_tensor=}")
@@ -700,9 +698,9 @@ naive_patchification()
 #                 #     y1, x1 = lu_ix
 #                 #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
 #                 #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-                
+
 #                 # for i, (lu_ix, patch) in enumerate(zip(patch_dict["right_lu_ixs"], patch_dict["right_patches"])):
-                    
+
 #                 #     y1, x1 = lu_ix
 #                 #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
 #                 #     accumulating_tensor[:, y1:y2, x1:x2] += patch
@@ -712,13 +710,13 @@ naive_patchification()
 #                 #     y1, x1 = lu_ix
 #                 #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
 #                 #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-                
+
 #                 # for i, (lu_ix, patch) in enumerate(zip(patch_dict["right_bottom_corner_lu_ixs"], patch_dict["right_bottom_corner"])):
-                    
+
 #                 #     y1, x1 = lu_ix
 #                 #     y2, x2 = y1 + patch_shape[0], x1 + patch_shape[1]
 #                 #     accumulating_tensor[:, y1:y2, x1:x2] += patch
-                
+
 #                 py_log.log_locals(MY_LOGGER)
 #                 return accumulating_tensor
 #             except Exception as e:
@@ -1032,7 +1030,7 @@ naive_patchification()
 #     returner = df_np
 #     if header != None:
 #         returner = (df_np, cols)
-                    
+
 #     return returner
 
 

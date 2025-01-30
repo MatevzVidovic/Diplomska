@@ -694,6 +694,12 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 }
                 list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
                 save_path_for_collection = osp.join(graph_save_path, f"{train_iter}_broken_up_svgs")
+                
+                count = 1
+                while osp.exists(save_path_for_collection):    # to make sure we don't overwrite anything, and we keep things readable
+                    save_path_for_collection = osp.join(graph_save_path, f"{train_iter}_broken_up_svgs_{count}")
+                    count += 1
+                
                 for fig, _, curr_id in list_of_fig_ax_id_tuples:
                     save_plt_fig(fig, save_path_for_collection, f"{train_iter}_model_graph_{curr_id}", formats={"svg"})
 

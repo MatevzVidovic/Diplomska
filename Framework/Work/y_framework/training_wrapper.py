@@ -46,6 +46,8 @@ from y_helpers.img_and_fig_tools import show_image, save_plt_fig_quick_figs, sav
 from y_helpers.patchification import patchify, accumulate_patches
 
 
+from y_framework.params_dataclasses import *
+
 
 
 def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=True, do_free_mem=True, do_mem_stats=True, do_gc_tensor_objects=True):
@@ -505,11 +507,14 @@ def split_along_splitting_ixs(input_tensor, splitting_ixs):
 class TrainingWrapper:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, training_wrapper_params, model, dataloaders_dict):
+    def __init__(self, training_wrapper_params: TrainingWrapperParams, model, dataloaders_dict):
         
         try:
 
-            self.device = training_wrapper_params["device"]
+
+            self.params = training_wrapper_params
+
+            self.device = self.params.device
 
             self.model = model.to(self.device)
             self.dataloaders_dict = dataloaders_dict
@@ -517,12 +522,11 @@ class TrainingWrapper:
 
             # self.epochs = learning_parameters["epochs"]
 
-            self.params = training_wrapper_params
     
 
-            if self.params["have_patchification"]:
+            if self.params.have_patchification:
 
-                pp = self.params["patchification_params"]
+                pp = self.params.patchification_params
 
                 self.patch_shape = (pp["patch_y"], pp["patch_x"])
                 self.stride_shape = (int(pp["stride_percent_of_patch_y"] * self.patch_shape[0]), int(pp["stride_percent_of_patch_x"] * self.patch_shape[1]))
@@ -553,7 +557,7 @@ class TrainingWrapper:
         
             size = int(len(dataloader.sampler))
 
-            if self.params["have_patchification"]:
+            if self.params.have_patchification:
                 size = size * self.num_of_patches_from_img
             
             num_batches = len(dataloader)
@@ -568,7 +572,7 @@ class TrainingWrapper:
 
             for batch_ix, data_dict in enumerate(dataloader):
                 X = data_dict["images"]
-                y = data_dict[self.params["target"]]
+                y = data_dict[self.params.target]
                 scleras = data_dict["scleras"]
                 img_names = data_dict["img_names"]
 
@@ -593,7 +597,7 @@ class TrainingWrapper:
 
 
 
-                if self.params["zero_out_non_sclera_on_predictions"]:
+                if self.params.zero_out_non_sclera_on_predictions:
                     scleras = scleras.to(self.device)
                     scleras = torch.squeeze(scleras, dim=1)
                     where_sclera_is_zero = scleras == 0
@@ -602,7 +606,7 @@ class TrainingWrapper:
                     # we want to make logits such that we are sure this is not a vein
                     # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
 
-                loss = self.params["loss_fn"](pred, y)
+                loss = self.params.loss_fn(pred, y)
 
                 curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
                 agg_test_loss += curr_test_loss
@@ -650,7 +654,7 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict[self.params["target"]]
+                    y = data_dict[self.params.target]
                     img_names = data_dict["img_names"]
                     X, y = X.to(self.device), y.to(self.device)
                     self.model(X)
@@ -681,14 +685,14 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict[self.params["target"]]
+                    y = data_dict[self.params.target]
                     scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
 
 
 
 
-                    if self.params["have_patchification"]:
+                    if self.params.have_patchification:
 
                         pred = None
 
@@ -771,7 +775,7 @@ class TrainingWrapper:
 
 
 
-                    if self.params["zero_out_non_sclera_on_predictions"]:
+                    if self.params.zero_out_non_sclera_on_predictions:
                         scleras = scleras.to(self.device)
                         scleras = torch.squeeze(scleras, dim=1)
                         where_sclera_is_zero = scleras == 0
@@ -788,7 +792,7 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    curr_test_loss = self.params["loss_fn"](pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
+                    curr_test_loss = self.params.loss_fn(pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
                     agg_test_loss += curr_test_loss
 
 
@@ -860,7 +864,7 @@ class TrainingWrapper:
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
                     X = data_dict["images"]
-                    y = data_dict[self.params["target"]]
+                    y = data_dict[self.params.target]
                     scleras = data_dict["scleras"]
                     img_names = data_dict["img_names"]
                     
@@ -868,7 +872,7 @@ class TrainingWrapper:
                     pred = self.model(X)
 
 
-                    if self.params["zero_out_non_sclera_on_predictions"]:
+                    if self.params.zero_out_non_sclera_on_predictions:
                         scleras = scleras.to(self.device)
                         scleras = torch.squeeze(scleras, dim=1)
                         where_sclera_is_zero = scleras == 0
@@ -884,7 +888,7 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.params["loss_fn"](pred, y).item()
+                    test_loss += self.params.loss_fn(pred, y).item()
 
 
 
@@ -1049,7 +1053,7 @@ class TrainingWrapper:
                     pred = self.model(X)
 
 
-                    if self.params["zero_out_non_sclera_on_predictions"]:
+                    if self.params.zero_out_non_sclera_on_predictions:
                         scleras = data_dict["scleras"]
                         scleras = scleras.to(self.device)
                         scleras = torch.squeeze(scleras, dim=1)
@@ -1114,7 +1118,7 @@ class TrainingWrapper:
                 while aggregate_batch is None or aggregate_batch[0].size(0) < curr_bs:
                 
                     X = data_dict["images"]
-                    y = data_dict[self.params["target"]]
+                    y = data_dict[self.params.target]
 
                     if aggregate_batch is None:
                         aggregate_batch = (X[:curr_bs], y[:curr_bs])
@@ -1133,7 +1137,7 @@ class TrainingWrapper:
                 pred = self.model(X)
 
 
-                loss = self.params["loss_fn"](pred, y)
+                loss = self.params.loss_fn(pred, y)
 
                 curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
 
@@ -1176,7 +1180,7 @@ class TrainingWrapper:
                     while aggregate_batch is None or aggregate_batch[0].size(0) < curr_bs:
                     
                         X = data_dict["images"]
-                        y = data_dict[self.params["target"]]
+                        y = data_dict[self.params.target]
 
                         if aggregate_batch is None:
                             aggregate_batch = (X[:curr_bs], y[:curr_bs])

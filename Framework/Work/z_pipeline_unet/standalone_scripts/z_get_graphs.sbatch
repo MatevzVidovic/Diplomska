@@ -19,8 +19,6 @@
 
 
 
-# srun -c 2 --gpus=A100:1 bash z_pipeline_unet/z0_get_graphs.sh name_of_sd > x_get_graphs.txt
-
 
 
 

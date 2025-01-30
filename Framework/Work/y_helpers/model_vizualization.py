@@ -102,15 +102,28 @@ def string_of_pruned(list_of_initial_ixs, initial_dim_size):
 
 def break_up_string_of_pruned(string_of_pruned, limit_chars_per_line):
     list_of_elements = string_of_pruned.split(", ")
+    
+    # remove empty strings
+    for ix in range(len(list_of_elements)-1, -1, -1):
+        if list_of_elements[ix] == "":
+            del list_of_elements[ix]
+    
     final_string = ""
     curr_line = ""
-    for element in list_of_elements:
+    for element in list_of_elements[:-1]:
+        
         if len(curr_line) + len(element) + 2 > limit_chars_per_line:
             final_string += curr_line + "\n"
-            curr_line = element
-        else:
-            curr_line += element + ", "
+            curr_line = ""
+
+        curr_line += element + ", "
+
+
+    if len(list_of_elements) > 0:
+        curr_line += list_of_elements[-1]
+    
     final_string += curr_line
+
     return final_string
 
 
@@ -128,16 +141,18 @@ def get_string_of_pruned(tree_ix, initial_resource_calc, pruner, limit_chars_per
     if ix in pruner.tree_ix_2_list_of_initial_kernel_ixs.keys():
         list_of_active_initial_kernel_ixs = pruner.tree_ix_2_list_of_initial_kernel_ixs[ix]
         initial_dim_size = initial_weights_shape[0]
-        curr_string_of_pruned = {string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)}
+        curr_string_of_pruned = string_of_pruned(list_of_active_initial_kernel_ixs, initial_dim_size)
         broken_up_string = break_up_string_of_pruned(curr_string_of_pruned, limit_chars_per_line)
-        display_string += f"\nKernels pruned: [\n{broken_up_string}\n]"
+        broken_up_string = f"\n{broken_up_string}" if broken_up_string != "" else broken_up_string
+        display_string += f"\nKernels pruned: [{broken_up_string}]"
     
     if ix in pruner.tree_ix_2_list_of_initial_input_slice_ixs.keys():
         list_of_active_initial_input_slice_ixs = pruner.tree_ix_2_list_of_initial_input_slice_ixs[ix]
         initial_dim_size = initial_weights_shape[1]
-        curr_string_of_pruned = {string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)}
+        curr_string_of_pruned = string_of_pruned(list_of_active_initial_input_slice_ixs, initial_dim_size)
         broken_up_string = break_up_string_of_pruned(curr_string_of_pruned, limit_chars_per_line)
-        display_string += f"\nInput slices pruned: [\n{broken_up_string}\n]"
+        broken_up_string = f"\n{broken_up_string}" if broken_up_string != "" else broken_up_string
+        display_string += f"\nInput slices pruned: [{broken_up_string}]"
     
     return display_string
 
@@ -248,7 +263,7 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
 
     layer = resource_calc.module_tree_ix_2_module_itself[tree_ix]
     if type(layer) == nn.Conv2d:
-        display_string += f"\n{list(layer.weight.shape)}"
+        display_string += f"\nW.shape: {list(layer.weight.shape)}"
     
     elif type(layer) == nn.BatchNorm2d:
         
@@ -257,10 +272,10 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
         
         # are all shapes the same?
         if all(shape == shapes[0] for shape in shapes):
-            display_string += f"\n{shapes[0]}"
+            display_string += f"\nW.shape: {shapes[0]}"
         else:
             for shape in shapes:
-                display_string += f"\n{shape}"
+                display_string += f"\nW,B,RM,RV shapes: {shape}"
     
 
     # The display of what we have pruned:
@@ -287,10 +302,14 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
                 display_string += 3*"\n"
                 display_string += f"\nInextricable pruned connections:"
 
-            for following_ix, _ in inextricable_following_to_prune:
-                to_add = get_string_of_pruned(following_ix, initial_resource_calc, pruner, limit_chars_in_line)
-                display_string += f"\n{following_ix}: {to_add}"
-                display_string += "\n"
+                for following_tree_ix, _ in inextricable_following_to_prune:
+                    to_add = get_string_of_pruned(following_tree_ix, initial_resource_calc, pruner, limit_chars_in_line)
+                    lowest_level_modules_index = lowest_level_modules.index(following_tree_ix)
+                    display_string += f"\n{lowest_level_modules_index}. LLM: {to_add}"
+                    display_string += "\n" + 10*"-" + "\n"
+                
+                display_string += 10*"=" + "\n"
+                
 
 
 
@@ -299,10 +318,14 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
                 display_string += 3*"\n"
                 display_string += f"\nInput slice pruned connections:"
 
-            for following_ix, _ in following_to_prune:
-                to_add = get_string_of_pruned(following_ix, initial_resource_calc, pruner, limit_chars_in_line)
-                display_string += f"\n{following_ix}: {to_add}"
-                display_string += "\n"
+                for following_tree_ix, _ in following_to_prune:
+                    to_add = get_string_of_pruned(following_tree_ix, initial_resource_calc, pruner, limit_chars_in_line)
+                    lowest_level_modules_index = lowest_level_modules.index(following_tree_ix)
+                    display_string += f"\n{lowest_level_modules_index}. LLM: {to_add}"
+                    display_string += "\n" + 10*"-" + "\n"
+                
+                display_string += 10*"=" + "\n"
+
         except:
             pass
         
@@ -499,13 +522,19 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
 
 
 
-def get_dict_of_rectangle_info(curr_tree_ix, resource_calc, ll_y, lu_x, rect_height, rect_width, min_child_width_limit):
+def get_dict_of_rectangle_info(curr_tree_ix, resource_calc, curr_level, lu_x, rect_width, min_child_width_limit):
+    """
+    We used to calculate left_lower_y and rect_height too, and pass them as params.
+    But now we would rather just know what level this rect is on: the top row being 0, the next row down being 1, etc.
+    Previously we would calculate the rect_height as 1/max_depth, where max_depth would be true if the graph would never be broken due to min_child_width_limit.
+    By just holding the level, we can calculate max_depth of this specific dict_of_rectangle_info we are about to draw, 
+    and this way we get a drawing across the entire plot.
+    """
 
     res_dict = {
         curr_tree_ix: {
-            "ll_y": ll_y,
+            "curr_level": curr_level,
             "lu_x": lu_x,
-            "rect_height": rect_height,
             "rect_width": rect_width,
             "new_root_id": None
         }
@@ -537,7 +566,8 @@ def get_dict_of_rectangle_info(curr_tree_ix, resource_calc, ll_y, lu_x, rect_hei
             children_root_res_dicts = []
 
             for i, child_tree_ix in enumerate(sort_tree_ixs(children)):
-                child_dict, list_of_new_root_dicts = get_dict_of_rectangle_info(child_tree_ix, resource_calc, ll_y = (ll_y - rect_height), lu_x = (lu_x + i * child_width), rect_height=rect_height, rect_width=child_width, min_child_width_limit=min_child_width_limit)
+                child_dict, list_of_new_root_dicts = get_dict_of_rectangle_info(child_tree_ix, resource_calc, curr_level=(curr_level+1), lu_x = (lu_x + i * child_width), rect_width=child_width, 
+                                                                                min_child_width_limit=min_child_width_limit)
                 children_dict.update(child_dict)
                 children_root_res_dicts += list_of_new_root_dicts
 
@@ -550,18 +580,25 @@ def get_dict_of_rectangle_info(curr_tree_ix, resource_calc, ll_y, lu_x, rect_hei
 
 
         else: # child_width < min_child_width_limit:
-
+                
+            
+            # This is for the old dict_of_rectangle_info, where we have to break the tree.
             # This lets us know something became a new root.
             # The parent dict ends at this node tho.
             curr_id = random.randint(0, 999999)
             res_dict[curr_tree_ix]["new_root_id"] = curr_id
             
             
+
+
+            curr_level = 0
             rect_width = 1.0
             lu_x = 0.0
-            ll_y = 1.0 - rect_height
 
-            new_root_res_dict, children_root_res_dicts = get_dict_of_rectangle_info(curr_tree_ix, resource_calc, ll_y=ll_y, lu_x=lu_x, rect_width=rect_width, rect_height=rect_height, min_child_width_limit=min_child_width_limit)
+            # This call is essentially the same as when we first call get_dict_of_rectangle_info from somewhere outside the function.
+            # Now we just make it that the root is lower down in the tree.
+            new_root_res_dict, children_root_res_dicts = get_dict_of_rectangle_info(curr_tree_ix, resource_calc, curr_level=curr_level, lu_x=lu_x, rect_width=rect_width, 
+                                                                                    min_child_width_limit=min_child_width_limit)
 
 
 
@@ -571,6 +608,17 @@ def get_dict_of_rectangle_info(curr_tree_ix, resource_calc, ll_y, lu_x, rect_hei
 
 
 
+def add_rect_height_and_ll_y_to_dict_of_rectangle_info(dict_of_rectangle_info):
+
+    max_level = max(rect_info["curr_level"] for rect_info in dict_of_rectangle_info.values())
+    rect_height = 1/(max_level + 1)  # +1 because levels are 0-indexed, so their num is one more than the highest ix.
+
+    for rect_info in dict_of_rectangle_info.values():
+        curr_level = rect_info["curr_level"]
+        rect_info["rect_height"] = rect_height
+        rect_info["ll_y"] = 1.0 - (curr_level + 1) * rect_height
+
+    return dict_of_rectangle_info
 
 
 
@@ -653,15 +701,17 @@ def model_graph(resource_calc, initial_resource_calc=None, pruner=None, width=20
 
 
 
-    dict_of_rectangle_info, list_of_new_root_rect_dicts = get_dict_of_rectangle_info(root_tree_ix, resource_calc, ll_y=ll_y, lu_x=0.0, rect_width=1.0, rect_height=rect_height, min_child_width_limit=min_child_width_limit)
+    dict_of_rectangle_info, list_of_new_root_rect_dicts = get_dict_of_rectangle_info(root_tree_ix, resource_calc, curr_level=0, lu_x=0.0, rect_width=1.0, min_child_width_limit=min_child_width_limit)
 
     main_dict_tuple = (dict_of_rectangle_info, "Main")
-    all_to_make = [main_dict_tuple] + list_of_new_root_rect_dicts
+    all_dicts_to_draw = [main_dict_tuple] + list_of_new_root_rect_dicts
+
+    all_dicts_to_draw = [(add_rect_height_and_ll_y_to_dict_of_rectangle_info(curr_res_dict), curr_id) for curr_res_dict, curr_id in all_dicts_to_draw]
 
 
 
     all_fig_ax_id_tuples = []
-    for curr_res_dict, curr_id in all_to_make:
+    for curr_res_dict, curr_id in all_dicts_to_draw:
 
         fig, ax = plt.subplots(figsize=(width*cm, height*cm))
         # set title to fig
@@ -673,7 +723,7 @@ def model_graph(resource_calc, initial_resource_calc=None, pruner=None, width=20
 
         dict_of_unchanging = {
             "is_for_img": is_for_img,
-            "limit_chars_in_line": 30,
+            "limit_chars_in_line": 35,
             "physical_width": width,
             "physical_height": height,
 
