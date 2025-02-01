@@ -33,22 +33,24 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import os
-import os.path as osp
-import torch
+# import os.path as osp
 import pickle
 import shutil
 
+
+import torch
+
+
 import y_helpers.json_handler as jh
+from y_helpers.model_vizualization import model_graph
 
-
+from y_framework.params_dataclasses import *
 from y_framework.training_wrapper import TrainingWrapper
 from y_framework.conv_resource_calc import ConvResourceCalc
 from y_framework.pruner import Pruner
-from y_helpers.model_vizualization import model_graph
 
 
 
-from y_framework.params_dataclasses import *
 
 
 
@@ -62,7 +64,7 @@ class ModelWrapper:
 
         try:
             
-            self.params = model_wrapper_params
+            self.params: ModelWrapperParams = model_wrapper_params
                 
             self.model_class = self.params.model_class
             
@@ -137,7 +139,7 @@ class ModelWrapper:
             self.optimizer_class = self.params.optimizer_class
 
 
-            self.training_wrapper = TrainingWrapper(training_wrapper_params, self.model, dataloader_dict)
+            self.training_wrapper: TrainingWrapper = TrainingWrapper(training_wrapper_params, self.model, dataloader_dict)
 
             self.initialize_optimizer()
 
@@ -190,7 +192,10 @@ class ModelWrapper:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments, other_zeroth_dim_LLM_ixs=[]):
+    def initialize_pruning(self, get_importance_dict_fn, input_slice_connection_fn, kernel_connection_fn, pruning_disallowments, other_zeroth_dim_LLM_ixs=None):
+
+        if other_zeroth_dim_LLM_ixs is None:
+            other_zeroth_dim_LLM_ixs = []
 
 
 
@@ -359,8 +364,8 @@ class ModelWrapper:
         following = self.pruner_instance.pruning_logs["following"]
         print("conv_ix/batch_norm_ix , real_(kernel/input_slice)_ix, initial_-||-")
         print("Conv ||  BatchNorm2d ||  Following")
-        for i in range(len(conv)):
-            print(f"{conv[i]}, || {batch_norm[i]} || {following[i]}")
+        for ix, curr_conv in enumerate(conv):
+            print(f"{curr_conv}, || {batch_norm[ix]} || {following[ix]}")
             print("\n")
 
     @py_log.autolog(passed_logger=MY_LOGGER)
@@ -374,7 +379,7 @@ class ModelWrapper:
         torch.save(self.model, new_model_path)
 
         if self.pruner_instance is not None:
-            pruner_filename = f"pruner_" + str_identifier + ".pkl"
+            pruner_filename = "pruner_" + str_identifier + ".pkl"
             os.makedirs(osp.join(self.save_path, "pruners"), exist_ok=True)
             new_pruner_path = osp.join(self.save_path, "pruners", pruner_filename)
             with open(new_pruner_path, "wb") as f:
@@ -405,7 +410,7 @@ class ModelWrapper:
         safety_path = osp.join(parent_dir_path, "safety_copies")
         os.makedirs(safety_path, exist_ok=True)
 
-        safety_copy_dir = osp.join(safety_path, f"actual_safety_copies")
+        safety_copy_dir = osp.join(safety_path, "actual_safety_copies")
         os.makedirs(safety_copy_dir, exist_ok=True)
 
 
@@ -433,12 +438,12 @@ class ModelWrapper:
             j_path = osp.join(safety_path, f"safety_copies_{str_identifier}.json")
             
             if osp.exists(j_path):
-                id = 1
+                add_id = 1
                 old_j_path = j_path
-                j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{add_id}.json")
                 while osp.exists(j_path):
-                    id += 1
-                    j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{id}.json")
+                    add_id += 1
+                    j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{add_id}.json")
                 print(f"JSON file {old_j_path} already exists. We made {j_path} instead.")
             
             

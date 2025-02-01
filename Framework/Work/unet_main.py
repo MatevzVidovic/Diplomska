@@ -34,19 +34,18 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 
 
 import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader, Sampler
-import random
+from torch.utils.data import DataLoader
 
 import argparse
+
+
 
 from y_framework.min_resource_percentage import MinResourcePercentage
 from y_framework.model_wrapper import ModelWrapper
 
 from y_framework.training_support import *
-from y_helpers.losses import MultiClassDiceLoss, WeightedLosses, JaccardLoss, TverskyLoss
+from y_helpers.losses import *
 
-import ast
 
 import y_helpers.yaml_handler as yh
 
@@ -623,7 +622,7 @@ dataloading_args = {
 
     "train_batch_size" : YD["train_batch_size"],
     "eval_batch_size" : YD["eval_batch_size"], # val and test use torch.no_grad() so they use less memory
-    "shuffle" : False, # TODO shuffle??
+    "shuffle" : False,
     "num_workers" : YD["num_of_dataloader_workers"],
 }
 
@@ -700,13 +699,13 @@ def get_data_loaders():
     # batch needed to be big.
 
 
-    print('train dataset len: ' + str(train_dataset.__len__()))
-    print('val dataset len: ' + str(valid_dataset.__len__()))
-    print('test dataset len: ' + str(test_dataset.__len__()))
+    print('train dataset len: ' + str(len(train_dataset)))
+    print('val dataset len: ' + str(len(valid_dataset)))
+    print('test dataset len: ' + str(len(test_dataset)))
 
-    print('train dataloader num of batches: ' + str(trainloader.__len__()))
-    print('val dataloader num of batches: ' + str(validloader.__len__()))
-    print('test dataloader num of batches: ' + str(testloader.__len__()))
+    print('train dataloader num of batches: ' + str(len(trainloader)))
+    print('val dataloader num of batches: ' + str(len(validloader)))
+    print('test dataloader num of batches: ' + str(len(testloader)))
 
     
     return trainloader, validloader, testloader
@@ -1446,6 +1445,7 @@ if __name__ == "__main__":
             disallowed_dict = {
                 model_wrapper.conv_tree_ixs[26] : 1.1
             }
+        
 
 
         generally_disallowed.set_by_tree_ix_dict(disallowed_dict)

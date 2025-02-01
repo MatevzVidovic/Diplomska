@@ -1,12 +1,5 @@
 
 
-
-
-
-
-
-
-
 import logging
 import yaml
 import os.path as osp
@@ -37,18 +30,21 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import os
-from y_helpers.img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_plt_fig, save_img_quick_figs, smart_conversion, save_img
+import pickle
+
 import torch
 from torch.utils.data import DataLoader
 
-import matplotlib.pyplot as plt
-import pickle
 
 import y_helpers.json_handler as jh
+from y_helpers.img_and_fig_tools import show_image, save_plt_fig, smart_conversion, save_img
+from y_helpers.model_eval_graphs import resource_graph, show_results
 
 from y_framework.model_wrapper import ModelWrapper
 
-from y_helpers.model_eval_graphs import resource_graph, show_results
+
+
+
 
 
 
@@ -84,8 +80,11 @@ class TrainingLogs:
     pickle_filename = "training_logs"
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=[]) -> None:
+    def __init__(self, tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=None) -> None:
         
+        if deleted_models_logs is None:
+            deleted_models_logs = []
+
         self.tl_main_save_path = tl_main_save_path
         self.number_of_epochs_per_training = number_of_epochs_per_training
         self.last_log = last_log
@@ -122,7 +121,10 @@ class TrainingLogs:
 
     @staticmethod
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=[]):
+    def load_or_create_training_logs(tl_main_save_path, number_of_epochs_per_training, cleaning_err_key, last_log=None, deleted_models_logs=None):
+
+        if deleted_models_logs is None:
+            deleted_models_logs = []
 
         os.makedirs(tl_main_save_path, exist_ok=True)
         j_path = osp.join(tl_main_save_path, "prev_training_logs_name.json")
@@ -254,7 +256,11 @@ class PruningLogs:
     pickle_filename = "pruning_logs"
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def __init__(self, pl_main_save_path, pruning_logs=[]) -> None:
+    def __init__(self, pl_main_save_path, pruning_logs=None) -> None:
+
+        if pruning_logs is None:
+            pruning_logs = []
+
         self.pl_main_save_path = pl_main_save_path
         self.pruning_logs = pruning_logs
         self.last_train_iter = None
@@ -262,7 +268,10 @@ class PruningLogs:
     
     @staticmethod
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def load_or_create_pruning_logs(pl_main_save_path, pruning_logs=[]):
+    def load_or_create_pruning_logs(pl_main_save_path, pruning_logs=None):
+
+        if pruning_logs is None:
+            pruning_logs = []
         
         os.makedirs(pl_main_save_path, exist_ok=True)
         j_path = osp.join(pl_main_save_path, "prev_pruning_logs_name.json")
@@ -343,7 +352,7 @@ class PruningLogs:
         if len(self.pruning_logs) == 0:
             return
         
-        if self.pruning_logs[-1][1] == False:
+        if self.pruning_logs[-1][1] is False:
             self.pruning_logs = self.pruning_logs[:-1]
 
         if self.last_train_iter is not None and self.last_unique_id is not None:
@@ -403,7 +412,10 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 @py_log.autolog(passed_logger=MY_LOGGER)
 def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
                         max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_key="loss", 
-                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict={}, model_graph_breakup_param=0.05, one_big_svg_width=500):
+                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict=None, model_graph_breakup_param=0.05, one_big_svg_width=500):
+    
+    if pruning_kwargs_dict is None:
+        pruning_kwargs_dict = {}
 
 
     # to prevent an error I had, where even the last model would somehow get deleted (which is another error on top of that, because that should never happen)

@@ -39,12 +39,12 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 from pydantic.dataclasses import dataclass
 from pydantic import field_validator, Field
-
 from pydantic import ConfigDict
 
 
-import torch
 from typing import Any
+
+import torch
 
 
 config_dict = ConfigDict(

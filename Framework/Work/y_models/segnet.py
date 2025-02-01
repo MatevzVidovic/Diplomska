@@ -1,4 +1,4 @@
-import torch
+
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -150,7 +150,7 @@ class SegNet(nn.Module):
         x = F.relu(self.BNEn42(self.ConvEn42(x))) 
         x = F.relu(self.BNEn43(self.ConvEn43(x)))   
         x, ind4 = self.MaxEn4(x)
-        size4 = x.size()
+        # size4 = x.size()
 
         #Stage 5
         x = F.relu(self.BNEn51(self.ConvEn51(x))) 

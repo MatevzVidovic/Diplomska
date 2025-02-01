@@ -31,8 +31,9 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-import torch.nn as nn
 import copy
+
+import torch.nn as nn
 
 from y_helpers.model_sorting import sort_tree_ixs
 
@@ -166,8 +167,8 @@ class ConvResourceCalc():
         elif isinstance(layer, nn.BatchNorm2d):
 
             # Dovolj FLOPs in weights dovolj malo, da ne upostevam.
-            for _, dict in self.resource_name_2_resource_dict.items():
-                dict[tree_ix] = 0
+            for _, curr_dict in self.resource_name_2_resource_dict.items():
+                curr_dict[tree_ix] = 0
 
             self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
 
@@ -176,16 +177,16 @@ class ConvResourceCalc():
 
 
             # Prekompleksno se to upostevat za flops.
-            for _, dict in self.resource_name_2_resource_dict.items():
-                dict[tree_ix] = 0
+            for _, curr_dict in self.resource_name_2_resource_dict.items():
+                curr_dict[tree_ix] = 0
 
             self.resource_name_2_resource_dict["weights_dimensions"][tree_ix] = list(layer.weight.shape)
 
         
 
         else:
-            for _, dict in self.resource_name_2_resource_dict.items():
-                dict[tree_ix] = 0
+            for _, curr_dict in self.resource_name_2_resource_dict.items():
+                curr_dict[tree_ix] = 0
         
 
 
@@ -203,7 +204,9 @@ class ConvResourceCalc():
 
 
         
-        def modify_forward(module, curr_tree_ix=(0,), current_path_list=[]):
+        def modify_forward(module, curr_tree_ix=(0,), current_path_list=None):
+            if current_path_list is None:
+                current_path_list = []
 
             module_name = type(module).__name__    #.lower()
 
@@ -324,7 +327,7 @@ class ConvResourceCalc():
 
         modify_forward(self.wrapper_model.model)
         input_example = input_example.to(self.wrapper_model.device)
-        y = self.wrapper_model.model.forward(input_example)
+        _ = self.wrapper_model.model.forward(input_example)
         restore_forward(self.wrapper_model.model)
 
 

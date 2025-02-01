@@ -36,30 +36,22 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER, python_logger_path)
 
 
 
-from y_datasets.img_augments import horizontal_flip, rotation, gaussian_blur
 
 
-from y_helpers.img_and_fig_tools import smart_conversion, save_plt_fig_quick_figs
 
-from enum import Enum
+
+import os
+import os.path as osp
+import argparse
+# import random
 
 import numpy as np
-import torch
-from torch.utils.data import Dataset
-import os
-# import random
 from PIL import Image
 from torchvision import transforms
-import cv2
-
 import matplotlib.pyplot as plt
-import os.path as osp
-# from utils import one_hot2dist
-
 np.random.seed(7)
 
-import matplotlib.pyplot as plt
-
+from y_helpers.img_and_fig_tools import smart_conversion, save_plt_fig_quick_figs
 
 
 transform = transforms.Compose(
@@ -98,7 +90,6 @@ def get_mask(mask_folder_path, file_name_no_suffix) -> np.array:
 
 
 
-import argparse
 
 if __name__ == "__main__":
 
@@ -247,25 +238,25 @@ if __name__ == "__main__":
             
             
             # Define the offset as a fraction of the axes width
-            offset_fraction = 0.0
+            OFFSET_FRACTION = 0.0
             
             # Get the current axes limits
             xlim = ax.get_xlim()
-            x_offset = (xlim[1] - xlim[0]) * offset_fraction
+            x_offset = (xlim[1] - xlim[0]) * OFFSET_FRACTION
 
-            text_offset = 0
+            TEXT_OFFSET = 0
             
             # Annotate the boxplot
             ax.annotate(f'Median: {median:.2f}', xy=(1 + x_offset, median), xycoords=('data', 'data'),
-                        xytext=(text_offset, 0), textcoords='offset points', ha='left', va='center')
+                        xytext=(TEXT_OFFSET, 0), textcoords='offset points', ha='left', va='center')
             ax.annotate(f'Q1: {q1:.2f}', xy=(1 + x_offset, q1), xycoords=('data', 'data'),
-                        xytext=(text_offset, 0), textcoords='offset points', ha='left', va='center')
+                        xytext=(TEXT_OFFSET, 0), textcoords='offset points', ha='left', va='center')
             ax.annotate(f'Q3: {q3:.2f}', xy=(1 + x_offset, q3), xycoords=('data', 'data'),
-                        xytext=(text_offset, 0), textcoords='offset points', ha='left', va='center')
+                        xytext=(TEXT_OFFSET, 0), textcoords='offset points', ha='left', va='center')
             ax.annotate(f'Min: {min_val:.2f}', xy=(1 + x_offset, min_val), xycoords=('data', 'data'),
-                        xytext=(text_offset, 0), textcoords='offset points', ha='left', va='center')
+                        xytext=(TEXT_OFFSET, 0), textcoords='offset points', ha='left', va='center')
             ax.annotate(f'Max: {max_val:.2f}', xy=(1 + x_offset, max_val), xycoords=('data', 'data'),
-                        xytext=(text_offset, 0), textcoords='offset points', ha='left', va='center')
+                        xytext=(TEXT_OFFSET, 0), textcoords='offset points', ha='left', va='center')
     
             ax.set_title(info[1])
             save_plt_fig_quick_figs(fig, "box_" + info[1] + "_" + parsed_split, formats=["svg"])

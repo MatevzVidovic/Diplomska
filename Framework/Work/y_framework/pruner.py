@@ -31,11 +31,12 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import torch
+
 from y_framework.conv_resource_calc import ConvResourceCalc
+from y_framework.training_wrapper import TrainingWrapper
 
 from y_helpers.model_vizualization import model_graph
 
-from y_framework.training_wrapper import TrainingWrapper
 
 
 
@@ -93,18 +94,18 @@ class Pruner:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune_current_layer(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
+    def prune_current_layer(self, tree_ix, real_kernel_ix, tree_ix_2_module):
         try:
 
             # get the module
             module = tree_ix_2_module[tree_ix]
 
 
-            if type(module) == torch.nn.BatchNorm2d:
-                self.prune_batchnorm(tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module)
+            if isinstance(module, torch.nn.BatchNorm2d):
+                self.prune_batchnorm(tree_ix, real_kernel_ix, tree_ix_2_module)
                 return
-            elif type(module) == torch.nn.ConvTranspose2d:
-                self.prune_upconvolution(tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module)
+            elif isinstance(module, torch.nn.ConvTranspose2d):
+                self.prune_upconvolution(tree_ix, real_kernel_ix, tree_ix_2_module)
                 return
 
 
@@ -164,7 +165,7 @@ class Pruner:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune_batchnorm(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
+    def prune_batchnorm(self, tree_ix, real_input_slice_ix, tree_ix_2_module):
 
         try:
             # get the module
@@ -213,7 +214,7 @@ class Pruner:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune_upconvolution(self, tree_ix, real_kernel_ix, wrapper_model, tree_ix_2_module):
+    def prune_upconvolution(self, tree_ix, real_kernel_ix, tree_ix_2_module):
         try:
 
             # get the module
@@ -270,7 +271,7 @@ class Pruner:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune_following_layer(self, tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module):
+    def prune_following_layer(self, tree_ix, real_input_slice_ix, tree_ix_2_module):
 
         try:
 
@@ -396,7 +397,7 @@ class Pruner:
     
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune(self, num_to_prune, importance_dict, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, resource_limitation_dict=None):
+    def prune(self, num_to_prune, importance_dict, curr_conv_resource_calc: ConvResourceCalc, resource_limitation_dict=None):
 
         # Returns True if there are more to prune in the future, False if there are no more to prune.
 
@@ -522,7 +523,7 @@ class Pruner:
                 curr_to_prune_elem = (to_prune_elem[0], self.tree_ix_2_list_of_initial_kernel_ixs[to_prune_elem[0]].index(to_prune_elem[1]))
 
                 # this also does curr_conv_resource_calc.calculate_resources(self.input_example)
-                succeeded = self.prune_one_layer_recursive(curr_to_prune_elem, curr_conv_resource_calc, wrapper_model)
+                succeeded = self.prune_one_layer_recursive(curr_to_prune_elem, curr_conv_resource_calc)
                 if succeeded:
                     num_pruned += 1
                 if num_pruned >= num_to_prune:
@@ -545,7 +546,7 @@ class Pruner:
 
 
     @py_log.autolog(passed_logger=MY_LOGGER)
-    def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, wrapper_model: TrainingWrapper, check_if_disallowed=True):
+    def prune_one_layer_recursive(self, to_prune, curr_conv_resource_calc: ConvResourceCalc, check_if_disallowed=True):
         
         # to_prune is (tree_ix, real_kernel_ix)
 
@@ -639,10 +640,10 @@ class Pruner:
 
             try:
                 # method for pruning current
-                self.prune_current_layer(to_prune[0], to_prune[1], wrapper_model, tree_ix_2_module)
+                self.prune_current_layer(to_prune[0], to_prune[1], tree_ix_2_module)
             except KeyError as e:
                 print(f"Pruning {to_prune} failed.")
-                self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]]
+                # for_log_locals = self.tree_ix_2_list_of_initial_kernel_ixs[to_prune[0]]
                 # py_log.log_locals(passed_logger=MY_LOGGER)
                 raise e
             
@@ -652,7 +653,7 @@ class Pruner:
             # on those the method of next to be pruned (its a different pruning method)
             for tree_ix, real_input_slice_ix, _ in following_to_prune:
 
-                self.prune_following_layer(tree_ix, real_input_slice_ix, wrapper_model, tree_ix_2_module)
+                self.prune_following_layer(tree_ix, real_input_slice_ix, tree_ix_2_module)
             
 
 
@@ -678,7 +679,7 @@ class Pruner:
 
             inextricable_following_to_prune = self.kernel_connection_fn(to_prune[0], to_prune[1], self.conv_tree_ixs, self.lowest_level_modules)        
             for tree_ix, kernel_ix in inextricable_following_to_prune:
-                self.prune_one_layer_recursive((tree_ix, kernel_ix), curr_conv_resource_calc, wrapper_model, check_if_disallowed=False)
+                self.prune_one_layer_recursive((tree_ix, kernel_ix), curr_conv_resource_calc, check_if_disallowed=False)
             
             # When the call of the original pruning call is finished, the dimensions across the network are corrected and they line up correctly.
             # We have to do this recalculation, so that when this function gets called next time, the resources are correct and we correctly know what is allowed to be pruned.

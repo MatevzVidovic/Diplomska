@@ -1,10 +1,7 @@
 
 
-# symlinks to data
-Data/*
-/sclera_data*
-/vein_sclera_data*
-/vein_and_sclera_data*
+# symlink to data
+Data
 
 # Usual scp transfer folders:
 scp*/
@@ -51,6 +48,7 @@ y_multipurpose.sbatch
 pruned_models_*/
 ana_*/
 x_*.out
+uml_diagrams/
 
 # Probs not needed anymore:
 # saved/

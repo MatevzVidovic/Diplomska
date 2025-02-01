@@ -34,32 +34,38 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
+import os
+import os.path as osp
 import pickle
+import inspect
+# import random
+
 import numpy as np
 import torch
-import os
-# import random
 from PIL import Image
-import cv2
 from torchvision import transforms
-
 import matplotlib.pyplot as plt
-import os.path as osp
+
+
 # from utils import one_hot2dist
 
 
-import inspect
 
 
 
 
 
-def save_plt_fig(fig, save_path, filename, formats={"svg", "png", "pkl"}, dpi=100):
-
-    # If you have a graph. no images, then svg is important, so keep dpi (dots per inch) low.
-    # If you have an image, then png is important, so make dpi high - but in that case it is better to use save_img() instead of this function,
-    # becuse save_img() will save it pixel-perfect. 
+def save_plt_fig(fig, save_path, filename, formats=None, dpi=100):
     
+    """
+    If you have a graph. no images, then svg is important, so keep dpi (dots per inch) low.
+    If you have an image, then png is important, so make dpi high - but in that case it is better to use save_img() instead of this function,
+    becuse save_img() will save it pixel-perfect.
+    """
+    
+    if formats is None:
+        formats = {"svg", "png", "pkl"}
+
     if fig is None:
         print("save_plt_fig: fig is None")
         return
@@ -78,10 +84,15 @@ def save_plt_fig(fig, save_path, filename, formats={"svg", "png", "pkl"}, dpi=10
 
 
 
-def save_plt_fig_quick_figs(fig, filename, formats={"svg", "png", "pkl"}, dpi=100):
-    # This is mainly used for viewing of figs on the hpc cluster.
-    # Because plt.show() doesn't work there. So we keep overwriting the same named figs
-    #  in this quick_figs and then viewing the last one through vscode.
+def save_plt_fig_quick_figs(fig, filename, formats=None, dpi=100):
+    """
+    This is mainly used for viewing of figs on the hpc cluster.
+    Because plt.show() doesn't work there. So we keep overwriting the same named figs
+    in this quick_figs and then viewing the last one through vscode.
+    """
+    if formats is None:
+        formats = {"svg", "png", "pkl"}
+    
     quick_figs_path = osp.join("quick_figs")
     save_plt_fig(fig, quick_figs_path, filename, formats, dpi=dpi)
 
@@ -262,9 +273,10 @@ def to_type(given_img, goal_type_name):
         raise e
 
 def to_img_repr(given_img, goal_img_repr):
-    # The two img reprs are [0, 255] (uint8) and [0, 1] (float32)
-    # goal_img_repr can be "uint8", "float32"
-
+    """
+    The two img reprs are [0, 255] (uint8) and [0, 1] (float32)
+    goal_img_repr can be "uint8", "float32"
+    """
     try:
 
         if isinstance(given_img, np.ndarray):
@@ -293,28 +305,28 @@ def to_img_repr(given_img, goal_img_repr):
 
             if goal_img_repr == "uint8":
                 return given_img
-            
+
             raise ValueError("Image.Image can only be uint8")
         
         elif isinstance(given_img, torch.Tensor):
+            
+            img = given_img.clone()
+    
+            if img.dtype == torch.uint8:
+                if goal_img_repr == "uint8":
+                    return img
+                elif goal_img_repr == "float32":
+                    img = img.float()
+                    img /= 255
+                    return img
                 
-                img = given_img.clone()
-        
-                if img.dtype == torch.uint8:
-                    if goal_img_repr == "uint8":
-                        return img
-                    elif goal_img_repr == "float32":
-                        img = img.float()
-                        img /= 255
-                        return img
-                    
-                elif img.dtype == torch.float32:
-                    if goal_img_repr == "uint8":
-                        img *= 255
-                        img = img.byte()
-                        return img
-                    elif goal_img_repr == "float32":
-                        return img
+            elif img.dtype == torch.float32:
+                if goal_img_repr == "uint8":
+                    img *= 255
+                    img = img.byte()
+                    return img
+                elif goal_img_repr == "float32":
+                    return img
 
         raise ValueError(f"""goal_img_repr must be 'uint8' or 'float32', and given_img must be np.ndarray, Image.Image, or torch.Tensor. 
                         We got type(given_img) = {type(given_img)} and goal_img_repr = {goal_img_repr}.

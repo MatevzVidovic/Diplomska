@@ -1,8 +1,7 @@
 
-import matplotlib.pyplot as plt
+import argparse
 import pickle
 
-import argparse
 
 from y_framework.conv_resource_calc import ConvResourceCalc
 

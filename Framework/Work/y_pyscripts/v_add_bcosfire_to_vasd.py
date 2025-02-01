@@ -2,16 +2,8 @@
 
 import os
 import os.path as osp
-import numpy as np
-import cv2
-
 import shutil as sh
-
-from PIL import Image
-
 import sys
-
-import matplotlib.pyplot as plt
 
 
 vasd = osp.join("Data", 'vein_and_sclera_data')

@@ -6,8 +6,6 @@ import os.path as osp
 import shutil as sh
 
 
-import sys
-
 
 # srun python3 v_make_vask_imgs.py
 

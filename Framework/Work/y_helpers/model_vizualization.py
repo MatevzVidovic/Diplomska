@@ -33,19 +33,17 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-
-from torch import nn
+import random
 from typing import Union
 
-import random
-
-import matplotlib
+from torch import nn
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-
 from y_helpers.model_sorting import sort_tree_ixs, denest_tuple
 from y_framework.conv_resource_calc import ConvResourceCalc
+
+
 
 
 cm = 1/2.54  # centimeters in inches
@@ -69,12 +67,16 @@ def string_of_pruned(list_of_initial_ixs, initial_dim_size):
     for ix in list_of_initial_ixs:
         try:
             ix_is_in_initial_ixs_list[ix] = True
-        except:
-            print(f"ix: {ix}")
-            print(f"initial_dim_size: {initial_dim_size}")
-            print(f"list_of_initial_ixs: {list_of_initial_ixs}")
-            raise ValueError("Index out of range.")
-    
+        except Exception as e:
+            context = f"""
+            ix: {ix}
+            initial_dim_size: {initial_dim_size}
+            list_of_initial_ixs: {list_of_initial_ixs}
+            """
+            print(context)
+            raise Exception(context) from e
+
+
     # When you come into a territory of False, you start a new section.
     # When you leave it, you end the section.
     # If we are in false territory at the end, we end the section.
@@ -89,7 +91,7 @@ def string_of_pruned(list_of_initial_ixs, initial_dim_size):
             if ix_in_False_territory >= 1:
                 string += f"-{i-1}, "
             elif ix_in_False_territory == 0:
-                string += f", "
+                string += ", "
             ix_in_False_territory = -1
     if ix_in_False_territory > 0:
         string += f"-{initial_dim_size}"
@@ -262,10 +264,10 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
 
 
     layer = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-    if type(layer) == nn.Conv2d:
+    if isinstance(layer, nn.Conv2d):
         display_string += f"\nW.shape: {list(layer.weight.shape)}"
     
-    elif type(layer) == nn.BatchNorm2d:
+    elif isinstance(layer, nn.BatchNorm2d):
         
         shapes = [list(layer.weight.shape), list(layer.bias.shape), 
                     list(layer.running_mean.shape), list(layer.running_var.shape)]
@@ -300,7 +302,7 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
 
             if len(inextricable_following_to_prune) > 0:
                 display_string += 3*"\n"
-                display_string += f"\nInextricable pruned connections:"
+                display_string += "\nInextricable pruned connections:"
 
                 for following_tree_ix, _ in inextricable_following_to_prune:
                     to_add = get_string_of_pruned(following_tree_ix, initial_resource_calc, pruner, limit_chars_in_line)
@@ -316,7 +318,7 @@ def draw_rect(tree_ix, ll_y, lu_x, rect_width, rect_height, new_root_id, dict_of
             
             if len(following_to_prune) > 0:
                 display_string += 3*"\n"
-                display_string += f"\nInput slice pruned connections:"
+                display_string += "\nInput slice pruned connections:"
 
                 for following_tree_ix, _ in following_to_prune:
                     to_add = get_string_of_pruned(following_tree_ix, initial_resource_calc, pruner, limit_chars_in_line)

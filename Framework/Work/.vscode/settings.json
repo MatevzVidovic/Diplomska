@@ -1,5 +1,27 @@
 {
     "files.associations": {
         "*.json": "jsonc"
-    }
+    },
+
+    "pylint.args": [
+        // "--disable=C0114",  // Disable specific error codes
+        // "--disable=C0115",
+        // "--disable=C0111,C0103",  // Specific message codes
+
+        "--disable=C",        // Disable all convention messages
+        "--disable=W",        // Disable all warning messages
+        "--disable=E",        // Disable all error messages
+        // "--disable=R",        // Disable all refactor messages
+        // "--disable=F",         // Disable all fatal messages
+
+        "--disable=C0301,C0303,C0305",  // line too long, trailing whitespace, trailing newlines
+        "--disable=C0116, W0105",  // have docstring, string statement has no effect (for multiline comment strings i like to have)
+
+
+        "--ignored-modules=cv2",
+
+        // "--enable=W0611",         // Re-enable specific warnings
+        "--max-line-length=100",  // Other configuration
+        "--good-names=i,j,k,ex,Run,_" // tells Pylint to accept certain variable names that would otherwise violate its naming conventions
+    ]
 }

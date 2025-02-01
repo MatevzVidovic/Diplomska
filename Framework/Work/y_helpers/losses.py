@@ -27,6 +27,10 @@ MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same strin
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
+
+
+
+
 import torch
 from torch import nn
 
@@ -332,7 +336,13 @@ class JaccardLoss(nn.Module):
 
 
 class WeightedLosses(nn.Module):
-    def __init__(self, losses_list, weights_list=[]):
+
+    def __init__(self, losses_list, weights_list=None):
+        super(WeightedLosses, self).__init__()
+
+        if weights_list is None:
+            weights_list = []
+        
         # super(MultiClassDiceLoss, self).__init__()
         self.losses_list = losses_list
 

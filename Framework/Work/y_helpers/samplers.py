@@ -1,12 +1,13 @@
 
 
-from torch.utils.data import Dataset, DataLoader, Sampler
 import random
 
+from torch.utils.data import Sampler
 
 
 class ResamplingSampler(Sampler):
     def __init__(self, data_source, num_samples):
+        super(Sampler, self).__init__(data_source)
         self.data_source = data_source
         self.num_samples = num_samples
 
@@ -20,6 +21,7 @@ class ResamplingSampler(Sampler):
 
 class BalancedRandomSampler(Sampler):
     def __init__(self, data_source, num_samples):
+        super(Sampler, self).__init__(data_source)
         self.data_source = data_source
         self.num_samples = num_samples
 
@@ -40,6 +42,7 @@ class BalancedRandomSampler(Sampler):
 
 class LimitedSampler(Sampler):
     def __init__(self, data_source, num_samples, shuffle=False):
+        super(Sampler, self).__init__(data_source)
         self.data_source = data_source
         self.num_samples = min(num_samples, len(data_source))
         self.shuffle = shuffle
@@ -55,3 +58,4 @@ class LimitedSampler(Sampler):
 
     def __len__(self):
         return self.num_samples
+    

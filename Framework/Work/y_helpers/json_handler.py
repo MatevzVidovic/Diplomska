@@ -4,10 +4,10 @@
 
 
 
+import os.path as osp
 
 import orjson
 
-import os.path as osp
 
 
 def load(path):

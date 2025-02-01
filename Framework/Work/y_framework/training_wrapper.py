@@ -31,21 +31,19 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
+from timeit import default_timer as timer
+import gc
+
+
 import cv2
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from timeit import default_timer as timer
-import gc
 
-from y_helpers.img_and_fig_tools import show_image, save_plt_fig_quick_figs, save_img
-
+from y_helpers.img_and_fig_tools import save_img
 from y_helpers.patchification import patchify, accumulate_patches
-
-
 from y_framework.params_dataclasses import *
 
 
@@ -86,8 +84,8 @@ def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=
                         print(f"Tensor {obj.size()} {obj.device}, {size_mb:.2f} MB")
                 except:
                     pass
-    
 
+                
     except Exception as e:
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
@@ -133,10 +131,10 @@ def get_conf_matrix(predictions, targets, num_classes=2):
         
         try:
             assert (predictions.shape == targets.shape)
-        except:
+        except AssertionError as e:
             print("predictions.shape: ", predictions.shape)
             print("targets.shape: ", targets.shape)
-            raise AssertionError
+            raise e
 
 
 
@@ -380,7 +378,7 @@ def conf_matrix_to_F1_prec_rec(confusion_matrix):
 
     try:
 
-        TN = confusion_matrix[0][0]
+        # TN = confusion_matrix[0][0]
         FN = confusion_matrix[1][0]
         FP = confusion_matrix[0][1]
         TP = confusion_matrix[1][1]
@@ -747,7 +745,7 @@ class TrainingWrapper:
 
                             final_pred_shape = (2, img.size()[1], img.size()[2])
 
-                            accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, self.patch_shape, pred_patch_dict)
+                            accumulating_tensor, num_of_addings = accumulate_patches(final_pred_shape, pred_patch_dict)
 
                             reconstructed_img = accumulating_tensor / num_of_addings    # probs not necessary, but can't really hurt
 

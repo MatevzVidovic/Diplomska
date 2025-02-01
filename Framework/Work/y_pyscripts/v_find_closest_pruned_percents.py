@@ -3,17 +3,16 @@
 
 
 
-import argparse
-
 import os.path as osp
+import argparse
+import pickle
+
 
 import y_helpers.json_handler as jh
 
 
-import pickle
 
 
-import argparse
 
 
 
@@ -46,7 +45,7 @@ saved_model_wrapper_path = osp.join(model_path, "saved_model_wrapper")
 
 
 pl_j_path = osp.join(main_save_path, "prev_pruning_logs_name.json")
-pl_name = jh.load(pl_j_path)[f"prev_pruning_logs"]
+pl_name = jh.load(pl_j_path)["prev_pruning_logs"]
 
 pruning_logs_path = osp.join(main_save_path, pl_name)
 irc_path = osp.join(saved_model_wrapper_path, "initial_conv_resource_calc.pkl")

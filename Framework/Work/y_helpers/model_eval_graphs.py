@@ -30,12 +30,15 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 import pickle
+import argparse
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+
 import y_helpers.json_handler as jh
 
 
-import matplotlib.pyplot as plt
 
-import argparse
 
 
 
@@ -61,8 +64,8 @@ def show_results(main_save_path):
             return
         
 
-        tl_name = jh.load(tl_j_path)[f"prev_training_logs"]
-        pl_name = jh.load(pl_j_path)[f"prev_pruning_logs"]
+        tl_name = jh.load(tl_j_path)["prev_training_logs"]
+        pl_name = jh.load(pl_j_path)["prev_pruning_logs"]
 
         training_logs_path = osp.join(main_save_path, "training_logs", tl_name)
         pruning_logs_path = osp.join(main_save_path, "pruning_logs", pl_name)
@@ -127,8 +130,6 @@ def show_results(main_save_path):
 
 
 
-        from matplotlib.patches import Patch
-
         # Create the initial legend
         plt.legend()
 
@@ -170,7 +171,7 @@ def resource_graph(main_save_path, saved_model_wrapper_path):
     try:
 
         pl_j_path = osp.join(main_save_path, "prev_pruning_logs_name.json")
-        pl_name = jh.load(pl_j_path)[f"prev_pruning_logs"]
+        pl_name = jh.load(pl_j_path)["prev_pruning_logs"]
         pruning_logs_path = osp.join(main_save_path, "pruning_logs", pl_name)
 
         irc_path = osp.join(saved_model_wrapper_path, "initial_conv_resource_calc.pkl")
