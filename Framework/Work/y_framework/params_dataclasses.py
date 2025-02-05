@@ -42,7 +42,7 @@ from pydantic import field_validator, Field
 from pydantic import ConfigDict
 
 
-from typing import Any
+from typing import Any, Union
 
 import torch
 
@@ -71,7 +71,7 @@ class TrainingWrapperParams:
     loss_fn: torch.nn.Module
     zero_out_non_sclera_on_predictions: bool
     have_patchification: bool
-    patchification_params: dict
+    patchification_params: Union[dict, None]
     
 
 

@@ -25,7 +25,7 @@ yo_ids=${2}
 
 param_num=2
 num_optional=1
-pipeline_name=z_pipeline_unet
+pipeline_name=z_pipeline_unet_sclera
 
 
 sbatch_id=get_bs
@@ -33,7 +33,6 @@ protect_out_files='false'
 retain_savedir='false'
 #pass 'false' for false, anything else for true
 
-pipeline_name=z_pipeline_unet
 source z_boilerplate.sh 
 # get out_name, sd_name, yo_paths
 

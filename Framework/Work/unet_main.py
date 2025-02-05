@@ -423,6 +423,17 @@ elif YD["model"] == "64_1_6":
         "expansion" : 1,
         "depth" : 6,
         }
+elif YD["model"] == "32_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 32,
+        "expansion" : 2,
+        "depth" : 4,
+        }
 elif YD["model"] == "4_2_4":
     model_parameters = {
         # layer sizes

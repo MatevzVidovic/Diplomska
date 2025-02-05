@@ -38,7 +38,7 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 
 
 
-# python3 -m z_pipeline_unet.standalone_scripts.v_unet_porter
+# python3 -m z_pipeline_unet_sclera.standalone_scripts.v_unet_porter
 
 
 

@@ -36,7 +36,7 @@ add_bcosfire_to_img: False
 add_coye_to_img: False
 
 # Model parameters that need to be set in stone for pruning
-model: "small"
+model: "32_2_4"
 input_width: 2048
 input_height: 2048
 input_channels: 3
@@ -44,7 +44,7 @@ output_channels: 2
 
 # Patchification options
 have_patchification: False
-patchification_params: None
+patchification_params: null
   # patch_x: 256
   # patch_y: 128
   # stride_percent_of_patch_x: 0.5

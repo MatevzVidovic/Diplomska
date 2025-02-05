@@ -44,7 +44,7 @@ output_channels: 2
 
 # Patchification options
 have_patchification: False
-patchification_params: None
+patchification_params: null
   # patch_x: 256
   # patch_y: 128
   # stride_percent_of_patch_x: 0.5
