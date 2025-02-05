@@ -1343,8 +1343,18 @@ elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
     IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
 elif IMPORTANCE_FN_DEFINER == "IPAD1_L1":
     IMPORTANCE_FN = IPAD_and_weights_granular(0.5, 0, 0.5, 0)
+elif IMPORTANCE_FN_DEFINER == "IPAD2_L2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0.5, 0, 0.5)
+elif IMPORTANCE_FN_DEFINER == "IPAD1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(1.0, 0, 0, 0)
+elif IMPORTANCE_FN_DEFINER == "IPAD2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 1.0, 0, 0)
+elif IMPORTANCE_FN_DEFINER == "L1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 1.0, 0)
+elif IMPORTANCE_FN_DEFINER == "L2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 0, 1.0)
 else:
-    raise ValueError(f"IMPORTANCE_FN_DEFINER must be 'random', 'uniform' or 'IPAD_eq'. Was: {IMPORTANCE_FN_DEFINER}")
+    raise ValueError(f"IMPORTANCE_FN_DEFINER must be diff. Was: {IMPORTANCE_FN_DEFINER}")
 
 
 
@@ -1437,10 +1447,6 @@ if __name__ == "__main__":
                 model_wrapper.conv_tree_ixs[18] : 1.1
             }
 
-            # Because in this model there are layers with only 4 kernels. And so having this limit be less means that they can end up with 0 kernels.
-            if YD["conv2d_prune_limit"] <= 0.25:
-                YD["conv2d_prune_limit"] = 0.26
-
         elif YD["model"] == "64_2_6":
             disallowed_dict = {
                 model_wrapper.conv_tree_ixs[26] : 1.1
@@ -1486,7 +1492,7 @@ if __name__ == "__main__":
 
 
         FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        FLOPS_min_res_percents.set_by_name("Conv2d", YD["conv2d_prune_limit"])
+        FLOPS_min_res_percents.set_by_name("Conv2d", YD["FLOPS_conv2d_prune_limit"])
 
         # tree_ix_2_percentage_dict = {
         #     (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
@@ -1501,10 +1507,39 @@ if __name__ == "__main__":
 
 
         weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-        weights_min_res_percents.set_by_name("Conv2d", YD["conv2d_prune_limit"])
+        weights_min_res_percents.set_by_name("Conv2d", YD["weights_conv2d_prune_limit"])
 
         if TEST_PRUNING:
             weights_min_res_percents.set_by_name("Conv2d", 0.999999)
+        
+
+
+
+        # When the network has been pruned severely, we would like to take it to 0% so we see how the model performs close to it.
+        # For this reason we introduce relative percentages.
+
+        # The original FLOPS limit might be 0.2. But as the FLOPS of thw overall network become close to 0.2, we run out of layers to prune.
+        # So we introduce relative limits. Here the limit is scalled by the percent of FLOPS that are left to prune.
+        # So if the relative limit is 0.8, and the network is at 0.2 of the original FLOPS, the limit is 0.2*0.8 = 0.16.
+        # 
+        # So we need to always be taking the minimum of the original limit and the relative limit.
+        # And the relative limit should be wuite high, so that it doesn't come into effect too soon. 
+
+
+        relative_FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        relative_FLOPS_min_res_percents.set_by_name("Conv2d", YD["relative_FLOPS_conv2d_prune_limit"])
+
+        relative_weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        relative_weights_min_res_percents.set_by_name("Conv2d", YD["relative_weights_conv2d_prune_limit"])
+
+
+
+        # When we prune the network extremely it might happen that we prune the last kernel in a layer.
+        # If there were 64 kernels in the layer, and we pruned 63, that kernel is 0.0156 of the original layer.
+        # If the relative limit has come to be 0.012, we would prune this kernel. And that would be a disaster because the network wouldn't work anymore.
+
+        kernel_num_min = MinResourcePercentage(tree_ix_2_name)
+        kernel_num_min.set_by_name("Conv2d", 1)
 
 
         
@@ -1513,7 +1548,10 @@ if __name__ == "__main__":
             "general" : generally_disallowed.min_resource_percentage_dict,
             "choice" : choice_disallowed.min_resource_percentage_dict,
             "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
-            "weights" : weights_min_res_percents.min_resource_percentage_dict
+            "weights" : weights_min_res_percents.min_resource_percentage_dict,
+            "relative_FLOPS" : relative_FLOPS_min_res_percents.min_resource_percentage_dict,
+            "relative_weights" : relative_weights_min_res_percents.min_resource_percentage_dict,
+            "kernel_num" : kernel_num_min.min_resource_percentage_dict
         }
 
 

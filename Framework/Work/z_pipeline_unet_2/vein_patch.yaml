@@ -7,7 +7,7 @@
 
 # More situationally changed parameters
 is_resource_calc_ready: True
-is_pruning_ready: True   # set to false to skip all prun
+is_pruning_ready: False   # set to false to skip all prun
 path_to_data: "./Data/vein_and_sclera_data"
 target: "veins"
 train_epoch_size: 300    # we use random resampling, so this is unconnected with train_dataset size
@@ -15,7 +15,7 @@ train_epoch_size: 300    # we use random resampling, so this is unconnected with
 val_epoch_size: 100
 test_epoch_size: 100
 train_batch_size: 2
-eval_batch_size: 6   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+eval_batch_size: 4   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
 learning_rate: 0.0001
 num_of_dataloader_workers: 32
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
@@ -43,8 +43,8 @@ input_channels: 5
 output_channels: 2
 
 # Patchification options
-have_patchification: False
-patchification_params: #None
+have_patchification: True
+patchification_params: 
   patch_x: 256
   patch_y: 128
   stride_percent_of_patch_x: 0.5
@@ -61,8 +61,8 @@ patchification_params: #None
   # train_path_to_data: ./Data/vein_and_sclera_data_patches_128x256 
   # Another is in having the normal dataset, but before DataSet gives the image, it samples patches out of it:
   
-  # num_of_patches_from_img: 50   # with strides 128 and 64, and size 2048x1024, there are 2048/128 * 1024/64 = 256 patches in the reconstruction case. So 0 patches doesn't seem too much.
-  # prob_zero_patch_resample: 0.95    # This prevents most of our patches being background patches, where sclera iz 0 anyway.
+  num_of_patches_from_img: 50   # with strides 128 and 64, and size 2048x1024, there are 2048/128 * 1024/64 = 256 patches in the reconstruction case. So 0 patches doesn't seem too much.
+  prob_zero_patch_resample: 0.95    # This prevents most of our patches being background patches, where sclera iz 0 anyway.
 
 
 
@@ -79,7 +79,4 @@ num_filters_to_prune: -1 # not applied
 prune_n_kernels_at_once: 100
 resource_name_to_prune_by: "flops_num"        # Options: flops_num, weights_num, kernels_num
 importance_func: IPAD_eq        # Options: [0.5, 0.5, 0.5], 0, 1
-FLOPS_conv2d_prune_limit: 0.2
-weights_conv2d_prune_limit: 0.0
-relative_FLOPS_conv2d_prune_limit: 0.8
-relative_weights_conv2d_prune_limit: 0.0
+conv2d_prune_limit: 0.2

@@ -552,6 +552,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 
                 inp = ""
                 curr_dataset = model_wrapper.training_wrapper.dataloaders_dict["train"].dataset
+                target_name = model_wrapper.training_wrapper.params.target
                 da_dataloader = DataLoader(curr_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
                 img_ix = 0
 
@@ -560,15 +561,22 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 while inp == "":
                     
                     ix = 0
-                    for X, y in da_dataloader:
+                    for data_dict in da_dataloader:
                         
                         # so we actually get to the image we want to see
                         if ix < img_ix:
                             ix += 1
                             continue
 
-                        curr_img = X[0]
-                        curr_target = y[0]
+
+                        X = data_dict["images"]
+                        y = data_dict[target_name]
+                        # img_names = data_dict["img_names"]
+
+                        # curr_img = X[0, :3].squeeze()
+                        curr_img = X[0].squeeze()[:3]
+
+                        curr_target = y[0].squeeze()
                         break
 
                     combined_img = curr_img * (1 - curr_target)   # This will make all vein pixels blacked out.
@@ -578,7 +586,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                     
                     
                     
-                    fig, _ = show_image([curr_img, curr_target])
+                    # fig, _ = show_image([curr_img, curr_target])
                     # save_plt_fig(fig, save_path, f"da_{quick_figs_counter}")
 
                     curr_img = smart_conversion(curr_img, "ndarray", "uint8")

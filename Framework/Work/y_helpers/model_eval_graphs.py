@@ -82,26 +82,26 @@ def show_results(main_save_path):
         print(training_logs)
         print(pruning_logs)
 
-        model_errors = training_logs.errors + training_logs.deleted_models_errors
-        model_errors = [log for log in model_errors if log is not None]
-        model_errors = [log for log in model_errors if not log[5]]
-        model_errors.sort(key = lambda x: x[2])
+        model_logs = training_logs.logs + training_logs.deleted_models_logs
+        model_logs = [log for log in model_logs if log is not None]
+        model_logs = [log for log in model_logs if not log["is_not_automatic"]]
+        model_logs.sort(key = lambda x: x["train_iter"])
 
-        val_errors = [error[0] for error in model_errors]
-        test_errors = [error[1] for error in model_errors]
+        val_errors = [error["val_err"] for error in model_logs]
+        test_errors = [error["test_err"] for error in model_logs]
 
 
-        val_losses = [error[0] for error in val_errors]
+        val_losses = [error["loss"] for error in val_errors]
         # error[1] is approx IoU
-        val_1minus_F1s = [1 - error[2] for error in val_errors]
-        val_1minus_IoUs = [1 - error[3] for error in val_errors]
+        val_1minus_F1s = [1 - error["F1"] for error in val_errors]
+        val_1minus_IoUs = [1 - error["IoU"] for error in val_errors]
 
         
 
-        test_losses = [error[1] for error in test_errors]
+        test_losses = [error["loss"] for error in test_errors]
         # error[1] is approx IoU
-        test_1minus_F1s = [1 - error[2] for error in test_errors]
-        test_1minus_IoUs = [1 - error[3] for error in test_errors]
+        test_1minus_F1s = [1 - error["F1"] for error in test_errors]
+        test_1minus_IoUs = [1 - error["IoU"] for error in test_errors]
 
 
         # make a plot of the val errors and test errors over time

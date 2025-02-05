@@ -328,6 +328,20 @@ class Pruner:
 
             # print(self.pruning_disallowments["FLOPS"])
 
+
+            network_flops = curr_conv_resource_calc.get_resource_of_whole_model("flops_num")
+            network_weights = curr_conv_resource_calc.get_resource_of_whole_model("weights_num")
+
+            network_flops_initial = self.initial_conv_resource_calc.get_resource_of_whole_model("flops_num")
+            network_weights_initial = self.initial_conv_resource_calc.get_resource_of_whole_model("weights_num")
+
+            network_flops_percentage = network_flops / network_flops_initial
+            network_weights_percentage = network_weights / network_weights_initial
+
+            print(f"network_flops_percentage: {network_flops_percentage}")
+            print(f"network_weights_percentage: {network_weights_percentage}")
+
+
             disallowed_directly = set()
 
             for tree_ix, limit in self.pruning_disallowments["general"].items():
@@ -341,9 +355,12 @@ class Pruner:
                 except ZeroDivisionError:
                     curr_flops_percentage = 0
 
+                relative_disallowment_limit = self.pruning_disallowments["relative_FLOPS"][tree_ix] * network_flops_percentage
+                final_limit = min(limit, relative_disallowment_limit)
+
                 # print(self.pruning_disallowments["FLOPS"][tree_ix])
                 # print(curr_flops_percentage)
-                if curr_flops_percentage < limit:
+                if curr_flops_percentage <= final_limit:
                     disallowed_directly.add(tree_ix)
 
 
@@ -352,9 +369,23 @@ class Pruner:
                     curr_weights_percentage = curr_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix] / self.initial_conv_resource_calc.resource_name_2_resource_dict["weights_num"][tree_ix]
                 except ZeroDivisionError:
                     curr_weights_percentage = 0
+
+                relative_disallowment_limit = self.pruning_disallowments["relative_weights"][tree_ix] * network_weights_percentage
+                final_limit = min(limit, relative_disallowment_limit)
                     
-                if curr_weights_percentage < limit:
+                if curr_weights_percentage <= final_limit:
                     disallowed_directly.add(tree_ix)
+
+
+
+            for tree_ix, limit in self.pruning_disallowments["kernel_num"].items():
+
+                curr_kernel_num = curr_conv_resource_calc.resource_name_2_resource_dict["kernels_num"].get(tree_ix, None)
+                kernel_num_limit = self.pruning_disallowments["kernel_num"][tree_ix]
+
+                if not curr_kernel_num is None and curr_kernel_num <= kernel_num_limit:
+                    disallowed_directly.add(tree_ix)
+
             
 
             # Then we find all conv tree_ixs (only those are relevant to us) which are disallowed directly or due to their parents

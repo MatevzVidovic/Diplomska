@@ -251,7 +251,7 @@ class ModelWrapper:
         importance_dict = self.get_importance_dict_fn(self) # this does epoch pass in it
 
         # this already does resource_calc.calculate_resources(self.input_example)
-        are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, self.training_wrapper, resource_limitation_dict)
+        are_there_more_to_prune_in_the_future = self.pruner_instance.prune(n, importance_dict, self.resource_calc, resource_limitation_dict)
 
         # This needs to be done so the gradient computation graph is updated.
         # Otherwise it expects gradients of the old shapes.
@@ -421,9 +421,10 @@ class ModelWrapper:
             copied_filenames = []
 
             # Iterate through all files in self.save_path
-            for filename in os.listdir(self.save_path):
+            to_models = osp.join(self.save_path, "models")
+            for filename in os.listdir(to_models):
                 if filename.startswith(model_name):
-                    src_file = osp.join(self.save_path, filename)
+                    src_file = osp.join(to_models, filename)
                     dst_file = osp.join(safety_copy_dir, filename)
 
                     copied_filenames.append(filename)

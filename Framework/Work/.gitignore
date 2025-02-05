@@ -36,19 +36,13 @@ SegNet_*/
 UNet_*/
 deeplab*/
 
-# Pipeline folders should be ignored, so you can just copy them from ported PrunedModels.
-# But we use a negation pattern to add back the z_pipeline_base folder.
-z_pipeline_*/
-!z_pipeline_unet/
-!z_pipeline_segnet/
-!z_pipeline_deeplab/
-
-
+*errors.csv
 y_multipurpose.sbatch
 pruned_models_*/
 ana_*/
 x_*.out
 uml_diagrams/
+trial_*/
 
 # Probs not needed anymore:
 # saved/
