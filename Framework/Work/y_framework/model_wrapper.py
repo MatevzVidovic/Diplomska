@@ -329,11 +329,34 @@ class ModelWrapper:
             }
             
             print(f"Goal resource value: {goal_resource_value}")
+
+            goal_resource_value_percentage = goal_resource_value / initial_resource_value
+
+            print(f"Goal resource value percentage: {goal_resource_value_percentage}")
+
+
+
+
+
+            network_flops_initial = self.initial_resource_calc.get_resource_of_whole_model("flops_num")
+            network_weights_initial = self.initial_resource_calc.get_resource_of_whole_model("weights_num")
+
+            network_flops = self.resource_calc.get_resource_of_whole_model("flops_num")
+            network_weights = self.resource_calc.get_resource_of_whole_model("weights_num")
             
+            network_flops_percentage = network_flops / network_flops_initial
+            network_weights_percentage = network_weights / network_weights_initial
+
+            print(f"Curr network_flops_percentage: {network_flops_percentage}")
+            print(f"Curr network_weights_percentage: {network_weights_percentage}")
+            
+
+
             while curr_resource_value > goal_resource_value:
                 are_there_more_to_prune_in_the_future = self._prune_n_kernels(prune_n_kernels_at_once, resource_limitation_dict) # this already does resource_calc.calculate_resources(self.input_example) 
                 curr_resource_value = self.resource_calc.get_resource_of_whole_model(resource_name)
                 print(f"Current resource value: {curr_resource_value}")
+                print(f"Current resource value percentage: {curr_resource_value / initial_resource_value}")
                 if not are_there_more_to_prune_in_the_future:
                     break
         

@@ -15,7 +15,7 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1.yaml")
+yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1_sclera.yaml")
 YD = yh.read_yaml(yaml_path)
 
 

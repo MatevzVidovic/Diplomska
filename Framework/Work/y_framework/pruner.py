@@ -338,9 +338,6 @@ class Pruner:
             network_flops_percentage = network_flops / network_flops_initial
             network_weights_percentage = network_weights / network_weights_initial
 
-            print(f"network_flops_percentage: {network_flops_percentage}")
-            print(f"network_weights_percentage: {network_weights_percentage}")
-
 
             disallowed_directly = set()
 

@@ -1,0 +1,25 @@
+
+
+
+
+
+
+
+pipeline_name: "z_pipeline_unet_sclera"
+yaml_id: "sclera"
+trial_name: "trial_1_sclera"
+origin_dir_name: "unet_train_sclera"
+versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
+mtti: 150
+core_num: 20
+
+
+origin_prefix: "unet_prune_"
+origin_suffix: "_sclera"
+pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
+retained_percents: [0.75, 0.5, 0.25, 0.03]
+resource_name: "flops_num"
+model_name: "UNet"
+
+training_logs_name: training_logs_150_.pkl
+csv_path: unet_150_models_errors_sclera.csv

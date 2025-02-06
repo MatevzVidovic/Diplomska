@@ -57,7 +57,7 @@ import sys
 
 import y_helpers.yaml_handler as yh
 
-yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1.yaml")
+yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1_sclera.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -77,7 +77,7 @@ YD = yh.read_yaml(yaml_path)
 # model_name = "UNet"
 
 
-
+core_num = YD["core_num"]
 trial_folder = YD["trial_name"]
 pruning_methods = YD["pruning_methods"]
 origin_prefix = YD["origin_prefix"]
@@ -87,6 +87,8 @@ retained_percents = YD["retained_percents"]
 goal_train_iters = YD["mtti"]
 resource_name = YD["resource_name"]
 model_name = "UNet"
+
+yaml_id = YD["yaml_id"]
 
 
 origin_names = [f"{origin_prefix}{i}{origin_suffix}" for i in pruning_methods]
@@ -298,6 +300,9 @@ def move_model(origin_path, target_path, str_id, model_name):
 to_run_folder = osp.join(trial_folder, "run_files_2")
 os.makedirs(to_run_folder, exist_ok=True)
 
+to_out_folder = osp.join(trial_folder, "out_files_2")
+os.makedirs(to_out_folder, exist_ok=True)
+
 
 for ix in range(len(origin_paths)):
 
@@ -314,6 +319,9 @@ for ix in range(len(origin_paths)):
         move_model(origin_paths[ix], target_paths[i], ids[i], model_name)
 
 
+        out_name = f"x_{target_folder_names[i]}_out.txt"
+        to_out = osp.join(to_out_folder, out_name)
+
         sbatch_name = f"{target_folder_names[i]}.sbatch"
         sbatch = f"""#!/bin/bash
 #SBATCH --job-name={target_paths[i]}
@@ -324,7 +332,7 @@ for ix in range(len(origin_paths)):
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_sclera/vein.yaml >> x_{target_folder_names[i]}.txt  2>&1
+python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_sclera/{yaml_id}.yaml >> {to_out}  2>&1
 """
         
 
@@ -339,7 +347,7 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 #SBATCH --gpus=A100_80GB
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_sclera/vein.yaml >> x_{target_folder_names[i]}.txt  2>&1
+python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_sclera/{yaml_id}.yaml >> {to_out}  2>&1
 """
 
         # To escape { and } in fstrings, use double brackets: {{ and }}
@@ -361,6 +369,78 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 
 
 
+
+
+
+
+# just have to_run_folder be set up correctly, and this whould go well:
+
+
+
+# now make the automatic runnning mechanism
+# We will have 2 sbatches that will run the python file.
+# One will run normally, and one will run it on ana.
+# Both sbatches have the max time limit of 2 days.
+
+# The sbatch files take the arguments for the python file.
+
+# Python file will be the runner.
+# It has a yaml file in its run folder (creates it if it doesn't exist).
+# Lists all the runner files in the run folder, with dicts: {"run": False, "finished": False}
+# Before starting a run, it reads the run folder, figures out which in its sequence hasn't been run yet,
+# writes to the yaml that thet file "run" is true, and runs the file.
+# Upon finish it writes to the yaml that the file "finished" is true.
+
+# The python file takes 2 args: 
+# pos: start, mid_up, mid_down, end     # where in the sorted listdir it starts seeking to run files.
+# max_run: int                          # how many files to run at most. Otherwise we are sure to surpass the time-limit at some point.
+
+to_py_runner = osp.join(to_run_folder, "runner.py")
+to_origin_runner = osp.join(osp.dirname(__file__), "runner.py")
+sh.copy2(to_origin_runner, to_py_runner)
+
+sbatch_name = "run_sbatch.sbatch"
+sbatch = f"""#!/bin/bash
+
+#SBATCH --job-name=runner
+#SBATCH --time=2-00:00:00
+
+#SBATCH -p frida
+#SBATCH -c {core_num}
+#SBATCH --gpus=A100
+#SBATCH --mem-per-cpu=6G
+
+max_run=$1
+
+python3 {to_py_runner} --max_run $max_run
+"""
+
+ana_sbatch_name = "ana_run_sbatch.sbatch"
+sbatch = f"""#!/bin/bash
+
+#SBATCH --job-name=runner
+#SBATCH --time=2-00:00:00
+
+#SBATCH -p frida
+#SBATCH -c {core_num}
+#SBATCH --gpus=A100_80GB
+#SBATCH --mem-per-cpu=6G
+
+max_run=$1
+
+python3 {to_py_runner} --max_run $max_run
+"""
+
+
+to_sbatch = osp.join(to_run_folder, sbatch_name)
+with open(to_sbatch, "w") as f:
+    f.write(sbatch)
+
+to_ana_sbatch = osp.join(to_run_folder, ana_sbatch_name)
+with open(to_ana_sbatch, "w") as f:
+    f.write(ana_sbatch)
+
+print(f"{to_ana_sbatch}")
 
 
 
