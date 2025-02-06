@@ -9,7 +9,7 @@ import y_helpers.yaml_handler as yh
 import sys
 
 
-yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join("z_pipeline_unet_veins", "standalone_scripts", "trial_1_sclera.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -48,9 +48,9 @@ for pm in pruning_methods:
         folder_structure[curr_path].append( (f"{method_folder_name}_{rp}", f"{pm}_{rp_perc}%") )
 
 
+
+
 print(folder_structure)
-
-
 
 
 
@@ -64,7 +64,7 @@ get_ts_sh = osp.join(pipeline_name, "standalone_scripts", "z_get_ts.sbatch")
 
 
 count = 0
-test_limit = 1e9
+test_limit = 1
 for base_f, main_fs in folder_structure.items():
 
     for main_f, _ in main_fs:

@@ -15,7 +15,7 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join("z_pipeline_unet_veins", "standalone_scripts", "trial_1_sclera.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -56,8 +56,8 @@ for pm in pruning_methods:
         folder_structure[curr_path].append( (f"{method_folder_name}_{rp}", f"{pm}_{rp_perc}%") )
 
 
-print(folder_structure)
 
+print(folder_structure)
 
 
 def add_row(df_np, row):
