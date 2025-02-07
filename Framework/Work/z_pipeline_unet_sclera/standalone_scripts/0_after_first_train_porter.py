@@ -245,7 +245,7 @@ python3 {to_py_runner} --max_run $max_run
 """
 
 ana_sbatch_name = "ana_run_sbatch.sbatch"
-sbatch = f"""#!/bin/bash
+ana_sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name=runner
 #SBATCH --time=2-00:00:00

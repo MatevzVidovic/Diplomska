@@ -549,6 +549,9 @@ class TrainingWrapper:
     def train(self):
         
         try:
+
+            torch.cuda.empty_cache()
+
             train_times = []
 
             dataloader = self.dataloaders_dict["train"]
@@ -633,12 +636,18 @@ class TrainingWrapper:
                 # torch.cuda.empty_cache()
 
                 # print_cuda_memory()
+
+
+
+            torch.cuda.empty_cache()
+            
             test_loss = agg_test_loss / num_batches
             print(f"Train Error: Avg loss: {test_loss:>.8f}")
 
             return train_times
 
         except Exception as e:
+            print_cuda_memory()
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
 
@@ -671,6 +680,9 @@ class TrainingWrapper:
     def test(self, dataloader_name="test"):
 
         try:
+
+
+            torch.cuda.empty_cache()
 
             dataloader = self.dataloaders_dict[dataloader_name]
 
@@ -826,6 +838,7 @@ class TrainingWrapper:
 
 
         except Exception as e:
+            print_cuda_memory()
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
     

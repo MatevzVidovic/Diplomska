@@ -58,6 +58,11 @@ from y_framework.params_dataclasses import *
 
 
 
+
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process arguments that can change between trainings.")

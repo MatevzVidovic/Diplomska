@@ -10,7 +10,7 @@ yaml_id: "veins"
 trial_name: "trial_1_veins"
 origin_dir_name: "unet_train_veins"
 versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
-mtti: 350    # 100 iters to start with, then 100 prunings with 2 iters. Then lets say at most 50 prunings after that (most will have more anyways)
+mtti: 400    # 150 iters to start with, then 100 prunings with 2 iters. Then lets say at most 50 prunings after that (most will have more anyways)
 core_num: 5
 
 
@@ -21,5 +21,5 @@ retained_percents: [0.75, 0.5, 0.25, 0.03]
 resource_name: "flops_num"
 model_name: "UNet"
 
-training_logs_name: training_logs_30_.pkl
-csv_path: unet_150_models_errors_veins.csv
+training_logs_name: training_logs_400_.pkl
+csv_path: unet_400_models_errors_veins.csv
