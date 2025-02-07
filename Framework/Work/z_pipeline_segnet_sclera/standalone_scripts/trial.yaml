@@ -1,0 +1,28 @@
+
+
+
+
+
+
+
+pipeline_name: "z_pipeline_segnet_sclera"
+main_name: segnet_main.py
+model_name: segnet
+pth_model_name: SegNet
+yaml_id: "sclera"
+trial_name: "trial_segnet_sclera"
+origin_dir_name: "segnet_train_sclera"
+versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
+mtti: 150    # 20 iters to start with, then 100 prunings with 1 iter. Then at least 30 trainings after that
+core_num: 5
+
+
+origin_prefix: "segnet_prune_"
+origin_suffix: "_sclera"
+pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
+retained_percents: [0.75, 0.5, 0.25, 0.03]
+resource_name: "flops_num"
+model_name: "segnet"
+
+training_logs_name: training_logs_150_.pkl
+csv_path: segnet_150_models_errors_sclera.csv

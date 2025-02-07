@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
 
 
-from y_models.unet_original import UNet
+from y_models.segnet import SegNet
 
 
 
@@ -400,141 +400,60 @@ if YD["have_patchification"]:
     dim_y = YD["patchification_params"]["patch_y"]
     dim_x = YD["patchification_params"]["patch_x"]
 
-if YD["model"] == "64_2_6":
+
+
+
+
+elif YD["model"] == "64_2":
+        
     model_parameters = {
         # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
         "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "64_1_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
         "starting_kernels" : 64,
-        "expansion" : 1,
-        "depth" : 6,
-        }
-elif YD["model"] == "32_2_4":
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
+
+elif YD["model"] == "16_2":
+        
     model_parameters = {
         # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
         "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "16_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
         "starting_kernels" : 16,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "4_2_4":
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
+
+elif YD["model"] == "5_1.3":
+
     model_parameters = {
         # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "8_2_5":
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
+        "expansion" : 1.3,
+        "starting_kernels" : 5,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
+
+elif YD["model"] == "small" or YD["model"] == "4_1":
+
     model_parameters = {
         # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 5,
-        }
-elif YD["model"] == "8_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "6_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 6,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "4_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "8_1.5_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 5,
-        }
-elif YD["model"] == "8_1.5_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 6,
-        }
-    
-elif YD["model"] == "small" or YD["model"] == "4_1_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
+        "output_y" : OUTPUT_DIMS["height"],
+        "output_x" : OUTPUT_DIMS["width"],
         "expansion" : 1,
-        "depth" : 4,
-        }
+        "starting_kernels" : 4,
+        "in_chn" : INPUT_DIMS["channels"],
+        "out_chn" : OUTPUT_DIMS["channels"],
+    }
 else:
     raise ValueError("Model not recognized.")
+
 
 print(f"{INPUT_DIMS['channels']=}")
 print(f"{dim_x=}")
@@ -585,7 +504,7 @@ optimizer = torch.optim.Adam
 
 
 model_wrapper_params = ModelWrapperParams(
-    model_class = UNet,
+    model_class = SegNet,
     input_example = INPUT_EXAMPLE,
     save_path = save_path,
     device = device,
@@ -778,66 +697,8 @@ KERNEL_CONNECTION_FN = None
 
 
 
-
-
-
-
-
-
-
-if MODEL == "default":
-
-    model_parameters = {
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif MODEL == "64_2_6":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-    }
-
-elif MODEL == "5_1.3_4":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.3,
-        "starting_kernels" : 5,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-else:
-    raise ValueError(f"MODEL not recognized: {MODEL}.")
-
-
-
-INPUT_EXAMPLE = torch.randn(1, INPUT_DIMS["channels"], INPUT_DIMS["height"], INPUT_DIMS["width"])
-
-
-
-
-
-
-
-
-"""
-THIS HERE IS THE START OF BUILDING A CONNECTION fn
-based on the _get_next_conv_id_list_recursive()
-It is very early stage.
-"""
-
-
+# SegNet doesn't need an elif tree for connection functions, because the depth is fixed, and there are no skip connections.
+# So the functions are the same for all chosen model parameters.
 
 
 
@@ -874,7 +735,6 @@ def segnet_input_slice_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_l
 
 
     
-
 
 
 def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_modules):
@@ -971,276 +831,39 @@ def segnet_kernel_connection_fn(tree_ix, kernel_ix, conv_tree_ixs, lowest_level_
 
 
 
-# When each batch is processed, the averaging_objects function is called.
-# Here you define how you would like to create your averaging objects through one epoch of training.
-# This function shows how we would like to update our average of the activations (outputs)
-# for the convolutional layers (because in the background this is only set for convolutional layers).
-# At each iteration the mean is corrects so far. So at the end the mean is also correct.
-# It is better to train with larger batch sizes so numerical errors of the iterative mean calculation are smaller.
-
-# Proof:
-# The first mean is correct so far. It is avg_0 = \sum x_i / n_0 where n_0 is the number of elements of the 0-th iteration.
-# by the same logic, avg_1 is also correct (the average of just the next batch).
-# The second mean avg_{1,2} is (n_0 * avg _0 + n_1 * avg_1) / (n_0 + n_1) = 
-# (n_0 * (\sum x_i / n_0) + n_1 * (\sum x_j / n_1)) / (n_0 + n_1) =
-# ( \sum x_i + \sum x_j ) / (n_0 + n_1)
-# # Which is the correct mean of all the elements. By induction, the same logic applies to all iterations.  
-
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# IF USING INPUT OR MODULE WEIGHTS, YOU HAVE TO DETACH THEM!!!!!
-# Also, input is a tuple, so you have to figure out what it really is first - I haven't looked into it.
-# The output has already been detached, so we don't need to worry about backpropagation.
-# You can do .detach() again, which won't change anything, it's idempotent.
-# If they weren't detached, they remain in the computational graph and keep being in the gradient calculation during loss.backward().
-# Because of pruning, this shows an error like so:
-#  File "/home/matevzvidovic/Desktop/Diplomska/Prototip/Delo/TrainingWrapper.py", line 424, in train
-#     loss.backward()
-#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/_tensor.py", line 522, in backward
-#     torch.autograd.backward(
-#   File "/home/matevzvidovic/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 266, in backward
-#     Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-# RuntimeError: Function ConvolutionBackward0 returned an invalid gradient at index 1 - got [128, 255, 3, 3] but expected shape compatible with [128, 256, 3, 3]
-
-# We would like to also use weights in our importance calculation.
-# The easiest and conceptually best place to put them is in the averaging function (outside of making their own function).
-# It doesn't make sense to average them, so we would just save them when the first average is made.
-
-
-INITIAL_AVG_OBJECT = (0, None, None)
-def averaging_function(module, input, output, prev_avg_object):
-    
-    batch_size = output.shape[0]
-    batch_mean = output.mean(dim=(0))
-
-    if prev_avg_object[1] is None:
-        new_avg_object = (batch_size, batch_mean, module.weight.data.detach().clone())
-        return new_avg_object
-
-    new_avg_object = (prev_avg_object[0] + batch_size, 
-                      (prev_avg_object[0] * prev_avg_object[1] + batch_size * batch_mean) / (prev_avg_object[0] + batch_size),
-                        prev_avg_object[2])
-
-    return new_avg_object 
-
-
-# averaging_mechanism = {
-#     "initial_averaging_object" : INITIAL_AVG_OBJECT,
-#     "averaging_function" : averaging_function
-# }
-
-
-
-# An additional function could be applied in between the averaging function and the importance function.
-# If we were, for example, interested in a specific interaction between the active outputs (not the averaged ones)
-# with our averaging object. For example, to calculate the correlation between the output and our average activations.
-# Then the averaging function would be applied in the first pass through the network and we would make our averaging objects.
-# Then this middle function would be used and we would calculate our batch_importances (correlations) for each batch.
-# Then the final importance function we see below us would only be used to combine these batch_importances.
-# For example to average them or to sum them.
-# But this is not currently implemented.
-
-
-
-
-
-def IPAD_kernel_importance_fn_generator(L1_ADC_weight):
-    assert L1_ADC_weight > 0 and L1_ADC_weight < 1, "L1_ADC_weight must be between 0 and 1."
-    
-    
-    def IPAD_kernel_importance_fn(averaging_objects: dict, conv_tree_ixs):
-        # Returns dict tree_ix_2_list_of_kernel_importances
-        # The ix-th importance is for the kernel currently on the ix-th place.
-        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
-        # state of active kernels.
-
-        tree_ix_2_kernels_importances = {}
-        for tree_ix in conv_tree_ixs:
-
-            kernels_average_activation = averaging_objects[tree_ix][1]
-            # print(kernels_average_activation.shape)
-            # print(kernels_average_activation)
-            overall_average_activation = kernels_average_activation.mean(dim=(0))
-            # print(overall_average_activation)
-            # print(overall_average_activation.shape)
-            # print(overall_average_activation)
-            h = kernels_average_activation.shape[1]
-            w = kernels_average_activation.shape[2]
-            diff = kernels_average_activation - overall_average_activation
-            L1_ADC = torch.abs(diff).sum(dim=(1,2)) / (h*w)
-            L2_ADC = (diff).pow(2).sum(dim=(1,2)).sqrt() / (h*w)
-            kernels_importances = L1_ADC_weight * L1_ADC + (1 - L1_ADC_weight) * L2_ADC
-            # print(f"L1_ADC: {L1_ADC}")
-            # print(f"L2_ADC: {L2_ADC}")
-            # print(kernels_importances.shape)
-            # print(kernels_importances)
-
-            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
-        
-        
-        return tree_ix_2_kernels_importances
-        
-    
-    return IPAD_kernel_importance_fn
-
-
-
-
-def weights_importance_fn_generator(L1_over_L2_alpha):
-    assert L1_over_L2_alpha > 0 and L1_over_L2_alpha < 1, "L1_over_L2_alpha must be between 0 and 1."
-    
-    def weights_importance_fn(averaging_objects: dict, conv_tree_ixs):
-        # Returns dict tree_ix_2_list_of_kernel_importances
-        # The ix-th importance is for the kernel currently on the ix-th place.
-        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
-        # state of active kernels.
-
-        tree_ix_2_kernels_importances = {}
-        for tree_ix in conv_tree_ixs:
-            
-            # [num_of_kernels, depth, h, w]
-            kernels_weights = averaging_objects[tree_ix][2]
-            overall_weights = kernels_weights.mean(dim=(0))
-            d = kernels_weights.shape[1]
-            h = kernels_weights.shape[2]
-            w = kernels_weights.shape[3]
-            L1 = torch.abs(kernels_weights - overall_weights).sum(dim=(1,2,3)) / (d*h*w)
-            L2 = (kernels_weights - overall_weights).pow(2).sum(dim=(1,2,3)).sqrt() / (d*h*w)
-            kernels_importances = L1_over_L2_alpha * L1 + (1 - L1_over_L2_alpha) * L2
-
-            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
-        
-        
-        return tree_ix_2_kernels_importances
-        
-    
-    return weights_importance_fn
-
-
-
-def IPAD_and_weights(IPAD_over_weights_alpha, IPAD_L1_ADC_weight, weights_L1_over_L2_alpha):
-    assert IPAD_over_weights_alpha > 0 and IPAD_over_weights_alpha < 1, "IPAD_over_weights_alpha must be between 0 and 1."
-
-    IPAD_fn = IPAD_kernel_importance_fn_generator(IPAD_L1_ADC_weight)
-    weights_fn = weights_importance_fn_generator(weights_L1_over_L2_alpha)
-
-    def joined_imporance_fn(averaging_objects: dict, conv_tree_ixs):
-        IPAD_importances = IPAD_fn(averaging_objects, conv_tree_ixs)
-        weights_importances = weights_fn(averaging_objects, conv_tree_ixs)
-
-        joined_importances = {}
-        for tree_ix in conv_tree_ixs:
-            joined_importances[tree_ix] = IPAD_over_weights_alpha * IPAD_importances[tree_ix] + (1 - IPAD_over_weights_alpha) * weights_importances[tree_ix]
-
-        return joined_importances
-
-    return joined_imporance_fn
-
-
-
-def random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
-    tree_ix_2_kernel_importances = {}
-    for tree_ix in conv_tree_ixs:
-        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
-        kernel_importance = torch.rand(num_of_kernels)
-        tree_ix_2_kernel_importances[tree_ix] = kernel_importance
-
-    return tree_ix_2_kernel_importances
-
-
-
-
-# Da imamo najmanjše importance v layerju, čigar curr_conv_ix (ix v conv_tree_ixs) je enak oziroma njabližje CURR_PRUNING_IX.
-# Znotraj layerja pa imajo kernels v V shapeu - da se vedno na sredini prunea (saj uniform pruning bi bil, da vedno 0-tega prunaš.- Ampak mi ni všeč, da se vedno the edge one prunea. Raje da vedno the middle one.)
-# Za posamezen layer določimo oddaljenost od trenutnega pruninga:
-# curr_dist = abs(curr_conv_ix - CURR_PRUNING_IX)
-# Naredi torej recimo, da kernel importances iz sredine proti robu rastejo med:
-# curr_dist in curr_dist+1.
-
-CURRENT_PRUNING_IX = 0
-def uniform_random_pruning_importance_fn(averaging_objects: dict, conv_tree_ixs):
-
-    global CURRENT_PRUNING_IX
-
-    tree_ix_2_kernel_importances = {}
-    for ix, tree_ix in enumerate(conv_tree_ixs):
-        
-        num_of_kernels = averaging_objects[tree_ix][1].shape[0]
-        curr_dist = abs(ix - CURRENT_PRUNING_IX)
-
-        middle_kernel_ix = num_of_kernels // 2
-        ixs = torch.arange(num_of_kernels)
-        kernel_distances = torch.abs(ixs - middle_kernel_ix)
-        
-        # should look sth like: [1.0, 0.97,...,0.0, 0.02, ... 1.0]
-        base_importances = kernel_distances.float() / kernel_distances.max().float()
-        # and now we put them in the right bracket based on distance of the layer from the current pruning ix
-        final_importances = base_importances + curr_dist
-        
-        tree_ix_2_kernel_importances[tree_ix] = final_importances
-    
-    CURRENT_PRUNING_IX += 1
-    if CURRENT_PRUNING_IX >= len(conv_tree_ixs):
-        CURRENT_PRUNING_IX = 0
-
-
-    return tree_ix_2_kernel_importances
+INPUT_SLICE_CONNECTION_FN = segnet_input_slice_connection_fn
+KERNEL_CONNECTION_FN = segnet_kernel_connection_fn
 
 
 
 
 
 
-if IMPORTANCE_FN_DEFINER == 0:
+
+
+if IMPORTANCE_FN_DEFINER == "random":
     IMPORTANCE_FN = random_pruning_importance_fn
-elif IMPORTANCE_FN_DEFINER == 1:
+elif IMPORTANCE_FN_DEFINER == "uniform":
     IMPORTANCE_FN = uniform_random_pruning_importance_fn
+elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
+    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
+elif IMPORTANCE_FN_DEFINER == "IPAD1_L1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0.5, 0, 0.5, 0)
+elif IMPORTANCE_FN_DEFINER == "IPAD2_L2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0.5, 0, 0.5)
+elif IMPORTANCE_FN_DEFINER == "IPAD1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(1.0, 0, 0, 0)
+elif IMPORTANCE_FN_DEFINER == "IPAD2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 1.0, 0, 0)
+elif IMPORTANCE_FN_DEFINER == "L1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 1.0, 0)
+elif IMPORTANCE_FN_DEFINER == "L2":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 0, 1.0)
 else:
-    IMPORTANCE_FN = IPAD_and_weights(*IMPORTANCE_FN_DEFINER)
+    raise ValueError(f"IMPORTANCE_FN_DEFINER must be diff. Was: {IMPORTANCE_FN_DEFINER}")
 
 
 
-
-
-
-
-
-
-
-def set_averaging_objects_hooks(model_wrapper, initial_averaging_object, averaging_function, averaging_objects: dict, resource_calc, tree_ixs: list):
-        
-    
-    def get_activation(tree_ix):
-        
-        def hook(module, input, output):
-            
-            detached_output = output.detach()
-
-            if tree_ix not in averaging_objects:
-                averaging_objects[tree_ix] = initial_averaging_object
-
-            averaging_objects[tree_ix] = averaging_function(module, input, detached_output, averaging_objects[tree_ix])
-
-        return hook
-
-    tree_ix_2_hook_handle = {}
-    for tree_ix in tree_ixs:
-        module = resource_calc.module_tree_ix_2_module_itself[tree_ix]
-        tree_ix_2_hook_handle[tree_ix] = module.register_forward_hook(get_activation(tree_ix))
-    
-    model_wrapper.tree_ix_2_hook_handle = tree_ix_2_hook_handle
-    
-
-
-
-def remove_hooks(model_wrapper):
-    
-    if model_wrapper.tree_ix_2_hook_handle is None:
-        raise ValueError("In remove_hooks: model_wrapper.tree_ix_2_hook_handle is already None")
-    
-    for hook_handle in model_wrapper.tree_ix_2_hook_handle.values():
-        hook_handle.remove()
-    
-    model_wrapper.tree_ix_2_hook_handle = None
 
 
 def get_importance_dict(model_wrapper: ModelWrapper):
@@ -1248,9 +871,9 @@ def get_importance_dict(model_wrapper: ModelWrapper):
     model_wrapper.averaging_objects = {}
     set_averaging_objects_hooks(model_wrapper, INITIAL_AVG_OBJECT, averaging_function, model_wrapper.averaging_objects, model_wrapper.resource_calc, model_wrapper.conv_tree_ixs)
 
-    model_wrapper.epoch_pass(dataloader_name="train")
+    # model_wrapper.epoch_pass(dataloader_name="train")
     # maybe doing this on val, because it is faster and it kind of makes more sense
-    # model_wrapper.epoch_pass(dataloader_name="validation")
+    model_wrapper.epoch_pass(dataloader_name="validation")
 
     # pruner needs the current state of model resources to know which modules shouldn't be pruned anymore
     model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
@@ -1278,8 +901,9 @@ def dummy_get_importance_dict(model_wrapper: ModelWrapper):
 
 
 GET_IMPORTANCE_DICT_FN = get_importance_dict
-if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
+if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
     GET_IMPORTANCE_DICT_FN = dummy_get_importance_dict
+
 
 
 
@@ -1287,92 +911,90 @@ if IMPORTANCE_FN_DEFINER == 0 or IMPORTANCE_FN_DEFINER == 1:
 if __name__ == "__main__":
 
     
-    model_wrapper = ModelWrapper(SegNet, model_parameters, dataloader_dict, learning_parameters, INPUT_EXAMPLE, save_path, device)
-
-    # Go see model graph to help you choose the right layers to prune.
-    # model_wrapper.model_graph()
+    model_wrapper = ModelWrapper(model_wrapper_params, model_parameters, dataloader_dict, training_wrapper_params)
 
 
 
 
 
 
+    if YD["is_pruning_ready"]:
 
-    tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
-
-
-    # If you change FLOPS_min_res_percents and weights_min_res_percents 
-    # or other disallowments
-    # between runnings of main, 
-    # the new onew will be used. So you can have an effect on your training by doing this.
-
-    
+        tree_ix_2_name = model_wrapper.get_tree_ix_2_name()
 
 
-    
+        # If you change FLOPS_min_res_percents and weights_min_res_percents 
+        # or other disallowments
+        # between runnings of main, 
+        # the new onew will be used. So you can have an effect on your training by doing this.
+
+        
 
 
-    # Here we abuse the min_res_percentage class to disallow certain prunings.
-    # Both for general disallowments and for choice disallowments
-    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-
-    # Important disallowing:
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
-    # Because otherwise your num of classes of the output (pred) will change.
-    # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    generally_disallowed = MinResourcePercentage(tree_ix_2_name)
-
-    disallowed_dict = {
-        model_wrapper.conv_tree_ixs[25] : 1.1
-    }
-    generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
+        
 
 
+        # Here we abuse the min_res_percentage class to disallow certain prunings.
+        # Both for general disallowments and for choice disallowments
+        # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
 
-
-    # Choice disallowing:
-    # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
-    conv_tree_ixs = model_wrapper.conv_tree_ixs
-    CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
-    # The reasoning for this choice comes from kernel_connection_fn:
-    # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
-    # Because the kernel nums must match.
-    """
-    # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
-
-    # Pairs of conv ixs:
-    # 1 23
-    # 3 21
-    # 6 18
-    # 9 15
-    """
-    choice_disallowed = MinResourcePercentage(tree_ix_2_name)
-
-    for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
-        disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
-    choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
-
-    
-    
+        # Important disallowing:
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # OUTCONV HAS TO BE DISALLOWED FROM PRUNING!!!!!!!
+        # Because otherwise your num of classes of the output (pred) will change.
+        # Otherwise you get "../aten/src/ATen/native/cuda/NLLLoss2d.cu:104: nll_loss2d_forward_kernel: block: [0,0,0], thread: [154,0,0] Assertion `t >= 0 && t < n_classes` failed."
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
 
 
 
 
+        disallowed_dict = {
+            model_wrapper.conv_tree_ixs[25] : 1.1
+        }
+        generally_disallowed.set_by_tree_ix_dict(disallowed_dict)
 
 
 
 
-    FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-    FLOPS_min_res_percents.set_by_name("Conv2d", 0.2)
+        # Choice disallowing:
+        # (only disallowed to be chosen for pruning, but still allowed to be pruned as a consequence of another pruning (through the kernel_connection_fn)).
+        conv_tree_ixs = model_wrapper.conv_tree_ixs
+        CHOICE_DISALLOWED_CONV_IXS = [15, 18, 21, 23]
+        # The reasoning for this choice comes from kernel_connection_fn:
+        # Because this then means, that [15, 18, 21, 23] haveto be disallowed to be chosen for pruning.
+        # Because the kernel nums must match.
+        """
+        # So when we prune the layer right before a pooling, we have to prune the layer right before the corresonding unpoolong.
 
-    tree_ix_2_percentage_dict = {
-        (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
-    }
-    FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
+        # Pairs of conv ixs:
+        # 1 23
+        # 3 21
+        # 6 18
+        # 9 15
+        """
+        choice_disallowed = MinResourcePercentage(tree_ix_2_name)
 
+        for tree_ix in CHOICE_DISALLOWED_CONV_IXS:
+            disallowed_dict[conv_tree_ixs[tree_ix]] = 1.1
+        choice_disallowed.set_by_tree_ix_dict(disallowed_dict)
+
+        
+            
+
+
+
+
+
+
+        FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        FLOPS_min_res_percents.set_by_name("Conv2d", YD["FLOPS_conv2d_prune_limit"])
+
+        # tree_ix_2_percentage_dict = {
+        #     (0,) : 0.2    # This will obviously have no effect, since all convolutional layers are capped. It is simply to show an example.
+        # }
+        # FLOPS_min_res_percents.set_by_tree_ix_dict(tree_ix_2_percentage_dict)
 
 
 
@@ -1380,28 +1002,54 @@ if __name__ == "__main__":
 
 
 
-    weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
-    weights_min_res_percents.set_by_name("Conv2d", 0.2)
 
-    if TEST_PRUNING:
-        weights_min_res_percents.set_by_name("Conv2d", 0.999999)
+        weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        weights_min_res_percents.set_by_name("Conv2d", YD["weights_conv2d_prune_limit"])
 
-
-    
-
-    pruning_disallowments = {
-        "general" : generally_disallowed.min_resource_percentage_dict,
-        "choice" : choice_disallowed.min_resource_percentage_dict,
-        "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
-        "weights" : weights_min_res_percents.min_resource_percentage_dict
-    }
-
-    model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, segnet_input_slice_connection_fn, segnet_kernel_connection_fn, pruning_disallowments)
+        if TEST_PRUNING:
+            weights_min_res_percents.set_by_name("Conv2d", 0.999999)
+        
 
 
 
-    # model_wrapper.training_wrapper.test_showcase()
-    # input("Don't go past here.")
+        # When the network has been pruned severely, we would like to take it to 0% so we see how the model performs close to it.
+        # For this reason we introduce relative percentages.
+
+        # The original FLOPS limit might be 0.2. But as the FLOPS of thw overall network become close to 0.2, we run out of layers to prune.
+        # So we introduce relative limits. Here the limit is scalled by the percent of FLOPS that are left to prune.
+        # So if the relative limit is 0.8, and the network is at 0.2 of the original FLOPS, the limit is 0.2*0.8 = 0.16.
+        # 
+        # So we need to always be taking the minimum of the original limit and the relative limit.
+        # And the relative limit should be wuite high, so that it doesn't come into effect too soon. 
+
+
+        relative_FLOPS_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        relative_FLOPS_min_res_percents.set_by_name("Conv2d", YD["relative_FLOPS_conv2d_prune_limit"])
+
+        relative_weights_min_res_percents = MinResourcePercentage(tree_ix_2_name)
+        relative_weights_min_res_percents.set_by_name("Conv2d", YD["relative_weights_conv2d_prune_limit"])
+
+
+
+        # When we prune the network extremely it might happen that we prune the last kernel in a layer.
+        # If there were 64 kernels in the layer, and we pruned 63, that kernel is 0.0156 of the original layer.
+        # If the relative limit has come to be 0.012, we would prune this kernel. And that would be a disaster because the network wouldn't work anymore.
+
+        kernel_num_min = MinResourcePercentage(tree_ix_2_name)
+        kernel_num_min.set_by_name("Conv2d", 1)
+
+
+        
+
+        pruning_disallowments = {
+            "general" : generally_disallowed.min_resource_percentage_dict,
+            "choice" : choice_disallowed.min_resource_percentage_dict,
+            "FLOPS" : FLOPS_min_res_percents.min_resource_percentage_dict,
+            "weights" : weights_min_res_percents.min_resource_percentage_dict,
+            "relative_FLOPS" : relative_FLOPS_min_res_percents.min_resource_percentage_dict,
+            "relative_weights" : relative_weights_min_res_percents.min_resource_percentage_dict,
+            "kernel_num" : kernel_num_min.min_resource_percentage_dict
+        }
 
 
 
@@ -1409,6 +1057,18 @@ if __name__ == "__main__":
 
 
 
+        model_wrapper.initialize_pruning(GET_IMPORTANCE_DICT_FN, INPUT_SLICE_CONNECTION_FN, KERNEL_CONNECTION_FN, pruning_disallowments)
+
+
+
+
+
+
+
+
+
+
+    @py_log.autolog(passed_logger=MY_LOGGER)
     def validation_stop(training_logs: TrainingLogs, pruning_logs: PruningLogs, curr_train_iter, initial_train_iter):
         # returns True when you should stop
 
@@ -1436,7 +1096,7 @@ if __name__ == "__main__":
         
         # And since we are comparing different methods, we want to compare them on the same number of train iters between prunings.
 
-        if (curr_train_iter - last_pruning_train_iter) >= NUM_TRAIN_ITERS_BETWEEN_PRUNINGS:
+        if (curr_train_iter - last_pruning_train_iter) >= YD["num_train_iters_between_prunings"]:
             return True
         
         return False
@@ -1467,8 +1127,22 @@ if __name__ == "__main__":
 
 
     
-    train_automatically(model_wrapper, main_save_path, validation_stop, max_training_iters=max_train_iters, max_auto_prunings=max_auto_prunings, train_iter_possible_stop=iter_possible_stop, pruning_phase=is_pruning_ph, cleaning_err_ix=cleaning_err_ix, cleanup_k=cleanup_k,
-                         num_of_epochs_per_training=num_ep_per_iter, pruning_kwargs_dict=pruning_kwargs)
+    train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=MAX_TRAIN_ITERS, max_total_training_iters=MAX_TOTAL_TRAIN_ITERS, 
+                        max_auto_prunings=YD["max_auto_prunings"], train_iter_possible_stop=ITER_POSSIBLE_STOP, pruning_phase=IS_PRUNING_PH, cleanup_k=YD["cleanup_k"],
+                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS, model_graph_breakup_param=MODEL_GRAPH_BREAKUP_PARAM, one_big_svg_width=ONE_BIG_SVG_WIDTH)
+
+
+
+
+
+
+
+
+
+    
+
+    
+
 
 
 
