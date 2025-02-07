@@ -395,6 +395,12 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 # pos: start, mid_up, mid_down, end     # where in the sorted listdir it starts seeking to run files.
 # max_run: int                          # how many files to run at most. Otherwise we are sure to surpass the time-limit at some point.
 
+
+to_py_runner_yaml = osp.join(to_run_folder, "runner.yaml")
+with open(to_py_runner_yaml, "w") as f:
+    f.write("")
+
+    
 to_py_runner = osp.join(to_run_folder, "runner.py")
 to_origin_runner = osp.join(osp.dirname(__file__), "runner.py")
 sh.copy2(to_origin_runner, to_py_runner)

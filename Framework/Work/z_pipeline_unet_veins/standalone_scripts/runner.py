@@ -34,9 +34,12 @@ def get_yaml(path):
     if osp.exists(path):
         with open(path, 'r') as f:
             YD = yaml.safe_load(f)
+
+            # when yaml is empty
+            if YD is None:
+                YD = {}
     else:
         YD = {}
-        yaml.dump(YD, open(path, 'w'))
     return YD
 
 
@@ -56,53 +59,46 @@ path = osp.dirname(__file__)
 yaml_path = osp.join(path, "runner.yaml")
 
 
-with open(yaml_path, 'r') as f:
+with open(yaml_path, 'r+') as f:
 
-
-    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-
-    print(f"{path=}")
-
-    YD = get_yaml(yaml_path)
 
 
     all_files = os.listdir(path)
-
-    print(f"{all_files=}")
 
     all_files = [f for f in all_files if not f.startswith("ana_") and not f.startswith("run_") and f.endswith(".sbatch")]
     all_files = sorted(all_files)
 
 
-    print(f"{all_files=}")
-
     run_count = 0
 
-    for f in all_files:
-        
+    for run_file in all_files:
+
+
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
         YD = get_yaml(yaml_path)
-        file_info = YD.get(f, {})
+        file_info = YD.get(run_file, {})
         file_run = file_info.get("run", False)
 
         if file_run:
             continue
 
-        YD[f] = {"run": True, "finished": False}
+        YD[run_file] = {"run": True, "finished": False}
         yaml.dump(YD, open(yaml_path, 'w'))
-
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
-        print(f"Running {f}")
-        os.system(f"bash {osp.join(path, f)}")
+
+
+        print(f"Running {run_file}")
+        os.system(f"bash {osp.join(path, run_file)}")
+        run_count += 1
+
 
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-
-        run_count += 1
         YD = get_yaml(yaml_path)
-        YD[f]["finished"] = True
+        YD[run_file]["finished"] = True
         yaml.dump(YD, open(yaml_path, 'w'))
-
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
 
 
         if run_count >= max_run:
