@@ -57,7 +57,7 @@ import sys
 
 import y_helpers.yaml_handler as yh
 
-yaml_path = osp.join("z_pipeline_unet_veins", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -74,9 +74,13 @@ YD = yh.read_yaml(yaml_path)
 # retained_percents = [0.75, 0.5, 0.25, 0.03]
 # goal_train_iters = 110
 # resource_name = "flops_num"
-# model_name = "UNet"
+# pth_model_name = "UNet"
 
+main_name = YD["main_name"]
+model_name = YD["model_name"]
+pth_model_name = YD["pth_model_name"]
 
+pipeline_name = YD["pipeline_name"]
 core_num = YD["core_num"]
 trial_folder = YD["trial_name"]
 pruning_methods = YD["pruning_methods"]
@@ -86,7 +90,6 @@ origin_suffix = YD["origin_suffix"]
 retained_percents = YD["retained_percents"]
 goal_train_iters = YD["mtti"]
 resource_name = YD["resource_name"]
-model_name = "UNet"
 
 yaml_id = YD["yaml_id"]
 
@@ -175,7 +178,7 @@ def copy_file(src_path, dest_path):
     #     raise e
 
 
-def move_model(origin_path, target_path, str_id, model_name):
+def move_model(origin_path, target_path, str_id, pth_model_name):
     """
     origin path e.g. trial_1/unet_prune_IPAD_eq_vein
     target path e.g. trial_1/pruned/unet_prune_IPAD_eq_vein_pruned/unet_prune_IPAD_eq_vein_pruned_0.75
@@ -203,7 +206,7 @@ def move_model(origin_path, target_path, str_id, model_name):
         # From /SegNet_main/safety_copies/actual_safety_copies/:
 
         # - copy SegNet_{str_id}.pth
-        model_pth = f"{model_name}_{str_id}.pth"
+        model_pth = f"{pth_model_name}_{str_id}.pth"
         to_model_pth = osp.join(origin_path, "safety_copies", "actual_safety_copies", model_pth)
         to_destination = osp.join(to_saved_model_wrapper, 'models', model_pth)
         copy_file(to_model_pth, to_destination)
@@ -316,7 +319,7 @@ for ix in range(len(origin_paths)):
     target_folder_names = [f"{origin_names[ix]}_pruned_{i}" for i in retained_percents]
     target_paths = [osp.join(goal_containers_paths[ix], name) for name in target_folder_names]
     for i in range(len(ids)):
-        move_model(origin_paths[ix], target_paths[i], ids[i], model_name)
+        move_model(origin_paths[ix], target_paths[i], ids[i], pth_model_name)
 
 
         out_name = f"x_{target_folder_names[i]}_out.txt"
@@ -332,7 +335,7 @@ for ix in range(len(origin_paths)):
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_veins/{yaml_id}.yaml >> {to_out}  2>&1
+python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
 """
         
 
@@ -347,7 +350,7 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 #SBATCH --gpus=A100_80GB
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_veins/{yaml_id}.yaml >> {to_out}  2>&1
+python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
 """
 
         # To escape { and } in fstrings, use double brackets: {{ and }}

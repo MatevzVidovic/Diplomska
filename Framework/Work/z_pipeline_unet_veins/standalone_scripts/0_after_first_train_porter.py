@@ -11,7 +11,7 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join("z_pipeline_unet_veins", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -26,6 +26,8 @@ YD = yh.read_yaml(yaml_path)
 
 # versions_to_make = ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 
+main_name = YD["main_name"]
+model_name = YD["model_name"]
 
 pipeline_name = YD["pipeline_name"]
 
@@ -66,7 +68,7 @@ os.makedirs(to_out_folder, exist_ok=True)
 
 # first one is the full train
 
-sd = f"unet_full_train{origin_suffix}"
+sd = f"{model_name}_full_train{origin_suffix}"
 
 sd_path = osp.join(trial_folder, sd)
 sh.copytree(origin_dir_path, sd_path)
@@ -86,7 +88,7 @@ sbatch = f"""#!/bin/bash
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
 
@@ -103,7 +105,7 @@ ana_sbatch = f"""#!/bin/bash
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
 
@@ -166,7 +168,7 @@ for sd, version in zip(save_dirs, versions_to_make):
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
     
@@ -182,7 +184,7 @@ python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipelin
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
     
@@ -250,7 +252,7 @@ python3 {to_py_runner} --max_run $max_run
 """
 
 ana_sbatch_name = "ana_run_sbatch.sbatch"
-sbatch = f"""#!/bin/bash
+ana_sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name=runner
 #SBATCH --time=2-00:00:00

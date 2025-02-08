@@ -6,8 +6,11 @@
 
 
 pipeline_name: "z_pipeline_unet_veins"
+main_name: unet_main.py
+model_name: unet
+pth_model_name: UNet
 yaml_id: "veins"
-trial_name: "trial_1_veins"
+trial_name: "trial_unet_veins"
 origin_dir_name: "unet_train_veins"
 versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 mtti: 400    # 150 iters to start with, then 100 prunings with 2 iters. Then lets say at most 50 prunings after that (most will have more anyways)

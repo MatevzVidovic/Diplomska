@@ -38,7 +38,7 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 
 
 
-# python3 -m z_pipeline_unet.standalone_scripts.v_unet_porter
+# python3 -m z_pipeline_unet_veins.standalone_scripts.v_unet_porter
 
 
 
@@ -57,7 +57,7 @@ import sys
 
 import y_helpers.yaml_handler as yh
 
-yaml_path = osp.join("z_pipeline_unet_2", "standalone_scripts", "trial_1.yaml")
+yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -74,10 +74,14 @@ YD = yh.read_yaml(yaml_path)
 # retained_percents = [0.75, 0.5, 0.25, 0.03]
 # goal_train_iters = 110
 # resource_name = "flops_num"
-# model_name = "UNet"
+# pth_model_name = "UNet"
 
+main_name = YD["main_name"]
+model_name = YD["model_name"]
+pth_model_name = YD["pth_model_name"]
 
-
+pipeline_name = YD["pipeline_name"]
+core_num = YD["core_num"]
 trial_folder = YD["trial_name"]
 pruning_methods = YD["pruning_methods"]
 origin_prefix = YD["origin_prefix"]
@@ -86,7 +90,8 @@ origin_suffix = YD["origin_suffix"]
 retained_percents = YD["retained_percents"]
 goal_train_iters = YD["mtti"]
 resource_name = YD["resource_name"]
-model_name = "UNet"
+
+yaml_id = YD["yaml_id"]
 
 
 origin_names = [f"{origin_prefix}{i}{origin_suffix}" for i in pruning_methods]
@@ -173,7 +178,7 @@ def copy_file(src_path, dest_path):
     #     raise e
 
 
-def move_model(origin_path, target_path, str_id, model_name):
+def move_model(origin_path, target_path, str_id, pth_model_name):
     """
     origin path e.g. trial_1/unet_prune_IPAD_eq_vein
     target path e.g. trial_1/pruned/unet_prune_IPAD_eq_vein_pruned/unet_prune_IPAD_eq_vein_pruned_0.75
@@ -201,7 +206,7 @@ def move_model(origin_path, target_path, str_id, model_name):
         # From /SegNet_main/safety_copies/actual_safety_copies/:
 
         # - copy SegNet_{str_id}.pth
-        model_pth = f"{model_name}_{str_id}.pth"
+        model_pth = f"{pth_model_name}_{str_id}.pth"
         to_model_pth = osp.join(origin_path, "safety_copies", "actual_safety_copies", model_pth)
         to_destination = osp.join(to_saved_model_wrapper, 'models', model_pth)
         copy_file(to_model_pth, to_destination)
@@ -298,6 +303,9 @@ def move_model(origin_path, target_path, str_id, model_name):
 to_run_folder = osp.join(trial_folder, "run_files_2")
 os.makedirs(to_run_folder, exist_ok=True)
 
+to_out_folder = osp.join(trial_folder, "out_files_2")
+os.makedirs(to_out_folder, exist_ok=True)
+
 
 for ix in range(len(origin_paths)):
 
@@ -311,8 +319,11 @@ for ix in range(len(origin_paths)):
     target_folder_names = [f"{origin_names[ix]}_pruned_{i}" for i in retained_percents]
     target_paths = [osp.join(goal_containers_paths[ix], name) for name in target_folder_names]
     for i in range(len(ids)):
-        move_model(origin_paths[ix], target_paths[i], ids[i], model_name)
+        move_model(origin_paths[ix], target_paths[i], ids[i], pth_model_name)
 
+
+        out_name = f"x_{target_folder_names[i]}_out.txt"
+        to_out = osp.join(to_out_folder, out_name)
 
         sbatch_name = f"{target_folder_names[i]}.sbatch"
         sbatch = f"""#!/bin/bash
@@ -324,7 +335,7 @@ for ix in range(len(origin_paths)):
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_2/vein.yaml >> x_{target_folder_names[i]}.txt  2>&1
+python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
 """
         
 
@@ -339,7 +350,7 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 #SBATCH --gpus=A100_80GB
 #SBATCH --mem-per-cpu=8G
 
-python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_pipeline_unet_2/vein.yaml >> x_{target_folder_names[i]}.txt  2>&1
+python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
 """
 
         # To escape { and } in fstrings, use double brackets: {{ and }}
@@ -361,6 +372,84 @@ python3 unet_main.py --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml z_
 
 
 
+
+
+
+
+# just have to_run_folder be set up correctly, and this whould go well:
+
+
+
+# now make the automatic runnning mechanism
+# We will have 2 sbatches that will run the python file.
+# One will run normally, and one will run it on ana.
+# Both sbatches have the max time limit of 2 days.
+
+# The sbatch files take the arguments for the python file.
+
+# Python file will be the runner.
+# It has a yaml file in its run folder (creates it if it doesn't exist).
+# Lists all the runner files in the run folder, with dicts: {"run": False, "finished": False}
+# Before starting a run, it reads the run folder, figures out which in its sequence hasn't been run yet,
+# writes to the yaml that thet file "run" is true, and runs the file.
+# Upon finish it writes to the yaml that the file "finished" is true.
+
+# The python file takes 2 args: 
+# pos: start, mid_up, mid_down, end     # where in the sorted listdir it starts seeking to run files.
+# max_run: int                          # how many files to run at most. Otherwise we are sure to surpass the time-limit at some point.
+
+
+to_py_runner_yaml = osp.join(to_run_folder, "runner.yaml")
+with open(to_py_runner_yaml, "w") as f:
+    f.write("")
+
+    
+to_py_runner = osp.join(to_run_folder, "runner.py")
+to_origin_runner = osp.join(osp.dirname(__file__), "runner.py")
+sh.copy2(to_origin_runner, to_py_runner)
+
+sbatch_name = "run_sbatch.sbatch"
+sbatch = f"""#!/bin/bash
+
+#SBATCH --job-name=runner
+#SBATCH --time=2-00:00:00
+
+#SBATCH -p frida
+#SBATCH -c {core_num}
+#SBATCH --gpus=A100
+#SBATCH --mem-per-cpu=6G
+
+max_run=$1
+
+python3 {to_py_runner} --max_run $max_run
+"""
+
+ana_sbatch_name = "ana_run_sbatch.sbatch"
+ana_sbatch = f"""#!/bin/bash
+
+#SBATCH --job-name=runner
+#SBATCH --time=2-00:00:00
+
+#SBATCH -p frida
+#SBATCH -c {core_num}
+#SBATCH --gpus=A100_80GB
+#SBATCH --mem-per-cpu=6G
+
+max_run=$1
+
+python3 {to_py_runner} --max_run $max_run
+"""
+
+
+to_sbatch = osp.join(to_run_folder, sbatch_name)
+with open(to_sbatch, "w") as f:
+    f.write(sbatch)
+
+to_ana_sbatch = osp.join(to_run_folder, ana_sbatch_name)
+with open(to_ana_sbatch, "w") as f:
+    f.write(ana_sbatch)
+
+print(f"{to_ana_sbatch}")
 
 
 

@@ -11,12 +11,12 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join("z_pipeline_unet_sclera", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
 
-# pipeline_name = "z_pipeline_unet_sclera"
+# pipeline_name = "z_pipeline_unet_veins"
 
 # yaml_id = "vein"
 
@@ -26,6 +26,8 @@ YD = yh.read_yaml(yaml_path)
 
 # versions_to_make = ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 
+main_name = YD["main_name"]
+model_name = YD["model_name"]
 
 pipeline_name = YD["pipeline_name"]
 
@@ -66,7 +68,7 @@ os.makedirs(to_out_folder, exist_ok=True)
 
 # first one is the full train
 
-sd = f"unet_full_train{origin_suffix}"
+sd = f"{model_name}_full_train{origin_suffix}"
 
 sd_path = osp.join(trial_folder, sd)
 sh.copytree(origin_dir_path, sd_path)
@@ -86,7 +88,7 @@ sbatch = f"""#!/bin/bash
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
 
@@ -103,7 +105,7 @@ ana_sbatch = f"""#!/bin/bash
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
 
@@ -166,7 +168,7 @@ for sd, version in zip(save_dirs, versions_to_make):
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
     
@@ -182,7 +184,7 @@ python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipelin
 #SBATCH --mem-per-cpu=6G
 
 
-python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
 
 """
     
@@ -222,6 +224,11 @@ python3 unet_main.py --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipelin
 # The python file takes 2 args: 
 # pos: start, mid_up, mid_down, end     # where in the sorted listdir it starts seeking to run files.
 # max_run: int                          # how many files to run at most. Otherwise we are sure to surpass the time-limit at some point.
+
+to_py_runner_yaml = osp.join(to_run_folder, "runner.yaml")
+with open(to_py_runner_yaml, "w") as f:
+    f.write("")
+
 
 to_py_runner = osp.join(to_run_folder, "runner.py")
 to_origin_runner = osp.join(osp.dirname(__file__), "runner.py")

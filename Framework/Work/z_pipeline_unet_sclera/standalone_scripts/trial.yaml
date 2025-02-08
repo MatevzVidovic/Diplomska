@@ -6,6 +6,9 @@
 
 
 pipeline_name: "z_pipeline_unet_sclera"
+main_name: unet_main.py
+model_name: unet
+pth_model_name: UNet
 yaml_id: "sclera"
 trial_name: "trial_1_sclera"
 origin_dir_name: "unet_train_sclera"

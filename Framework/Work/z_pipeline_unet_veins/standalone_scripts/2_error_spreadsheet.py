@@ -15,7 +15,7 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join("z_pipeline_unet_veins", "standalone_scripts", "trial_1_sclera.yaml")
+yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
 YD = yh.read_yaml(yaml_path)
 
 
@@ -30,7 +30,7 @@ csv_path = YD["csv_path"]
 
 
 
-
+model_name = YD["model_name"]
 
 pruning_methods = YD["pruning_methods"]
 retained_percents = YD["retained_percents"]
@@ -42,7 +42,7 @@ origin_suffix = YD["origin_suffix"]
 
 folder_structure = {}
 
-folder_structure[osp.join(base_path)] = [ (f"unet_full_train_{yaml_id}", "100%") ]
+folder_structure[osp.join(base_path)] = [ (f"{model_name}_full_train_{yaml_id}", "100%") ]
 
 
 for pm in pruning_methods:
