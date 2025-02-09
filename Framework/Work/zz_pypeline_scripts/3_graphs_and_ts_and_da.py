@@ -9,7 +9,17 @@ import y_helpers.yaml_handler as yh
 import sys
 
 
-yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
+import argparse
+argparser = argparse.ArgumentParser()
+argparser.add_argument("yaml_path", type=str)
+argparser.add_argument("--ts", action="store_true", help="Do test showcases")
+argparser.add_argument("--da", action="store_true", help="Do data augments")
+
+args = argparser.parse_args()
+yaml_path = args.yaml_path
+do_ts = args.ts
+do_da = args.da
+
 YD = yh.read_yaml(yaml_path)
 
 
@@ -64,14 +74,16 @@ get_ts_sh = osp.join(pipeline_name, "standalone_scripts", "z_get_ts.sbatch")
 
 
 count = 0
-test_limit = 1
+test_limit = 1e9
 for base_f, main_fs in folder_structure.items():
 
     for main_f, _ in main_fs:
         sd = osp.join(base_f, main_f)
         os.system(f"bash {get_graphs_sh} {yaml_id} {sd}")
-        os.system(f"bash {get_ts_sh} {yaml_id} {sd}")
-        os.system(f"bash {get_da_sh} {yaml_id} {sd}")
+        if do_ts:
+            os.system(f"bash {get_ts_sh} {yaml_id} {sd}")
+        if do_da:
+            os.system(f"bash {get_da_sh} {yaml_id} {sd}")
 
         count += 1
         if count >= test_limit:

@@ -22,7 +22,6 @@ origin_suffix: "_sclera"
 pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 retained_percents: [0.75, 0.5, 0.25, 0.03]
 resource_name: "flops_num"
-model_name: "UNet"
 
 training_logs_name: training_logs_150_.pkl
-csv_path: unet_150_models_errors_sclera.csv
+csv_name: unet_150_models_errors_sclera.csv

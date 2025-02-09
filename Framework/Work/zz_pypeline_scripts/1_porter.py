@@ -57,7 +57,13 @@ import sys
 
 import y_helpers.yaml_handler as yh
 
-yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
+
+import argparse
+argparser = argparse.ArgumentParser()
+argparser.add_argument("yaml_path", type=str)
+args = argparser.parse_args()
+yaml_path = args.yaml_path
+
 YD = yh.read_yaml(yaml_path)
 
 
@@ -336,6 +342,7 @@ for ix in range(len(origin_paths)):
 #SBATCH --mem-per-cpu=8G
 
 python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
+exit $?    # so we return the exit code of the python script 
 """
         
 
@@ -351,6 +358,7 @@ python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pi
 #SBATCH --mem-per-cpu=8G
 
 python3 {main_name} --mtti {goal_train_iters}  --sd {target_paths[i]} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out}  2>&1
+exit $?    # so we return the exit code of the python script 
 """
 
         # To escape { and } in fstrings, use double brackets: {{ and }}
@@ -411,7 +419,7 @@ sh.copy2(to_origin_runner, to_py_runner)
 sbatch_name = "run_sbatch.sbatch"
 sbatch = f"""#!/bin/bash
 
-#SBATCH --job-name=runner
+#SBATCH --job-name={pipeline_name}
 #SBATCH --time=2-00:00:00
 
 #SBATCH -p frida
@@ -427,7 +435,7 @@ python3 {to_py_runner} --max_run $max_run
 ana_sbatch_name = "ana_run_sbatch.sbatch"
 ana_sbatch = f"""#!/bin/bash
 
-#SBATCH --job-name=runner
+#SBATCH --job-name={pipeline_name}
 #SBATCH --time=2-00:00:00
 
 #SBATCH -p frida

@@ -15,7 +15,13 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
+
+import argparse
+argparser = argparse.ArgumentParser()
+argparser.add_argument("yaml_path", type=str)
+args = argparser.parse_args()
+yaml_path = args.yaml_path
+
 YD = yh.read_yaml(yaml_path)
 
 
@@ -26,7 +32,9 @@ YD = yh.read_yaml(yaml_path)
 
 training_logs_name = YD["training_logs_name"]
 
-csv_path = YD["csv_path"]
+trial_name = YD["trial_name"]
+csv_name = YD["csv_name"]
+csv_path = osp.join(trial_name, csv_name)
 
 
 

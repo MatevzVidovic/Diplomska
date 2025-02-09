@@ -22,7 +22,6 @@ origin_suffix: "_veins"
 pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 retained_percents: [0.75, 0.5, 0.25, 0.03]
 resource_name: "flops_num"
-model_name: "segnet"
 
 training_logs_name: training_logs_400_.pkl
-csv_path: segnet_400_models_errors_veins.csv
+csv_name: segnet_400_models_errors_veins.csv

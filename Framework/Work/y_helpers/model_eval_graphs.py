@@ -111,8 +111,8 @@ def show_results(main_save_path):
         fig, ax = plt.subplots()
 
 
-        plt.plot(val_losses, label="avg cross entropy (validation)")
-        plt.plot(test_losses, label="avg cross entropy (test)")
+        plt.plot(val_losses, label="avg loss (validation)")
+        plt.plot(test_losses, label="avg loss entropy (test)")
         plt.plot(val_1minus_F1s, label="1-F1 (validation)")
         plt.plot(test_1minus_F1s, label="1-F1 (test)")
         plt.plot(val_1minus_IoUs, label="1-IoU (validation)")
@@ -143,7 +143,8 @@ def show_results(main_save_path):
         # handles.append(extra)
         # labels.append("Green line: 10 filters pruned")
         handles.append(extra)
-        labels.append("Blue line: 1 pruning")
+        if len(pruning_moments) >= 1:
+            labels.append("Blue line: 1 pruning")
 
         # Update the legend with the new entries
         plt.legend(handles=handles, labels=labels)

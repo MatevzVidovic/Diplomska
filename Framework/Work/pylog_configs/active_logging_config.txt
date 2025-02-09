@@ -1,1 +1,1 @@
-logging_config.yaml
+no_logging.yaml

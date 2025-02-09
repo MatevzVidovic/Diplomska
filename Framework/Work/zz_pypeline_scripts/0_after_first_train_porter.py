@@ -11,7 +11,13 @@ import sys
 import y_helpers.yaml_handler as yh
 
 
-yaml_path = osp.join(osp.dirname(__file__), "trial.yaml")
+
+import argparse
+argparser = argparse.ArgumentParser()
+argparser.add_argument("yaml_path", type=str)
+args = argparser.parse_args()
+yaml_path = args.yaml_path
+
 YD = yh.read_yaml(yaml_path)
 
 
@@ -89,6 +95,7 @@ sbatch = f"""#!/bin/bash
 
 
 python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+exit $?    # so we return the exit code of the python script 
 
 """
 
@@ -106,6 +113,7 @@ ana_sbatch = f"""#!/bin/bash
 
 
 python3 {main_name} --mtti {mtti} --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+exit $?    # so we return the exit code of the python script 
 
 """
 
@@ -169,6 +177,7 @@ for sd, version in zip(save_dirs, versions_to_make):
 
 
 python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+exit $?    # so we return the exit code of the python script 
 
 """
     
@@ -185,6 +194,7 @@ python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline
 
 
 python3 {main_name} --ifn {version} -p --sd {trial_folder}/{sd} --yaml {pipeline_name}/{yaml_id}.yaml >> {to_out} 2>&1
+exit $?    # so we return the exit code of the python script 
 
 """
     
@@ -238,7 +248,7 @@ sh.copy2(to_origin_runner, to_py_runner)
 sbatch_name = "run_sbatch.sbatch"
 sbatch = f"""#!/bin/bash
 
-#SBATCH --job-name=runner
+#SBATCH --job-name={pipeline_name}
 #SBATCH --time=2-00:00:00
 
 #SBATCH -p frida
@@ -254,7 +264,7 @@ python3 {to_py_runner} --max_run $max_run
 ana_sbatch_name = "ana_run_sbatch.sbatch"
 ana_sbatch = f"""#!/bin/bash
 
-#SBATCH --job-name=runner
+#SBATCH --job-name={pipeline_name}
 #SBATCH --time=2-00:00:00
 
 #SBATCH -p frida
