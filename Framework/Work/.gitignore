@@ -43,6 +43,8 @@ ana_*/
 x_*.out
 uml_diagrams/
 trial_*/
+a_saved_*/
+slurm/
 
 # Probs not needed anymore:
 # saved/

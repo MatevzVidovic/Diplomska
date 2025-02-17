@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=utu
-#SBATCH --time=1-12:00:00
+#SBATCH --time=0-12:00:00
 
 #SBATCH -p frida
 #SBATCH -c 7

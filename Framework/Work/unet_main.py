@@ -406,6 +406,7 @@ if YD["have_patchification"]:
     dim_y = YD["patchification_params"]["patch_y"]
     dim_x = YD["patchification_params"]["patch_x"]
 
+
 if YD["model"] == "64_2_6":
     model_parameters = {
         # layer sizes
@@ -417,6 +418,88 @@ if YD["model"] == "64_2_6":
         "expansion" : 2,
         "depth" : 6,
         }
+elif YD["model"] == "64_2_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+        "depth" : 5,
+        }
+elif YD["model"] == "64_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+elif YD["model"] == "32_2_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 32,
+        "expansion" : 2,
+        "depth" : 6,
+        }
+elif YD["model"] == "32_2_5":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 32,
+        "expansion" : 2,
+        "depth" : 5,
+        }
+elif YD["model"] == "32_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 32,
+        "expansion" : 2,
+        "depth" : 4,
+        }
+    
+elif YD["model"] == "32_1.5_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 32,
+        "expansion" : 1.5,
+        "depth" : 6,
+        }
+
+elif YD["model"] == "64_1.5_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 64,
+        "expansion" : 1.5,
+        "depth" : 6,
+        }
+
+
+
 elif YD["model"] == "64_1_6":
     model_parameters = {
         # layer sizes

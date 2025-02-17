@@ -21,7 +21,7 @@ num_of_dataloader_workers: 1
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 
 # More trainig-type-defining parameters
-cleanup_k: 3      # Options: 0, 1, 2, 3
+cleanup_k: 1      # Options: 0, 1, 2, 3
 optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
 zero_out_non_sclera_on_predictions: False
 loss_fn_name: "MCDL"
