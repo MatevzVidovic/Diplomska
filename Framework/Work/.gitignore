@@ -44,7 +44,8 @@ x_*.out
 uml_diagrams/
 trial_*/
 a_saved_*/
-slurm/
+slurm*/
+archive/
 
 # Probs not needed anymore:
 # saved/

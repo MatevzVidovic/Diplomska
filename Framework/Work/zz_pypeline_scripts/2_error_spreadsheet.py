@@ -16,6 +16,17 @@ import y_helpers.yaml_handler as yh
 
 
 
+# srun python3 -m zz_pypeline_scripts.2_error_spreadsheet z_pipeline_unet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.2_error_spreadsheet z_pipeline_segnet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.2_error_spreadsheet z_pipeline_unet_sclera/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.2_error_spreadsheet z_pipeline_segnet_sclera/standalone_scripts/trial.yaml
+
+
+
+
 import argparse
 argparser = argparse.ArgumentParser()
 argparser.add_argument("yaml_path", type=str)
@@ -83,7 +94,7 @@ errors_np = None
 is_best_np = None
 
 
-err_titles = ["val MCDL", "val IoU", "test MCDL", "test IoU"]
+# err_titles = ["val MCDL", "val IoU", "test MCDL", "test IoU"]
 
 sections = ["val", "test"]
 loss_names = ["loss", "F1", "IoU", "precision", "recall"]

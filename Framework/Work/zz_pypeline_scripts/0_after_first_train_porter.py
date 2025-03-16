@@ -22,6 +22,19 @@ YD = yh.read_yaml(yaml_path)
 
 
 
+# srun python3 -m zz_pypeline_scripts.0_after_first_train_porter path_to/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.0_after_first_train_porter z_pipeline_unet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.0_after_first_train_porter z_pipeline_segnet_veins/standalone_scripts/trial.yaml
+
+
+# srun python3 -m zz_pypeline_scripts.0_after_first_train_porter z_pipeline_segnet_sclera/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.0_after_first_train_porter z_pipeline_unet_sclera/standalone_scripts/trial.yaml
+
+
+
 # pipeline_name = "z_pipeline_unet_veins"
 
 # yaml_id = "vein"
@@ -249,7 +262,7 @@ sbatch_name = "run_sbatch.sbatch"
 sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name={pipeline_name}
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 
 #SBATCH -p frida
 #SBATCH -c {core_num}
@@ -265,7 +278,7 @@ ana_sbatch_name = "ana_run_sbatch.sbatch"
 ana_sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name={pipeline_name}
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 
 #SBATCH -p frida
 #SBATCH -c {core_num}

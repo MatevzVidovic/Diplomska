@@ -9,6 +9,16 @@ import y_helpers.yaml_handler as yh
 import sys
 
 
+# srun python3 -m zz_pypeline_scripts.3_graphs_and_ts_and_da z_pipeline_unet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.3_graphs_and_ts_and_da z_pipeline_segnet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.3_graphs_and_ts_and_da z_pipeline_unet_sclera/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.3_graphs_and_ts_and_da z_pipeline_segnet_sclera/standalone_scripts/trial.yaml
+
+
+
 import argparse
 argparser = argparse.ArgumentParser()
 argparser.add_argument("yaml_path", type=str)

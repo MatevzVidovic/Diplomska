@@ -41,6 +41,16 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 # python3 -m z_pipeline_unet_veins.standalone_scripts.v_unet_porter
 
 
+# srun python3 -m zz_pypeline_scripts.1_porter path_to/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.1_porter z_pipeline_unet_sclera/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.1_porter z_pipeline_segnet_sclera/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.1_porter z_pipeline_unet_veins/standalone_scripts/trial.yaml
+
+# srun python3 -m zz_pypeline_scripts.1_porter z_pipeline_segnet_veins/standalone_scripts/trial.yaml
+
 
 import os
 import os.path as osp
@@ -420,7 +430,7 @@ sbatch_name = "run_sbatch.sbatch"
 sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name={pipeline_name}
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 
 #SBATCH -p frida
 #SBATCH -c {core_num}
@@ -436,7 +446,7 @@ ana_sbatch_name = "ana_run_sbatch.sbatch"
 ana_sbatch = f"""#!/bin/bash
 
 #SBATCH --job-name={pipeline_name}
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 
 #SBATCH -p frida
 #SBATCH -c {core_num}

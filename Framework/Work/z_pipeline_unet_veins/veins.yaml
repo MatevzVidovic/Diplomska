@@ -7,7 +7,7 @@
 
 # More situationally changed parameters
 is_resource_calc_ready: True
-is_pruning_ready: False   # set to false to skip all prun
+is_pruning_ready: True   # set to false to skip all prun
 path_to_data: "./Data/vein_and_sclera_data"
 target: "veins"
 train_epoch_size: 200    # we use random resampling, so this is unconnected with train_dataset size
@@ -69,7 +69,7 @@ patchification_params: null
 # Pruning parameters
 
 # more situationally changed parameters
-num_train_iters_between_prunings: 2
+num_train_iters_between_prunings: 1
 max_auto_prunings: 100
 proportion_to_prune: 0.01
 

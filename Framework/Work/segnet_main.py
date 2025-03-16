@@ -884,6 +884,14 @@ elif IMPORTANCE_FN_DEFINER == "L1":
     IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 1.0, 0)
 elif IMPORTANCE_FN_DEFINER == "L2":
     IMPORTANCE_FN = IPAD_and_weights_granular(0, 0, 0, 1.0)
+elif IMPORTANCE_FN_DEFINER == "L2_0.1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0.9, 0, 0.1)
+elif IMPORTANCE_FN_DEFINER == "L2_0.9":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0, 0.1, 0, 0.9)
+elif IMPORTANCE_FN_DEFINER == "L1_0.1":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0.9, 0, 0.1, 0)
+elif IMPORTANCE_FN_DEFINER == "L1_0.9":
+    IMPORTANCE_FN = IPAD_and_weights_granular(0.1, 0, 0.9, 0)
 else:
     raise ValueError(f"IMPORTANCE_FN_DEFINER must be diff. Was: {IMPORTANCE_FN_DEFINER}")
 

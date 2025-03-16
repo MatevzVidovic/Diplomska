@@ -8,7 +8,6 @@
 #SBATCH -c 7
 #SBATCH --gpus=A100
 #SBATCH --mem-per-cpu=8G
-#SBATCH --output=x_unet_test_full_pruning_IPAD.txt
 
 
 # #SBATCH -w ana
@@ -30,16 +29,10 @@ yo_ids=${3}
 # how to pass yo_ids:  bash y_unet_test_quick.sbatch test_quick "small weak sthsth"
 
 param_num=3
-num_optional=2
+num_optional=1
 
 
-sbatch_id=test_full_pruning
-
-
-if [[ $ifn == "" ]]; then
-    ifn=$main_ifn
-fi
-sbatch_id=${sbatch_id}_${ifn}
+sbatch_id=test_full_pruning_${ifn}
 
 protect_out_files='true'
 retain_savedir='false'

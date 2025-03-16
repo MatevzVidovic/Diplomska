@@ -12,14 +12,14 @@ pth_model_name: UNet
 yaml_id: "sclera"
 trial_name: "trial_1_sclera"
 origin_dir_name: "unet_train_sclera"
-versions_to_make: ["L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 mtti: 150
 core_num: 20
 
 
 origin_prefix: "unet_prune_"
 origin_suffix: "_sclera"
-pruning_methods: ["L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2"]
 retained_percents: [0.75, 0.5, 0.25, 0.03]
 resource_name: "flops_num"
 
