@@ -37,6 +37,9 @@ from torch import nn
 
 
 
+# Look at https://arxiv.org/abs/2312.05391 to understand the losses.
+# Focal Tversky loss is the goat!!!
+
 
 # In PyTorch, the automatic differentiation system, autograd, works by tracking operations on tensors to build a computational graph. 
 # Each operation on a tensor creates a new node in this graph, and each node knows how to compute the gradient of the operation it represents. 
@@ -46,7 +49,214 @@ from torch import nn
 # This is because each PyTorch operation is designed to be differentiable and is part of the computational graph.
 
 
-# Dice Loss is a smooth variation of IoU
+
+
+
+
+class FocalTverskyLoss(nn.Module):
+    def __init__(self, fp_imp=0.5, fn_imp=0.5, gamma=(4/3), smooth=1e-6, use_background=False, equalize=False):
+        # fn_imp == fp_imp == 0.5 is the same as Dice Loss.
+        # fn_imp == fp_imp == 1 is the same as Jaccard (IoU) Loss.
+        # Generally, (fn_imp + fp_imp) == 1. Im not sure if scaling both by the same value even matters. 
+        # Yes, the dependance of the loss on the number of correct examples is different, 
+        # but idk if theres real impact on the derrivative, aside from needing a different learning rate.
+        # Wouldn't really know.
+
+        # https://arxiv.org/pdf/1810.07842
+        # FTL = \sum_c (1 - TI_C)^gamma, TI_c being Tversky Index for class c
+        # Gamma is suggested to be in the range of [1,3] in the paper. They used 4/3.
+        # The loss had a problem with: over-suppression of the FTL when the class accuracy
+        # is high, usually as the model is close to convergence
+        # So maybe even just reducing the gamma in the end of training could be a good idea.
+
+
+
+        super(FocalTverskyLoss, self).__init__()
+        self.fp_imp = fp_imp
+        self.fn_imp = fn_imp
+        self.gamma = gamma
+        self.smooth = smooth
+        self.use_background = use_background
+        self.equalize = equalize
+
+    def forward(self, preds, targets):
+
+        try:
+
+            if len(preds.shape) == 3:
+                preds = preds.unsqueeze(0)
+
+
+            # Apply softmax to preds if they are logits
+            preds = torch.softmax(preds, dim=1) # Apply softmax across the class dimension
+
+
+            # Initialize Dice Loss
+            tversky_loss = 0.0
+
+
+
+            # Iterate over each class
+            for c in range(preds.shape[1]):
+                
+                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+                # So in the return we also divide with one less.
+                if not self.use_background and c == 0:
+                    continue
+
+                pred_to_be_flat = preds[:,c,:,:].squeeze(1)
+                pred_flat = pred_to_be_flat.reshape(-1)
+                
+                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
+                target_flat = target_to_be_flat.reshape(-1)
+
+                inv_target_flat = 1 - target_flat
+                pos_num = target_flat.sum()
+                neg_num = inv_target_flat.sum()
+
+
+
+                # Calculate true positives, false positives, and false negatives
+
+                if not self.equalize:
+                    true_pos = (pred_flat * target_flat).sum()
+                    false_neg = ((1 - pred_flat) * target_flat).sum()
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum()
+
+
+                else:
+                    # I think this might completely mess up the loss, because then it becomes completely irrelevant how many of which case there is.
+                    # but I could be wrong.
+
+                    true_pos = (pred_flat * target_flat).sum() / pos_num
+                    false_neg = ((1 - pred_flat) * target_flat).sum() / pos_num
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum() / neg_num
+
+                    # The division should put them on equal grounds - otherwise a huge imbalance will make it hard to set alpha and beta in a way 
+                    # that we can be sure to make either recall or precision higher.
+
+
+
+                # Calculate Tversky index
+                tversky_index = (true_pos + self.smooth) / (true_pos + self.fp_imp * false_pos + self.fn_imp * false_neg + self.smooth)
+
+
+                # Accumulate Tversky loss
+                tversky_loss += (1 - tversky_index)**(1/self.gamma)
+
+
+
+
+            # Average over all classes, just to make it easier to interpret.
+            num_of_classes = preds.shape[1] - 1 if not self.use_background else preds.shape[1]
+            tversky_loss =  1 - tversky_loss / num_of_classes
+            
+            return tversky_loss
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
+        
+
+
+
+
+
+
+
+class TverskyLoss(nn.Module):
+    def __init__(self, fp_imp=0.5, fn_imp=0.5, equalize=False, smooth=1e-6):
+        super(TverskyLoss, self).__init__()
+        self.fp_imp = fp_imp
+        self.fn_imp = fn_imp
+        self.equalize = equalize
+        self.smooth = smooth
+
+    def forward(self, preds, targets):
+
+        try:
+
+            if len(preds.shape) == 3:
+                preds = preds.unsqueeze(0)
+
+
+            # Apply softmax to preds if they are logits
+            preds = torch.softmax(preds, dim=1) # Apply softmax across the class dimension
+
+
+            # Initialize Dice Loss
+            tversky_index_sum = 0.0
+
+
+
+            # Iterate over each class
+            for c in range(preds.shape[1]):
+                
+                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+                # So in the return we also divide with one less.
+                if c == 0:
+                    continue
+
+                pred_to_be_flat = preds[:,c,:,:].squeeze(1)
+                pred_flat = pred_to_be_flat.reshape(-1)
+                
+                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
+                target_flat = target_to_be_flat.reshape(-1)
+
+                inv_target_flat = 1 - target_flat
+                pos_num = target_flat.sum()
+                neg_num = inv_target_flat.sum()
+
+
+
+                # Calculate true positives, false positives, and false negatives
+
+                if not self.equalize:
+                    true_pos = (pred_flat * target_flat).sum()
+                    false_neg = ((1 - pred_flat) * target_flat).sum()
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum()
+
+
+                else:
+                    # I think this might completely mess up the loss, because then it becomes completely irrelevant how many of which case there is.
+                    # but I could be wrong.
+
+                    true_pos = (pred_flat * target_flat).sum() / pos_num
+                    false_neg = ((1 - pred_flat) * target_flat).sum() / pos_num
+                    # false_pos = (pred_flat * (1 - target_flat)).sum()
+                    false_pos = (pred_flat * inv_target_flat).sum() / neg_num
+
+                    # The division should put them on equal grounds - otherwise a huge imbalance will make it hard to set alpha and beta in a way 
+                    # that we can be sure to make either recall or precision higher.
+
+
+
+                # Calculate Tversky index
+                tversky_index = (true_pos + self.smooth) / (true_pos + self.fp_imp * false_pos + self.fn_imp * false_neg + self.smooth)
+
+
+                # Accumulate Tversky loss
+                tversky_index_sum += tversky_index
+
+
+            # Average over all classes
+            tversky_loss =  1 - tversky_loss / (preds.shape[1] - 1) # -1 because we skip the background class
+            
+            return tversky_loss
+
+
+        except Exception as e:
+            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+            raise e
+        
+
+
+
+
 
 
 class MultiClassDiceLoss(nn.Module):
@@ -139,96 +349,6 @@ class MultiClassDiceLoss(nn.Module):
             py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
             raise e
         
-
-
-
-
-class TverskyLoss(nn.Module):
-    def __init__(self, fp_imp=0.5, fn_imp=0.5, equalize=False, smooth=1e-6):
-        super(TverskyLoss, self).__init__()
-        self.fp_imp = fp_imp
-        self.fn_imp = fn_imp
-        self.equalize = equalize
-        self.smooth = smooth
-
-    def forward(self, preds, targets):
-
-        try:
-
-            if len(preds.shape) == 3:
-                preds = preds.unsqueeze(0)
-
-
-            # Apply softmax to preds if they are logits
-            preds = torch.softmax(preds, dim=1) # Apply softmax across the class dimension
-
-
-            # Initialize Dice Loss
-            tversky_loss = 0.0
-
-
-
-            # Iterate over each class
-            for c in range(preds.shape[1]):
-                
-                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
-                # So in the return we also divide with one less.
-                if c == 0:
-                    continue
-
-                pred_to_be_flat = preds[:,c,:,:].squeeze(1)
-                pred_flat = pred_to_be_flat.reshape(-1)
-                
-                target_to_be_flat = (targets == c).float() # this will make the same sized tensor, just 1s where the target is c and 0s elsewhere
-                target_flat = target_to_be_flat.reshape(-1)
-
-                inv_target_flat = 1 - target_flat
-                pos_num = target_flat.sum()
-                neg_num = inv_target_flat.sum()
-
-
-
-                # Calculate true positives, false positives, and false negatives
-
-                if not self.equalize:
-                    true_pos = (pred_flat * target_flat).sum()
-                    false_neg = ((1 - pred_flat) * target_flat).sum()
-                    # false_pos = (pred_flat * (1 - target_flat)).sum()
-                    false_pos = (pred_flat * inv_target_flat).sum()
-
-
-                else:
-                    # I think this might completely mess up the loss, because then it becomes completely irrelevant how many of which case there is.
-                    # but I could be wrong.
-
-                    true_pos = (pred_flat * target_flat).sum() / pos_num
-                    false_neg = ((1 - pred_flat) * target_flat).sum() / pos_num
-                    # false_pos = (pred_flat * (1 - target_flat)).sum()
-                    false_pos = (pred_flat * inv_target_flat).sum() / neg_num
-
-                    # The division should put them on equal grounds - otherwise a huge imbalance will make it hard to set alpha and beta in a way 
-                    # that we can be sure to make either recall or precision higher.
-
-
-
-                # Calculate Tversky index
-                tversky_index = (true_pos + self.smooth) / (true_pos + self.fp_imp * false_pos + self.fn_imp * false_neg + self.smooth)
-
-                # Accumulate Tversky loss
-                tversky_loss += 1 - tversky_index
-
-
-            # Average over all classes
-            tversky_loss =  tversky_loss / (preds.shape[1] - 1) # -1 because we skip the background class
-            
-            return tversky_loss
-
-
-        except Exception as e:
-            py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
-            raise e
-        
-
 
 
 

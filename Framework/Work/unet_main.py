@@ -659,6 +659,8 @@ print(f"Device: {device}")
 
 if YD["loss_fn_name"] == "MCDL":
     loss_fn = MultiClassDiceLoss()
+elif YD["loss_fn_name"] == "FTL":
+    loss_fn = FocalTverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], gamma=YD["loss_params"]["gamma"])
 elif YD["loss_fn_name"] == "MCDLW":
     loss_fn = MultiClassDiceLoss(background_adjustment=YD["loss_params"]["bg_adj"])
 elif YD["loss_fn_name"] == "Tversky":
@@ -689,7 +691,8 @@ training_wrapper_params = TrainingWrapperParams(
     loss_fn = loss_fn,
     zero_out_non_sclera_on_predictions = YD["zero_out_non_sclera_on_predictions"],
     have_patchification = YD["have_patchification"],
-    patchification_params = YD["patchification_params"]
+    patchification_params = YD["patchification_params"],
+    IoU_aggregation_fn = YD["IoU_aggregation_fn"]
 )
 
 
@@ -775,6 +778,8 @@ if YD["have_patchification"]:
 
 if YD["dataset_type"] == "vasd":
     from y_datasets.dataset_all import IrisDataset, custom_collate_fn
+elif YD["dataset_type"] == "multi":
+    from y_datasets.dataset_multihead import IrisDataset, custom_collate_fn
 elif YD["dataset_type"] == "simple":
     from y_datasets.dataset_simple import IrisDataset, custom_collate_fn
 else:

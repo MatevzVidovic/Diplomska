@@ -72,6 +72,7 @@ class TrainingWrapperParams:
     zero_out_non_sclera_on_predictions: bool
     have_patchification: bool
     patchification_params: Union[dict, None]
+    IoU_aggregation_fn: str
     
 
 

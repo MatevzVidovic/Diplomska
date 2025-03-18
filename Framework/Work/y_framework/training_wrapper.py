@@ -607,6 +607,8 @@ class TrainingWrapper:
                     # we want to make logits such that we are sure this is not a vein
                     # shapes:  pred: (batch_size, 2, 128, 128), scleras: (batch_size, 1, 128, 128)
 
+
+
                 loss = self.params.loss_fn(pred, y)
 
                 curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
@@ -825,7 +827,10 @@ class TrainingWrapper:
             precision = F1_prec_rec["precision"]
             recall = F1_prec_rec["recall"]
             IoU, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
-            IoU = IoU[1]  # only IoU for sclera (not background)
+            if self.params.IoU_aggregation_fn == "mean":
+                IoU = np.mean(IoU)
+            elif self.params.IoU_aggregation_fn == "just_first_foreground":
+                IoU = IoU[1]  # only IoU for sclera (not background)
             
             print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n F1: {F1:>.6f} \n Precision: {precision:>.6f} \n Recall: {recall:>.6f}\n IoU: {IoU:>.6f}\n")
             
