@@ -108,7 +108,7 @@ def get_conf_matrix(predictions, targets, num_classes=2):
     """
 
     try:
-        
+        assert (targets <= num_classes-1).all()
 
         if isinstance(predictions, torch.Tensor):
             predictions_np = predictions.data.cpu().long().numpy()
@@ -373,23 +373,57 @@ def conf_matrix_to_IoU(confusion_matrix, num_classes):
 
 
 
-def conf_matrix_to_F1_prec_rec(confusion_matrix):
+def conf_matrix_to_F1_prec_rec(confusion_matrix, num_classes):
 
+
+    """
+    c = get_conf_matrix(np.array([0,1,2,3,3]), np.array([0,2,2,3,3]))
+    print(c)
+    [[1 0 0 0]
+     [0 0 0 0]
+     [0 1 1 0]
+     [0 0 0 2]]
+    """
 
     try:
 
-        # TN = confusion_matrix[0][0]
-        FN = confusion_matrix[1][0]
-        FP = confusion_matrix[0][1]
-        TP = confusion_matrix[1][1]
+        # # TN = confusion_matrix[0][0]
+        # FN = confusion_matrix[1][0]
+        # FP = confusion_matrix[0][1]
+        # TP = confusion_matrix[1][1]
 
 
-        precision = TP / (TP + FP)    if TP + FP > 0 else 0
-        recall = TP / (TP + FN)    if TP + FN > 0 else 0
+        # precision = TP / (TP + FP)    if TP + FP > 0 else 0
+        # recall = TP / (TP + FN)    if TP + FN > 0 else 0
 
-        F1 = 2 * (precision * recall) / (precision + recall)    if precision + recall > 0 else 0
+        # F1 = 2 * (precision * recall) / (precision + recall)    if precision + recall > 0 else 0
 
-        return {"F1": F1, "precision": precision, "recall": recall}
+        # return {"F1": F1, "precision": precision, "recall": recall}
+
+
+
+        if confusion_matrix.shape != (num_classes, num_classes):
+            print(confusion_matrix.shape)
+            raise NotImplementedError()
+
+        TPs = np.diag(confusion_matrix)
+        FPs = np.sum(confusion_matrix, axis=0) - TPs
+        FNs = np.sum(confusion_matrix, axis=1) - TPs
+
+
+        precisions = TPs / (TPs + FPs)
+        recalls = TPs / (TPs + FNs)
+
+        where_is_denominator_zero = (TPs + FPs) == 0
+        precisions[where_is_denominator_zero] = 0
+
+        where_is_denominator_zero = (TPs + FNs) == 0
+        recalls[where_is_denominator_zero] = 0
+
+        F1s = 2 * (precisions * recalls) / (precisions + recalls)
+        
+
+        return {"F1": F1s, "precision": precisions, "recall": recalls}
 
     
 
@@ -692,7 +726,7 @@ class TrainingWrapper:
 
             self.model.eval()
             agg_test_loss = 0
-            n_cl = 2
+            n_cl = self.params.num_classes
             aggregate_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):
@@ -822,17 +856,38 @@ class TrainingWrapper:
 
 
             test_loss = agg_test_loss / num_batches
-            F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix)
+            F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix, num_classes=n_cl)
+            IoU, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
             F1 = F1_prec_rec["F1"]
             precision = F1_prec_rec["precision"]
             recall = F1_prec_rec["recall"]
-            IoU, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
-            if self.params.IoU_aggregation_fn == "mean":
+
+            if self.params.metrics_aggregation_fn == "mean":
+                # This is all macro-averaging (average of over the number of classes - not accounting for class imbalance)
                 IoU = np.mean(IoU)
-            elif self.params.IoU_aggregation_fn == "just_first_foreground":
+                F1 = np.mean(F1)
+                # For prec and rec, micro-averaging doesn't really make sense, because for one class a FP is the Fn for another class.
+                # Look at the confusion matrix and the way FPs and FNs are calculated in the F1 calculation functtions.
+                precision = np.mean(precision)
+                recall = np.mean(recall)
+            elif self.params.metrics_aggregation_fn == "mean_no_background":
+                IoU = np.mean(IoU[1:])
+                F1 = np.mean(F1[1:])
+                precision = np.mean(precision[1:])
+                recall = np.mean(recall[1:])
+            elif self.params.metrics_aggregation_fn == "keep_vector":
+                pass
+            elif self.params.metrics_aggregation_fn == "just_first_foreground":
                 IoU = IoU[1]  # only IoU for sclera (not background)
+                F1 = F1[1]  # only F1 for sclera (not background)
+                precision = precision[1]  # only precision for sclera (not background)
+                recall = recall[1]  # only recall for sclera (not background)
             
-            print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n F1: {F1:>.6f} \n Precision: {precision:>.6f} \n Recall: {recall:>.6f}\n IoU: {IoU:>.6f}\n")
+            F1_strs = [f"{f1:>0.6f}" for f1 in F1]
+            precision_strs = [f"{prec:>0.6f}" for prec in precision]
+            recall_strs = [f"{rec:>0.6f}" for rec in recall]
+            IoU_strs = [f"{iou:>0.6f}" for iou in IoU]
+            print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n F1: {F1_strs} \n Precision: {precision_strs} \n Recall: {recall_strs}\n IoU: {IoU_strs}\n")
             
 
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))

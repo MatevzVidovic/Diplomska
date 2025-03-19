@@ -28,7 +28,7 @@ loss_fn_name: "FTL"
 loss_params: 
   fp_imp: 0.5
   fn_imp: 0.5
-  gamma: 1.33
+  gamma: 2
 
 # Dataset parameters
 dataset_type: multi    # Options: simple, vasd, multi

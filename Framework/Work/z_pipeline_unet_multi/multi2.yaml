@@ -16,7 +16,7 @@ val_epoch_size: 30
 test_epoch_size: 20
 train_batch_size: 5
 eval_batch_size: 15   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
-learning_rate: 0.0001
+learning_rate: 0.001
 num_of_dataloader_workers: 5
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 

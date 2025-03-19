@@ -10,14 +10,14 @@ is_resource_calc_ready: True
 is_pruning_ready: True   # set to false to skip all prun
 path_to_data: "./Data/vein_and_sclera_data"
 target: "multi"
-train_epoch_size: 200    # we use random resampling, so this is unconnected with train_dataset size
+train_epoch_size: 2    # we use random resampling, so this is unconnected with train_dataset size
 # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
-val_epoch_size: 30
-test_epoch_size: 20
-train_batch_size: 5
-eval_batch_size: 15   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+val_epoch_size: 2
+test_epoch_size: 2
+train_batch_size: 2
+eval_batch_size: 2   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
 learning_rate: 0.0001
-num_of_dataloader_workers: 5
+num_of_dataloader_workers: 2
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 
 # More trainig-type-defining parameters
@@ -25,14 +25,14 @@ cleanup_k: 1      # Options: 0, 1, 2, 3
 optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
 zero_out_non_sclera_on_predictions: False
 loss_fn_name: "FTL"
-loss_params: 
+loss_params:
   fp_imp: 0.5
   fn_imp: 0.5
   gamma: 1.33
 
 # Dataset parameters
-dataset_type: multi    # Options: simple, vasd, multi
-aug_type: tf    # Options: tf, np, pass
+dataset_type: multi    # Options: simple, vasd
+aug_type: pass    # Options: tf, np, pass
 metrics_aggregation_fn: keep_vector
 zero_out_non_sclera: False
 add_sclera_to_img: False
@@ -40,11 +40,11 @@ add_bcosfire_to_img: True
 add_coye_to_img: True
 
 # Model parameters that need to be set in stone for pruning
-model: "32_2_4"
-input_width: 2048
-input_height: 1048
+model: "small"
+input_width: 256
+input_height: 256
 input_channels: 5
-output_channels: 3
+output_channels: 2
 
 # Patchification options
 have_patchification: False
@@ -73,7 +73,7 @@ patchification_params: null
 # Pruning parameters
 
 # more situationally changed parameters
-num_train_iters_between_prunings: 1
+num_train_iters_between_prunings: 2
 max_auto_prunings: 100
 proportion_to_prune: 0.01
 
