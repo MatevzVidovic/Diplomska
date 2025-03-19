@@ -911,6 +911,7 @@ class TrainingWrapper:
 
 
 
+            perc_aggregate_conf_matrix = aggregate_conf_matrix / aggregate_conf_matrix.sum()
 
 
             returning_dict = {
@@ -934,7 +935,9 @@ class TrainingWrapper:
                 "IoUs": IoUs,
                 "F1s": F1s,
                 "precisions": precisions,
-                "recalls": recalls
+                "recalls": recalls,
+                "aggregate_conf_matrix": aggregate_conf_matrix,
+                "perc_aggregate_conf_matrix": perc_aggregate_conf_matrix
 
             }
 
@@ -945,6 +948,12 @@ class TrainingWrapper:
             F1s_strs = [f"{f1:>0.6f}" for f1 in F1s]
             precisions_strs = [f"{prec:>0.6f}" for prec in precisions]
             recalls_strs = [f"{rec:>0.6f}" for rec in recalls]
+
+
+            # i ish that all values that are more than 0, should be at least 1e-6, not as 0.00000 - so I know that at least the minimal amount is happening.
+            rows_modified = [[max(val, 1e-6) if val > 0 else 0 for val in row] for row in perc_aggregate_conf_matrix]
+            row_strs = [", ".join([f"{perc:>0.6f}" for perc in row]) for row in rows_modified]
+            perc_aggregate_conf_matrix_str = "\n".join([f"[{row_str}]" for row_str in row_strs])
             
             print(f"""{dataloader_name} Error:
                 Avg loss: {test_loss:>.8f}
@@ -955,7 +964,9 @@ class TrainingWrapper:
                 IoUs: {IoUs_strs}
                 F1s: {F1s_strs}
                 Precisions: {precisions_strs}
-                Recalls: {recalls_strs}\n""")
+                Recalls: {recalls_strs}
+                Perc aggregate confusion matrix: 
+{perc_aggregate_conf_matrix_str}\n""")
             
 
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
