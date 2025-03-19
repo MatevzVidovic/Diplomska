@@ -73,6 +73,7 @@ class TrainingWrapperParams:
     have_patchification: bool
     patchification_params: Union[dict, None]
     metrics_aggregation_fn: str
+    num_classes: int
     
 
 

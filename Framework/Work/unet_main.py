@@ -387,7 +387,7 @@ INPUT_DIMS = {
 OUTPUT_DIMS = {
     "width" : INPUT_DIMS["width"],
     "height" : INPUT_DIMS["height"],
-    "channels" : 2
+    "channels" : YD["output_channels"]
 }
 
 
@@ -692,7 +692,8 @@ training_wrapper_params = TrainingWrapperParams(
     zero_out_non_sclera_on_predictions = YD["zero_out_non_sclera_on_predictions"],
     have_patchification = YD["have_patchification"],
     patchification_params = YD["patchification_params"],
-    metrics_aggregation_fn = YD["metrics_aggregation_fn"]
+    metrics_aggregation_fn = YD["metrics_aggregation_fn"],
+    num_classes = OUTPUT_DIMS["channels"],
 )
 
 

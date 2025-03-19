@@ -108,7 +108,6 @@ def get_conf_matrix(predictions, targets, num_classes=2):
     """
 
     try:
-        assert (targets <= num_classes-1).all()
 
         if isinstance(predictions, torch.Tensor):
             predictions_np = predictions.data.cpu().long().numpy()
@@ -136,7 +135,12 @@ def get_conf_matrix(predictions, targets, num_classes=2):
             print("targets.shape: ", targets.shape)
             raise e
 
-
+        try:
+            assert (targets <= num_classes-1).all()
+        except AssertionError as e:
+            print("targets: ", targets)
+            print("num_classes: ", num_classes)
+            raise e
 
 
 
@@ -421,9 +425,11 @@ def conf_matrix_to_F1_prec_rec(confusion_matrix, num_classes):
         recalls[where_is_denominator_zero] = 0
 
         F1s = 2 * (precisions * recalls) / (precisions + recalls)
+        where_is_denominator_zero = (precisions + recalls) == 0
+        F1s[where_is_denominator_zero] = 0
         
 
-        return {"F1": F1s, "precision": precisions, "recall": recalls}
+        return {"F1s": F1s, "precisions": precisions, "recalls": recalls}
 
     
 
@@ -857,44 +863,106 @@ class TrainingWrapper:
 
             test_loss = agg_test_loss / num_batches
             F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix, num_classes=n_cl)
-            IoU, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
-            F1 = F1_prec_rec["F1"]
-            precision = F1_prec_rec["precision"]
-            recall = F1_prec_rec["recall"]
+            IoUs, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
+            F1s = F1_prec_rec["F1s"]
+            precisions = F1_prec_rec["precisions"]
+            recalls = F1_prec_rec["recalls"]
+
+            mIoU = np.mean(IoUs)
+            mF1s = np.mean(F1s)
+            mPrecisions = np.mean(precisions)
+            mRecalls = np.mean(recalls)
+
+            mNoBgIoU = np.mean(IoUs[1:])
+            mNoBgF1s = np.mean(F1s[1:])
+            mNoBgPrecisions = np.mean(precisions[1:])
+            mNoBgRecalls = np.mean(recalls[1:])
+
+            first_foreground_IoU = IoUs[1]
+            first_foreground_F1 = F1s[1]
+            first_foreground_precision = precisions[1]
+            first_foreground_recall = recalls[1]
+
+
 
             if self.params.metrics_aggregation_fn == "mean":
-                # This is all macro-averaging (average of over the number of classes - not accounting for class imbalance)
-                IoU = np.mean(IoU)
-                F1 = np.mean(F1)
-                # For prec and rec, micro-averaging doesn't really make sense, because for one class a FP is the Fn for another class.
-                # Look at the confusion matrix and the way FPs and FNs are calculated in the F1 calculation functtions.
-                precision = np.mean(precision)
-                recall = np.mean(recall)
+                
+                IoU = mIoU
+                F1 = mF1s
+                precision = mPrecisions
+                recall = mRecalls
+
             elif self.params.metrics_aggregation_fn == "mean_no_background":
-                IoU = np.mean(IoU[1:])
-                F1 = np.mean(F1[1:])
-                precision = np.mean(precision[1:])
-                recall = np.mean(recall[1:])
-            elif self.params.metrics_aggregation_fn == "keep_vector":
-                pass
+
+                IoU = mNoBgIoU
+                F1 = mNoBgF1s
+                precision = mNoBgPrecisions
+                recall = mNoBgRecalls
+
             elif self.params.metrics_aggregation_fn == "just_first_foreground":
-                IoU = IoU[1]  # only IoU for sclera (not background)
-                F1 = F1[1]  # only F1 for sclera (not background)
-                precision = precision[1]  # only precision for sclera (not background)
-                recall = recall[1]  # only recall for sclera (not background)
+                
+                IoU = first_foreground_IoU
+                F1 = first_foreground_F1
+                precision = first_foreground_precision
+                recall = first_foreground_recall
             
-            F1_strs = [f"{f1:>0.6f}" for f1 in F1]
-            precision_strs = [f"{prec:>0.6f}" for prec in precision]
-            recall_strs = [f"{rec:>0.6f}" for rec in recall]
-            IoU_strs = [f"{iou:>0.6f}" for iou in IoU]
-            print(f"{dataloader_name} Error: \n Avg loss: {test_loss:>.8f} \n F1: {F1_strs} \n Precision: {precision_strs} \n Recall: {recall_strs}\n IoU: {IoU_strs}\n")
+            else:
+                raise NotImplementedError(f"metrics_aggregation_fn {self.params.metrics_aggregation_fn} not implemented.")
+
+
+
+
+
+            returning_dict = {
+                "loss": test_loss,
+                "IoU": IoU,
+                "F1": F1,
+                "precision": precision,
+                "recall": recall,
+                "mIoU": mIoU,
+                "mF1": mF1s,
+                "mPrecision": mPrecisions,
+                "mRecall": mRecalls,
+                "mNoBgIoU": mNoBgIoU,
+                "mNoBgF1": mNoBgF1s,
+                "mNoBgPrecision": mNoBgPrecisions,
+                "mNoBgRecall": mNoBgRecalls,
+                "first_foreground_IoU": first_foreground_IoU,
+                "first_foreground_F1": first_foreground_F1,
+                "first_foreground_precision": first_foreground_precision,
+                "first_foreground_recall": first_foreground_recall,
+                "IoUs": IoUs,
+                "F1s": F1s,
+                "precisions": precisions,
+                "recalls": recalls
+
+            }
+
+
+
+            
+            IoUs_strs = [f"{iou:>0.6f}" for iou in IoUs]
+            F1s_strs = [f"{f1:>0.6f}" for f1 in F1s]
+            precisions_strs = [f"{prec:>0.6f}" for prec in precisions]
+            recalls_strs = [f"{rec:>0.6f}" for rec in recalls]
+            
+            print(f"""{dataloader_name} Error:
+                Avg loss: {test_loss:>.8f}
+                aggrIoU: {IoU}
+                aggrF1: {F1}
+                aggrPrecision: {precision}
+                aggrRecall: {recall} 
+                IoUs: {IoUs_strs}
+                F1s: {F1s_strs}
+                Precisions: {precisions_strs}
+                Recalls: {recalls_strs}\n""")
             
 
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
             # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
 
             # return (test_loss, approx_IoU, F1, IoU)
-            return {"loss": test_loss, "F1": F1, "IoU": IoU, "precision": precision, "recall": recall}
+            return returning_dict
 
 
         except Exception as e:
@@ -930,7 +998,7 @@ class TrainingWrapper:
             self.model.eval()
             test_loss = 0
             quick_figs_counter = 0
-            n_cl = 2
+            n_cl = self.params.num_classes
             aggregated_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
             with torch.no_grad():
                 for batch_ix, data_dict in enumerate(dataloader):

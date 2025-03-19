@@ -33,7 +33,7 @@ loss_params:
 # Dataset parameters
 dataset_type: multi    # Options: simple, vasd
 aug_type: pass    # Options: tf, np, pass
-metrics_aggregation_fn: keep_vector
+metrics_aggregation_fn: mean_no_background
 zero_out_non_sclera: False
 add_sclera_to_img: False
 add_bcosfire_to_img: True
@@ -44,7 +44,7 @@ model: "small"
 input_width: 256
 input_height: 256
 input_channels: 5
-output_channels: 2
+output_channels: 3
 
 # Patchification options
 have_patchification: False

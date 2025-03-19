@@ -37,6 +37,8 @@ from matplotlib.patches import Patch
 
 import y_helpers.json_handler as jh
 
+from y_framework.log_handlers import TrainingLogs, PruningLogs
+
 
 
 
@@ -70,7 +72,7 @@ def show_results(main_save_path):
         training_logs_path = osp.join(main_save_path, "training_logs", tl_name)
         pruning_logs_path = osp.join(main_save_path, "pruning_logs", pl_name)
 
-        training_logs = pickle.load(open(training_logs_path, "rb"))
+        training_logs: TrainingLogs = pickle.load(open(training_logs_path, "rb"))
         pruning_logs = pickle.load(open(pruning_logs_path, "rb"))
         
         
