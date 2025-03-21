@@ -93,6 +93,28 @@ def print_cuda_memory(do_total_mem=True, do_allocated_mem=True, do_reserved_mem=
 
 
 
+
+
+def get_predictions_mask(prediction_tensor):
+    """
+    We get a tensor of predictions of BSxCHxHxW.
+    We return a tensor of BSxHxW, where each pixel is the class with the highest probability.
+    """
+    try:
+
+        # print(prediction_tensor.shape)
+        # print(prediction_tensor[0].shape)
+        # print(prediction_tensor[0].argmax(dim=0).shape)
+        # print(prediction_tensor[0].argmax(dim=0))
+
+        return prediction_tensor.argmax(dim=1)
+
+    except Exception as e:
+        py_log_always_on.log_stack(MY_LOGGER, attr_sets=["size", "math", "hist"])
+        raise e
+
+
+
 """
 get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU are adapted from:
 from train_with_knowledge_distillation import get_mIoU_from_predictions, get_conf_matrix, conf_matrix_to_mIoU
@@ -540,6 +562,134 @@ def split_along_splitting_ixs(input_tensor, splitting_ixs):
 
 
 
+def get_metrics_dict(aggregate_conf_matrix, aggregation_fn_name, num_classes=2):
+
+
+    F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix, num_classes=num_classes)
+    IoUs, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=num_classes)
+    F1s = F1_prec_rec["F1s"]
+    precisions = F1_prec_rec["precisions"]
+    recalls = F1_prec_rec["recalls"]
+
+    mIoU = np.mean(IoUs)
+    mF1s = np.mean(F1s)
+    mPrecisions = np.mean(precisions)
+    mRecalls = np.mean(recalls)
+
+    mNoBgIoU = np.mean(IoUs[1:])
+    mNoBgF1s = np.mean(F1s[1:])
+    mNoBgPrecisions = np.mean(precisions[1:])
+    mNoBgRecalls = np.mean(recalls[1:])
+
+    first_foreground_IoU = IoUs[1]
+    first_foreground_F1 = F1s[1]
+    first_foreground_precision = precisions[1]
+    first_foreground_recall = recalls[1]
+
+
+
+    if aggregation_fn_name == "mean":
+        
+        IoU = mIoU
+        F1 = mF1s
+        precision = mPrecisions
+        recall = mRecalls
+
+    elif aggregation_fn_name == "mean_no_background":
+
+        IoU = mNoBgIoU
+        F1 = mNoBgF1s
+        precision = mNoBgPrecisions
+        recall = mNoBgRecalls
+
+    elif aggregation_fn_name == "just_first_foreground":
+        
+        IoU = first_foreground_IoU
+        F1 = first_foreground_F1
+        precision = first_foreground_precision
+        recall = first_foreground_recall
+    
+    else:
+        raise NotImplementedError(f"metrics_aggregation_fn {aggregation_fn_name} not implemented.")
+
+
+
+    perc_aggregate_conf_matrix = aggregate_conf_matrix / aggregate_conf_matrix.sum()
+
+
+    returning_dict = {
+        "IoU": IoU,
+        "F1": F1,
+        "precision": precision,
+        "recall": recall,
+        "mIoU": mIoU,
+        "mF1": mF1s,
+        "mPrecision": mPrecisions,
+        "mRecall": mRecalls,
+        "mNoBgIoU": mNoBgIoU,
+        "mNoBgF1": mNoBgF1s,
+        "mNoBgPrecision": mNoBgPrecisions,
+        "mNoBgRecall": mNoBgRecalls,
+        "first_foreground_IoU": first_foreground_IoU,
+        "first_foreground_F1": first_foreground_F1,
+        "first_foreground_precision": first_foreground_precision,
+        "first_foreground_recall": first_foreground_recall,
+        "IoUs": IoUs,
+        "F1s": F1s,
+        "precisions": precisions,
+        "recalls": recalls,
+        "aggregate_conf_matrix": aggregate_conf_matrix,
+        "perc_aggregate_conf_matrix": perc_aggregate_conf_matrix
+
+    }
+
+    return returning_dict
+
+
+
+
+def get_strs_from_metrics_dict(md):
+
+    IoUs_strs = [f"{iou:>0.6f}" for iou in md["IoUs"]]
+    F1s_strs = [f"{f1:>0.6f}" for f1 in md["F1s"]]
+    precisions_strs = [f"{prec:>0.6f}" for prec in md["precisions"]]
+    recalls_strs = [f"{rec:>0.6f}" for rec in md["recalls"]]
+
+
+    # i ish that all values that are more than 0, should be at least 1e-6, not as 0.00000 - so I know that at least the minimal amount is happening.
+    rows_modified = [[max(val, 1e-6) if val > 0 else 0 for val in row] for row in md["perc_aggregate_conf_matrix"]]
+    row_strs = [", ".join([f"{perc:>0.6f}" for perc in row]) for row in rows_modified]
+    perc_aggregate_conf_matrix_str = "\n".join([f"[{row_str}]" for row_str in row_strs])
+
+    combined_str = f"""aggrIoU: {md["IoU"]}
+aggrF1: {md["F1"]}
+aggrPrecision: {md["precision"]}
+aggrRecall: {md["recall"]} 
+IoUs: {IoUs_strs}
+F1s: {F1s_strs}
+Precisions: {precisions_strs}
+Recalls: {recalls_strs}
+Perc aggregate confusion matrix: 
+{perc_aggregate_conf_matrix_str}\n"""
+
+    returning_dict = {
+        "IoUs_strs": IoUs_strs,
+        "F1s_strs": F1s_strs,
+        "precisions_strs": precisions_strs,
+        "recalls_strs": recalls_strs,
+        "perc_aggregate_conf_matrix_str": perc_aggregate_conf_matrix_str,
+        "combined_str": combined_str
+    }
+
+
+
+
+    return returning_dict
+
+
+
+
+
 
 
 class TrainingWrapper:
@@ -609,7 +759,9 @@ class TrainingWrapper:
             start = timer()
 
             # print_cuda_memory()
-            agg_test_loss = 0
+            agg_loss = 0
+            n_cl = self.params.num_classes
+            aggregate_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
 
             for batch_ix, data_dict in enumerate(dataloader):
                 X = data_dict["images"]
@@ -630,10 +782,6 @@ class TrainingWrapper:
                 pred = self.model(X)
 
 
-
-
-
-
                 y = y.to(self.device)
 
 
@@ -652,8 +800,12 @@ class TrainingWrapper:
                 loss = self.params.loss_fn(pred, y)
 
                 curr_test_loss = loss.item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
-                agg_test_loss += curr_test_loss
+                agg_loss += curr_test_loss
 
+
+                predictions_mask = get_predictions_mask(pred)
+                confusion_matrix = get_conf_matrix(predictions_mask, y, num_classes=n_cl)
+                aggregate_conf_matrix = aggregate_conf_matrix + confusion_matrix
 
 
                 # Backpropagation
@@ -683,10 +835,37 @@ class TrainingWrapper:
 
             torch.cuda.empty_cache()
             
-            test_loss = agg_test_loss / num_batches
-            print(f"Train Error: Avg loss: {test_loss:>.8f}")
 
-            return train_times
+
+
+
+
+
+
+
+
+
+
+            avg_loss = agg_loss / num_batches
+
+            # metrics dict
+            md = get_metrics_dict(aggregate_conf_matrix, self.params.metrics_aggregation_fn, num_classes=n_cl)
+            md["loss"] = avg_loss
+            
+            combined_str = get_strs_from_metrics_dict(md)["combined_str"]
+
+            
+            print(f"""Train Error:
+Avg loss: {avg_loss:>.8f}
+{combined_str}\n""")
+            
+
+            returning_dict = {
+                "train_times": train_times,
+                "metrics_dict": md
+            }
+
+            return returning_dict
 
         except Exception as e:
             print_cuda_memory()
@@ -731,7 +910,7 @@ class TrainingWrapper:
             num_batches = len(dataloader)
 
             self.model.eval()
-            agg_test_loss = 0
+            agg_loss = 0
             n_cl = self.params.num_classes
             aggregate_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
             with torch.no_grad():
@@ -845,135 +1024,39 @@ class TrainingWrapper:
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
                     curr_test_loss = self.params.loss_fn(pred, y).item() # MCDL implicitly makes an average over the batch, because it does the calc on the whole tensor
-                    agg_test_loss += curr_test_loss
+                    agg_loss += curr_test_loss
 
 
 
 
 
-                    pred_binary = pred[:, 1] > pred[:, 0]
-
-
-                    confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
+                    predictions_mask = get_predictions_mask(pred)
+                    confusion_matrix = get_conf_matrix(predictions_mask, y, num_classes=n_cl)
                     aggregate_conf_matrix = aggregate_conf_matrix + confusion_matrix
 
 
 
 
 
-            test_loss = agg_test_loss / num_batches
-            F1_prec_rec = conf_matrix_to_F1_prec_rec(aggregate_conf_matrix, num_classes=n_cl)
-            IoUs, _ = conf_matrix_to_IoU(aggregate_conf_matrix, num_classes=n_cl)
-            F1s = F1_prec_rec["F1s"]
-            precisions = F1_prec_rec["precisions"]
-            recalls = F1_prec_rec["recalls"]
+            avg_loss = agg_loss / num_batches
 
-            mIoU = np.mean(IoUs)
-            mF1s = np.mean(F1s)
-            mPrecisions = np.mean(precisions)
-            mRecalls = np.mean(recalls)
-
-            mNoBgIoU = np.mean(IoUs[1:])
-            mNoBgF1s = np.mean(F1s[1:])
-            mNoBgPrecisions = np.mean(precisions[1:])
-            mNoBgRecalls = np.mean(recalls[1:])
-
-            first_foreground_IoU = IoUs[1]
-            first_foreground_F1 = F1s[1]
-            first_foreground_precision = precisions[1]
-            first_foreground_recall = recalls[1]
-
-
-
-            if self.params.metrics_aggregation_fn == "mean":
-                
-                IoU = mIoU
-                F1 = mF1s
-                precision = mPrecisions
-                recall = mRecalls
-
-            elif self.params.metrics_aggregation_fn == "mean_no_background":
-
-                IoU = mNoBgIoU
-                F1 = mNoBgF1s
-                precision = mNoBgPrecisions
-                recall = mNoBgRecalls
-
-            elif self.params.metrics_aggregation_fn == "just_first_foreground":
-                
-                IoU = first_foreground_IoU
-                F1 = first_foreground_F1
-                precision = first_foreground_precision
-                recall = first_foreground_recall
+            # metrics dict
+            md = get_metrics_dict(aggregate_conf_matrix, self.params.metrics_aggregation_fn, num_classes=n_cl)
+            md["loss"] = avg_loss
             
-            else:
-                raise NotImplementedError(f"metrics_aggregation_fn {self.params.metrics_aggregation_fn} not implemented.")
+            combined_str = get_strs_from_metrics_dict(md)["combined_str"]
 
-
-
-            perc_aggregate_conf_matrix = aggregate_conf_matrix / aggregate_conf_matrix.sum()
-
-
-            returning_dict = {
-                "loss": test_loss,
-                "IoU": IoU,
-                "F1": F1,
-                "precision": precision,
-                "recall": recall,
-                "mIoU": mIoU,
-                "mF1": mF1s,
-                "mPrecision": mPrecisions,
-                "mRecall": mRecalls,
-                "mNoBgIoU": mNoBgIoU,
-                "mNoBgF1": mNoBgF1s,
-                "mNoBgPrecision": mNoBgPrecisions,
-                "mNoBgRecall": mNoBgRecalls,
-                "first_foreground_IoU": first_foreground_IoU,
-                "first_foreground_F1": first_foreground_F1,
-                "first_foreground_precision": first_foreground_precision,
-                "first_foreground_recall": first_foreground_recall,
-                "IoUs": IoUs,
-                "F1s": F1s,
-                "precisions": precisions,
-                "recalls": recalls,
-                "aggregate_conf_matrix": aggregate_conf_matrix,
-                "perc_aggregate_conf_matrix": perc_aggregate_conf_matrix
-
-            }
-
-
-
-            
-            IoUs_strs = [f"{iou:>0.6f}" for iou in IoUs]
-            F1s_strs = [f"{f1:>0.6f}" for f1 in F1s]
-            precisions_strs = [f"{prec:>0.6f}" for prec in precisions]
-            recalls_strs = [f"{rec:>0.6f}" for rec in recalls]
-
-
-            # i ish that all values that are more than 0, should be at least 1e-6, not as 0.00000 - so I know that at least the minimal amount is happening.
-            rows_modified = [[max(val, 1e-6) if val > 0 else 0 for val in row] for row in perc_aggregate_conf_matrix]
-            row_strs = [", ".join([f"{perc:>0.6f}" for perc in row]) for row in rows_modified]
-            perc_aggregate_conf_matrix_str = "\n".join([f"[{row_str}]" for row_str in row_strs])
             
             print(f"""{dataloader_name} Error:
-                Avg loss: {test_loss:>.8f}
-                aggrIoU: {IoU}
-                aggrF1: {F1}
-                aggrPrecision: {precision}
-                aggrRecall: {recall} 
-                IoUs: {IoUs_strs}
-                F1s: {F1s_strs}
-                Precisions: {precisions_strs}
-                Recalls: {recalls_strs}
-                Perc aggregate confusion matrix: 
-{perc_aggregate_conf_matrix_str}\n""")
+Avg loss: {avg_loss:>.8f}
+{combined_str}\n""")
             
 
             # accuracies.append("{correct_perc:>0.1f}%".format(correct_perc=(100*correct)))
-            # avg_losses.append("{test_loss:>8f}".format(test_loss=test_loss))
+            # avg_losses.append("{avg_loss:>8f}".format(avg_loss=avg_loss))
 
-            # return (test_loss, approx_IoU, F1, IoU)
-            return returning_dict
+            # return (avg_loss, approx_IoU, F1, IoU)
+            return md
 
 
         except Exception as e:
@@ -1007,7 +1090,7 @@ class TrainingWrapper:
             dataloader = self.dataloaders_dict[dataloader_name]
 
             self.model.eval()
-            test_loss = 0
+            agg_loss = 0
             quick_figs_counter = 0
             n_cl = self.params.num_classes
             aggregated_conf_matrix = np.zeros((n_cl, n_cl), dtype=np.long)
@@ -1038,14 +1121,12 @@ class TrainingWrapper:
 
                     # https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
                     # The fact the shape of pred and y are diferent seems to be correct regarding loss_fn.
-                    test_loss += self.params.loss_fn(pred, y).item()
+                    agg_loss += self.params.loss_fn(pred, y).item()
 
 
 
-                    pred_binary = pred[:, 1] > pred[:, 0]
-
-
-                    confusion_matrix = get_conf_matrix(pred_binary, y, num_classes=n_cl)
+                    predictions_mask = get_predictions_mask(pred)
+                    confusion_matrix = get_conf_matrix(predictions_mask, y, num_classes=n_cl)
                     aggregated_conf_matrix += confusion_matrix
 
                     # X and y are tensors of a batch, so we have to go over them all
@@ -1216,7 +1297,7 @@ class TrainingWrapper:
 
 
 
-                    # pred_binary = pred[:, 1] > pred[:, 0]
+                    # predictions_mask = get_predictions_mask(pred)
 
                     # X and y are tensors of a batch, so we have to go over them all
                     for i in range(X.shape[0]):

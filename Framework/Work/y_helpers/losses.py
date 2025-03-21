@@ -53,8 +53,8 @@ from torch import nn
 
 
 
-class FocalTverskyLoss(nn.Module):
-    def __init__(self, fp_imp=0.5, fn_imp=0.5, gamma=(4/3), smooth=1e-6, use_background=False, equalize=False):
+class WeightedFocalTverskyLoss(nn.Module):
+    def __init__(self, fp_imp=0.5, fn_imp=0.5, gamma=(4/3), weights_list=None, smooth=1e-6, use_background=False, equalize=False):
         # fn_imp == fp_imp == 0.5 is the same as Dice Loss.
         # fn_imp == fp_imp == 1 is the same as Jaccard (IoU) Loss.
         # Generally, (fn_imp + fp_imp) == 1. Im not sure if scaling both by the same value even matters. 
@@ -71,13 +71,16 @@ class FocalTverskyLoss(nn.Module):
 
 
 
-        super(FocalTverskyLoss, self).__init__()
+        super(WeightedFocalTverskyLoss, self).__init__()
         self.fp_imp = fp_imp
         self.fn_imp = fn_imp
         self.gamma = gamma
+        self.weights_list = weights_list
         self.smooth = smooth
         self.use_background = use_background
         self.equalize = equalize
+
+
 
     def forward(self, preds, targets):
 
@@ -94,6 +97,14 @@ class FocalTverskyLoss(nn.Module):
             # Initialize Dice Loss
             tversky_loss = 0.0
 
+
+            num_classes = preds.shape[1]
+            # if no weights are given, we will use equal weights
+            if self.weights_list == None:
+                self.weights_list = [1 for _ in range(num_classes)]
+            else:
+                if len(self.weights_list) != num_classes:
+                    raise ValueError("The number of classes and weights must be the same. Even if not using the background, have a weight for it to make code work.")
 
 
             # Iterate over each class
@@ -144,14 +155,14 @@ class FocalTverskyLoss(nn.Module):
 
 
                 # Accumulate Tversky loss
-                tversky_loss += (1 - tversky_index)**(1/self.gamma)
+                tversky_loss += self.weights_list[c] *  (1 - tversky_index)**(1/self.gamma)
 
 
 
 
-            # Average over all classes, just to make it easier to interpret.
-            num_of_classes = preds.shape[1] - 1 if not self.use_background else preds.shape[1]
-            tversky_loss =  1 - tversky_loss / num_of_classes
+            # Average over all classes, just to make it easier to interpret (between 0 an 1).
+            num_of_classes = preds.shape[1] if self.use_background else preds.shape[1] - 1 
+            tversky_loss =  tversky_loss / num_of_classes
             
             return tversky_loss
 
@@ -460,15 +471,12 @@ class WeightedLosses(nn.Module):
     def __init__(self, losses_list, weights_list=None):
         super(WeightedLosses, self).__init__()
 
-        if weights_list is None:
-            weights_list = []
-        
         # super(MultiClassDiceLoss, self).__init__()
         self.losses_list = losses_list
 
         # if no weights are given, we will use equal weights
-        if len(weights_list) == 0:
-            self.weights_list = [(1/len(weights_list)) for _ in range(len(losses_list))]
+        if weights_list == None:
+            self.weights_list = [(1/len(losses_list)) for _ in range(len(losses_list))]
         else:
             if len(weights_list) != len(losses_list):
                 raise ValueError("The number of losses and weights must be the same.")

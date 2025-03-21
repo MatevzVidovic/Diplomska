@@ -58,30 +58,38 @@ from y_framework.log_handlers import TrainingLogs, PruningLogs
 
 
 
+def viscinity_save_check(viscinity_save_params, curr_resource_percentage):
 
+    viscinity_save_percentages, viscinity_save_margin = viscinity_save_params["resource_percentage_list"], viscinity_save_params["margin_for_save"]
+    for vsp in viscinity_save_percentages:
+        if curr_resource_percentage >= vsp - viscinity_save_margin and curr_resource_percentage <= vsp + viscinity_save_margin:
+            return True
+    return False
 
 
 
 @py_log.autolog(passed_logger=MY_LOGGER)
-def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PruningLogs, train_iter, unique_id, val_error=None, test_error=None):
+def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruning_logs: PruningLogs, train_iter, unique_id, val_error=None, test_error=None, train_error=None):
 
     new_model_filename, _ = model_wrapper.save(f"{train_iter}_{unique_id}")
     pruning_logs.confirm_last_pruning_train_iter()
 
     if val_error is None or test_error is None:
+        # This happens if we do a manual save or pruning with keyboard input, and so no training happened in this run yet.
         new_log = None
-        # this only happens if we do a manual save before any training even took place
-        # or maybe if we prune before any training took place
+
         if training_logs.last_log is not None:
+            # If there were other runs before and training happened, then we are saving the last model that was trained, and so we can repeat the log.
             v = training_logs.last_log["val_err"]
             t = training_logs.last_log["test_err"]
+            te = training_logs.last_log["train_err"]
             ti = training_logs.last_log["train_iter"]
             # new_log = (v, t, ti, new_model_filename, unique_id, True)
-            new_log = ({"val_err": v, "test_err": t, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True})
+            new_log = ({"val_err": v, "test_err": t, "train_err": te, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True})
 
         training_logs.add_log(new_log)
     else:
-        new_log = {"val_err": val_error, "test_err": test_error, "train_iter": train_iter, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": False}
+        new_log = {"val_err": val_error, "test_err": test_error, "train_err": train_error, "train_iter": train_iter, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": False}
         training_logs.add_log(new_log)
 
 
@@ -101,7 +109,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 @py_log.autolog(passed_logger=MY_LOGGER)
 def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
                         max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_key="loss", 
-                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict=None, model_graph_breakup_param=0.05, one_big_svg_width=500):
+                        cleanup_k=3, num_of_epochs_per_training=1, pruning_kwargs_dict=None, viscinity_save_params=None, model_graph_breakup_param=0.05, one_big_svg_width=500):
     
     if pruning_kwargs_dict is None:
         pruning_kwargs_dict = {}
@@ -534,8 +542,11 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
             curr_pickleable_conv_res_calc = model_wrapper.resource_calc.get_copy_for_pickle()
 
-            # This will ensure I have the best k models from every pruning phase.
-            model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_before_pruning")
+
+
+            # This is nice and all, but I always just use after pruning ones. It's just easier, and this here wouldnt save enough training iterations. Sorry.
+            # # This will ensure I have the best k models from every pruning phase.
+            # model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_before_pruning")
 
             # And this makes even less sense:
             # pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
@@ -548,12 +559,19 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
             num_of_auto_prunings += 1
 
+
+
+
             # This will ensure I have the best k models from every pruning phase.
             training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
             pruning_logs.log_pruning_train_iter(train_iter, curr_pickleable_conv_res_calc)
             training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "after_pruning")
-            # training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
-            model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_after_pruning")
+
+            info_dict = model_wrapper.get_resource_info(pruning_kwargs_dict["resource_name"])
+            curr_resource_percentage = info_dict["percentage"]
+            if viscinity_save_params is None or viscinity_save_check(viscinity_save_params, curr_resource_percentage):
+                # training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
+                model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_after_pruning")
 
 
 
@@ -585,7 +603,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
         
-        model_wrapper.train(num_of_epochs_per_training)
+        returnings = model_wrapper.train(num_of_epochs_per_training)
+        train_error = returnings[0]["metrics_dict"]
 
         # print(f"Hooks: {model_wrapper.tree_ix_2_hook_handle}")
 
@@ -600,7 +619,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
         training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
-        training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "", val_error, test_error)
+        training_logs, pruning_logs = perform_save(model_wrapper, training_logs, pruning_logs, train_iter, "", val_error, test_error, train_error)
         # training_logs.delete_all_but_best_k_models(cleanup_k, model_wrapper)
 
 

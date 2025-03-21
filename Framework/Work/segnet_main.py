@@ -514,8 +514,8 @@ print(f"Device: {device}")
 
 if YD["loss_fn_name"] == "MCDL":
     loss_fn = MultiClassDiceLoss()
-elif YD["loss_fn_name"] == "FTL":
-    loss_fn = FocalTverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], gamma=YD["loss_params"]["gamma"])
+elif YD["loss_fn_name"] == "WFTL":
+    loss_fn = WeightedFocalTverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], gamma=YD["loss_params"]["gamma"])
 elif YD["loss_fn_name"] == "MCDLW":
     loss_fn = MultiClassDiceLoss(background_adjustment=YD["loss_params"]["bg_adj"])
 elif YD["loss_fn_name"] == "Tversky":
@@ -1168,7 +1168,7 @@ if __name__ == "__main__":
     
     train_automatically(model_wrapper, main_save_path, val_stop_fn=validation_stop, max_training_iters=MAX_TRAIN_ITERS, max_total_training_iters=MAX_TOTAL_TRAIN_ITERS, 
                         max_auto_prunings=YD["max_auto_prunings"], train_iter_possible_stop=ITER_POSSIBLE_STOP, pruning_phase=IS_PRUNING_PH, cleanup_k=YD["cleanup_k"],
-                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS, model_graph_breakup_param=MODEL_GRAPH_BREAKUP_PARAM, one_big_svg_width=ONE_BIG_SVG_WIDTH)
+                         num_of_epochs_per_training=1, pruning_kwargs_dict=PRUNING_KWARGS, viscinity_save_params=YD["viscinity_save"], model_graph_breakup_param=MODEL_GRAPH_BREAKUP_PARAM, one_big_svg_width=ONE_BIG_SVG_WIDTH)
 
 
 

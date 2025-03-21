@@ -75,6 +75,9 @@ max_auto_prunings: 70
 proportion_to_prune: 0.01
 
 # More pruning-type-defining parameters
+viscinity_save: # if it is none, we simply make a safety copy after every prunning. This is storage expensive.
+  resource_percentage_list: [0.75, 0.5, 0.25, 0.03]
+  margin_for_save: 0.02
 prune_by_original_percent: True
 num_filters_to_prune: -1 # not applied
 prune_n_kernels_at_once: 100
