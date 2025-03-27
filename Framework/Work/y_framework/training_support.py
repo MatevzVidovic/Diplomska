@@ -195,6 +195,49 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                         Enter any other key to stop.\n""")
             
 
+            if inp == "fw":
+                dict_with_all = {}
+                print("Initial flops and weights:")
+                res_dict = model_wrapper.initial_resource_calc.get_all_resources_of_whole_model()
+                for k, v in res_dict.items():
+                    sci_format = f'{v:.3e}'
+                    print(f"{k}: {sci_format}")
+                    dict_with_all[k] = (sci_format, v)
+                try:
+                    model_wrapper.resource_calc.calculate_resources()
+                    print("Flops and weights:")
+                    res_dict = model_wrapper.resource_calc.get_all_resources_of_whole_model()
+                    for k, v in res_dict.items():
+                        sci_format = f'{v:.3e}'
+                        print(f"{k}: {sci_format}")
+                        initial_k = f"initial_{k}"
+                        dict_with_all[initial_k] = (sci_format, v)
+                except Exception as e:
+                    print("No prunings done yet, so no current resources to calculate.")
+
+                input_example_dims = str(model_wrapper.input_example.shape)
+                dict_with_all["input_example_dims"] = input_example_dims
+                
+                j_path_no_suffix = osp.join(main_save_path, "flops_and_weights", f"{train_iter}_flops_and_weights")
+                jh.dump_no_overwrite(j_path_no_suffix, dict_with_all)
+                
+
+
+                inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
+                            Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
+                            Enter bse to do a batch_size_eval and re-ask for input.
+                            Enter sp to do a save_preds from the data_path/save_preds directory, and re-ask for input.
+                            Enter da to do a data augmentation showcase and re-ask for input.
+                            Enter ts to do a test showcase of the model and re-ask for input.
+                            Enter "resource_graph" to trigger resource_graph() and re-ask for input.
+                            Enter s to save the model and re-ask for input.
+                            Enter g to show the graph of the model and re-ask for input.
+                            Enter r to trigger show_results() and re-ask for input.
+                            Enter a number to reset in how many trainings we ask you this again, and re-ask for input.
+                            Enter p to prune anyways (in production code, that is commented out, so the program will simply stop).
+                            Press Enter to continue training.
+                            Enter any other key to stop.\n""")
+
             if inp == "bst":
                 model_wrapper.training_wrapper.batch_size_train()
 

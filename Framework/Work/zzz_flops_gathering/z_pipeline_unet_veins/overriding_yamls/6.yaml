@@ -1,0 +1,3 @@
+model: "32_2_4"
+train_batch_size: 6
+eval_batch_size: 17

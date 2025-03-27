@@ -515,7 +515,10 @@ print(f"Device: {device}")
 if YD["loss_fn_name"] == "MCDL":
     loss_fn = MultiClassDiceLoss()
 elif YD["loss_fn_name"] == "WFTL":
-    loss_fn = WeightedFocalTverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], gamma=YD["loss_params"]["gamma"])
+    weights_list = None
+    if "weights_list" in YD["loss_params"]:
+        weights_list = YD["loss_params"]["weights_list"]
+    loss_fn = WeightedFocalTverskyLoss(fp_imp=YD["loss_params"]["fp_imp"], fn_imp=YD["loss_params"]["fn_imp"], gamma=YD["loss_params"]["gamma"], weights_list=weights_list)
 elif YD["loss_fn_name"] == "MCDLW":
     loss_fn = MultiClassDiceLoss(background_adjustment=YD["loss_params"]["bg_adj"])
 elif YD["loss_fn_name"] == "Tversky":

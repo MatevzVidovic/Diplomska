@@ -469,20 +469,11 @@ class ModelWrapper:
                         print(f"Copied {filename} to {safety_copy_dir}")
             
 
-            j_path = osp.join(safety_path, f"safety_copies_{str_identifier}.json")
-            
-            if osp.exists(j_path):
-                add_id = 1
-                old_j_path = j_path
-                j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{add_id}.json")
-                while osp.exists(j_path):
-                    add_id += 1
-                    j_path = osp.join(safety_path, f"safety_copies_{str_identifier}_{add_id}.json")
-                print(f"JSON file {old_j_path} already exists. We made {j_path} instead.")
-            
-            
+            j_path_no_suffix = osp.join(safety_path, f"safety_copies_{str_identifier}")
             j_dict = {"copied_filenames": copied_filenames}
-            jh.dump(j_path, j_dict)
+            jh.dump_no_overwrite(j_path_no_suffix, j_dict)
+            
+
 
 
             

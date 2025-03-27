@@ -33,6 +33,8 @@ printf "bst\nstop\nstop\n" > "$batch_size_train"
 batch_size_eval=$(mktemp)
 printf "bse\nstop\nstop\n" > "$batch_size_eval"
 
+flops_and_weights=$(mktemp)
+printf "fw\nstop\nstop\n" > "$flops_and_weights"
 
 
 # Function to delete a folder if it exists and then create it empty

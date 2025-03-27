@@ -348,6 +348,14 @@ class ConvResourceCalc():
 
 
 
+    def get_all_resources_of_whole_model(self):
+        res_dict = {}
+        available_resources = ["flops_num", "weights_num", "kernels_num"]
+        for resource_name in available_resources:
+            res_dict[resource_name] = self.get_resource_of_whole_model(resource_name)
+        return res_dict
+    
+
 
     def get_lowest_level_module_tree_ixs(self):
 
