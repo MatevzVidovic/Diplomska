@@ -1,0 +1,7 @@
+This doesnt work as expected
+
+The z_get_fw.sbatch refernces the z_pipeline folder outside of this folder.
+
+So having these things in this folder doesnt change a thing.
+
+So either mind that, or change the pipeline_name in these pipelines in zzz_flops...

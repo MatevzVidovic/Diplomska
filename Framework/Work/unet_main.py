@@ -451,6 +451,28 @@ elif YD["model"] == "32_2_6":
         "expansion" : 2,
         "depth" : 6,
         }
+elif YD["model"] == "8_2_6":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 8,
+        "expansion" : 2,
+        "depth" : 6,
+        }
+elif YD["model"] == "16_2_4":
+    model_parameters = {
+        # layer sizes
+        "output_y" : dim_y,
+        "output_x" : dim_x,
+        "n_channels" : INPUT_DIMS["channels"],
+        "n_classes" : OUTPUT_DIMS["channels"],
+        "starting_kernels" : 16,
+        "expansion" : 2,
+        "depth" : 4,
+        }
 elif YD["model"] == "32_2_5":
     model_parameters = {
         # layer sizes

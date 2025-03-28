@@ -30,6 +30,7 @@ loss_params:
   fn_imp: 0.5
   gamma: 2
   weights_list: [1, 1, 1.8]
+  ignore_classes: [0] # ignore the background in loss
 
 # Dataset parameters
 dataset_type: multi    # Options: simple, vasd, multi

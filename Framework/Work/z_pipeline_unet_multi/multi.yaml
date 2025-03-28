@@ -8,8 +8,8 @@
 # More situationally changed parameters
 is_resource_calc_ready: True
 is_pruning_ready: False   # set to false to skip all prun
-path_to_data: "./Data/vein_and_sclera_data"
-target: "multi"
+path_to_data: "./Data/sclera_data"
+target: "scleras"
 train_epoch_size: 200    # we use random resampling, so this is unconnected with train_dataset size
 # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
 val_epoch_size: 30
@@ -30,10 +30,11 @@ loss_params:
   fn_imp: 0.5
   gamma: 2
   weights_list: [1, 1, 1.8]
+  ignore_classes: [0, 2] # ignore the background in loss, and the veins
 
 # Dataset parameters
-dataset_type: multi    # Options: simple, vasd, multi
-aug_type: tf    # Options: tf, np, pass
+dataset_type: simple    # Options: simple, vasd, multi
+aug_type: pass    # Options: tf, np, pass
 metrics_aggregation_fn: mean_no_background
 zero_out_non_sclera: False
 add_sclera_to_img: False

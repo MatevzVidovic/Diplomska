@@ -7,17 +7,17 @@
 
 # More situationally changed parameters
 is_resource_calc_ready: True
-is_pruning_ready: True   # set to false to skip all prun
+is_pruning_ready: False   # set to false to skip all prun
 path_to_data: "./Data/vein_and_sclera_data"
 target: "veins"
 train_epoch_size: 200    # we use random resampling, so this is unconnected with train_dataset size
 # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
 val_epoch_size: 30
 test_epoch_size: 20
-train_batch_size: 5
-eval_batch_size: 15   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+train_batch_size: 10     # limits are 26 for train, 68 for eval
+eval_batch_size: 30   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
 learning_rate: 0.0001
-num_of_dataloader_workers: 5
+num_of_dataloader_workers: 20
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 
 # More trainig-type-defining parameters
@@ -37,7 +37,7 @@ add_bcosfire_to_img: True
 add_coye_to_img: True
 
 # Model parameters that need to be set in stone for pruning
-model: "32_2_4"
+model: "16_2_4"
 input_width: 2048
 input_height: 1048
 input_channels: 5

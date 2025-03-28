@@ -4,9 +4,9 @@
 #SBATCH --time=0-5:00:00
 
 #SBATCH -p frida
-#SBATCH -c 32
-#SBATCH --gpus=A100
-#SBATCH --mem-per-cpu=4G
+#SBATCH -c 15
+#SBATCH --gpus=A100_80GB
+#SBATCH --mem-per-cpu=2G
 
 
 # --job-name sadly cannot be changed with the passed id.

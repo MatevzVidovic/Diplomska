@@ -35,7 +35,7 @@ yo_ids=${3}
 
 param_num=3
 num_optional=1
-pipeline_name=z_pipeline_unet_sclera
+pipeline_name=zzz_flops_gathering/z_pipeline_segnet_sclera_small
 
 
 source ${pipeline_name}/z_constants.sh

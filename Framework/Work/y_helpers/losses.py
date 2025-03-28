@@ -54,7 +54,7 @@ from torch import nn
 
 
 class WeightedFocalTverskyLoss(nn.Module):
-    def __init__(self, fp_imp=0.5, fn_imp=0.5, gamma=(4/3), weights_list=None, smooth=1e-6, use_background=False, equalize=False):
+    def __init__(self, fp_imp=0.5, fn_imp=0.5, gamma=(4/3), weights_list=None, smooth=1e-6, ignore_classes={}, equalize=False):
         # fn_imp == fp_imp == 0.5 is the same as Dice Loss.
         # fn_imp == fp_imp == 1 is the same as Jaccard (IoU) Loss.
         # Generally, (fn_imp + fp_imp) == 1. Im not sure if scaling both by the same value even matters. 
@@ -77,7 +77,7 @@ class WeightedFocalTverskyLoss(nn.Module):
         self.gamma = gamma
         self.weights_list = weights_list
         self.smooth = smooth
-        self.use_background = use_background
+        self.ignore_classes = ignore_classes
         self.equalize = equalize
 
 
@@ -110,9 +110,11 @@ class WeightedFocalTverskyLoss(nn.Module):
             # Iterate over each class
             for c in range(preds.shape[1]):
                 
-                # since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
+
+                # For example: since our imgs are imbalanced (mostly background), i don't want the background to affect the loss too much
                 # So in the return we also divide with one less.
-                if not self.use_background and c == 0:
+                # but also, for pretraining on a dataset with just sclera where we have more examples.
+                if c in self.ignore_classes:
                     continue
 
                 pred_to_be_flat = preds[:,c,:,:].squeeze(1)
@@ -161,7 +163,7 @@ class WeightedFocalTverskyLoss(nn.Module):
 
 
             # Average over all classes, just to make it easier to interpret (between 0 an 1).
-            num_of_classes = preds.shape[1] if self.use_background else preds.shape[1] - 1 
+            num_of_classes = preds.shape[1] - len(self.ignore_classes)
             tversky_loss =  tversky_loss / num_of_classes
             
             return tversky_loss

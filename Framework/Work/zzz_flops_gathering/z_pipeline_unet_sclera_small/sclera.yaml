@@ -7,7 +7,7 @@
 
 # More situationally changed parameters
 is_resource_calc_ready: True
-is_pruning_ready: True   # set to false to skip all prun
+is_pruning_ready: False   # set to false to skip all prun
 path_to_data: "./Data/sclera_data"
 target: "scleras"
 train_epoch_size: 210    # we use random resampling, so this is unconnected with train_dataset size
@@ -37,7 +37,7 @@ add_bcosfire_to_img: False
 add_coye_to_img: False
 
 # Model parameters that need to be set in stone for pruning
-model: "8_2"
+model: "8_2_4"
 input_width: 1024
 input_height: 1024
 input_channels: 3

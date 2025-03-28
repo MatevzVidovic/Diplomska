@@ -89,6 +89,10 @@ class IrisDataset(Dataset):
 
         self.aug_type = kwargs.get('aug_type', 'tf')
 
+        # These are here only to know how many channels of zeros to add to the image
+        self.add_bcosfire_to_img = kwargs.get('add_bcosfire_to_img', False)
+        self.add_coye_to_img = kwargs.get('add_coye_to_img', False)
+
 
         self.patchify = kwargs.get('patchify', False)
         self.patch_shape = kwargs.get('patch_shape', None)
@@ -509,6 +513,24 @@ class IrisDataset(Dataset):
             sclera[sclera > 127] = 1
             sclera = np.expand_dims(sclera, axis=2)
 
+
+            # This is a workaround for the pretraining of multi
+            # There we have a model that will train for sclera and veins at the same time, and will use these extra channels as input later.
+            # But we want to first only train on the larger dataset of sclera annotations.
+            # So there, we neet to add these fake channels to the image so we can use the model with these dimensions later.
+            zero_channels_to_add = 0
+            if self.add_bcosfire_to_img:
+                zero_channels_to_add += 1
+            if self.add_coye_to_img:
+                zero_channels_to_add += 1
+
+            print(f"zero_channels_to_add: {zero_channels_to_add}")
+            print(f"{img=}")
+            
+            if zero_channels_to_add > 0:
+                img = np.concatenate([img, np.zeros((self.input_height, self.input_width, zero_channels_to_add))], axis=2)
+
+            print(f"{img=}")
 
 
 
