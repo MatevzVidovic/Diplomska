@@ -39,6 +39,6 @@ def dump_no_overwrite(path_no_suffix, json_dict, suffix=".json"):
             add_id += 1
             j_path = path_no_suffix + f"_{add_id}{suffix}"
         
+        print(f"JSON file {old_j_path} already exists. We made {j_path} instead.")
     dump(j_path, json_dict)
-    print(f"JSON file {old_j_path} already exists. We made {j_path} instead.")
             

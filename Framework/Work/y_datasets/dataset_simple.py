@@ -524,13 +524,10 @@ class IrisDataset(Dataset):
             if self.add_coye_to_img:
                 zero_channels_to_add += 1
 
-            print(f"zero_channels_to_add: {zero_channels_to_add}")
-            print(f"{img=}")
             
             if zero_channels_to_add > 0:
-                img = np.concatenate([img, np.zeros((self.input_height, self.input_width, zero_channels_to_add))], axis=2)
-
-            print(f"{img=}")
+                to_concat = np.zeros((self.input_height, self.input_width, zero_channels_to_add), dtype=np.uint8)
+                img = np.concatenate([img, to_concat], axis=2)
 
 
 
