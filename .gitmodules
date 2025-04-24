@@ -1,3 +1,6 @@
 [submodule "Framework/Work/python_logger"]
 	path = Framework/Work/python_logger
 	url = https://github.com/MatevzVidovic/python_logger.git
+[submodule "Framework/Work/hpcRunner"]
+	path = Framework/Work/hpcRunner
+	url = git@github.com:MatevzVidovic/hpcRunner.git
