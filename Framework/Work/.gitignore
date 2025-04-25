@@ -47,6 +47,14 @@ a_saved_*/
 slurm*/
 archive/
 
+
+zzz_outputs/
+sysrun_outputs/
+*__pycache__/
+bashpy_temp/
+sysrun_temp/
+hpc_runner_test/
+
 # Probs not needed anymore:
 # saved/
 # saved_main/
