@@ -1,7 +1,6 @@
 
 
 
-
 import logging
 import yaml
 import os.path as osp
@@ -177,6 +176,36 @@ def weights_importance_fn_generator(L1_over_L2_alpha):
             
             # [num_of_kernels, depth, h, w]
             kernels_weights = averaging_objects[tree_ix][2]
+            d = kernels_weights.shape[1]
+            h = kernels_weights.shape[2]
+            w = kernels_weights.shape[3]
+            L1 = torch.abs(kernels_weights).sum(dim=(1,2,3)) / (d*h*w)
+            L2 = (kernels_weights).pow(2).sum(dim=(1,2,3)).sqrt() / (d*h*w)
+            kernels_importances = L1_over_L2_alpha * L1 + (1 - L1_over_L2_alpha) * L2
+
+            tree_ix_2_kernels_importances[tree_ix] = kernels_importances
+        
+        
+        return tree_ix_2_kernels_importances
+        
+    
+    return weights_importance_fn
+
+
+def weights_deviation_importance_fn_generator(L1_over_L2_alpha):
+    assert L1_over_L2_alpha >= 0 and L1_over_L2_alpha <= 1, "L1_over_L2_alpha must be between 0 and 1."
+    
+    def weights_deviation_importance_fn(averaging_objects: dict, conv_tree_ixs):
+        # Returns dict tree_ix_2_list_of_kernel_importances
+        # The ix-th importance is for the kernel currently on the ix-th place.
+        # To convert this ix to the initial unpruned models kernel ix, use the pruner's
+        # state of active kernels.
+
+        tree_ix_2_kernels_importances = {}
+        for tree_ix in conv_tree_ixs:
+            
+            # [num_of_kernels, depth, h, w]
+            kernels_weights = averaging_objects[tree_ix][2]
             overall_weights = kernels_weights.mean(dim=(0))
             d = kernels_weights.shape[1]
             h = kernels_weights.shape[2]
@@ -191,27 +220,48 @@ def weights_importance_fn_generator(L1_over_L2_alpha):
         return tree_ix_2_kernels_importances
         
     
-    return weights_importance_fn
+    return weights_deviation_importance_fn
 
 
+# def IPAD_and_weights(IPAD_over_weights_alpha, IPAD_L1_ADC_weight, weights_L1_over_L2_alpha):
+#     assert IPAD_over_weights_alpha >= 0 and IPAD_over_weights_alpha <= 1, "IPAD_over_weights_alpha must be between 0 and 1."
 
-def IPAD_and_weights(IPAD_over_weights_alpha, IPAD_L1_ADC_weight, weights_L1_over_L2_alpha):
-    assert IPAD_over_weights_alpha >= 0 and IPAD_over_weights_alpha <= 1, "IPAD_over_weights_alpha must be between 0 and 1."
+#     IPAD_fn = IPAD_kernel_importance_fn_generator(IPAD_L1_ADC_weight)
+#     weights_fn = weights_importance_fn_generator(weights_L1_over_L2_alpha)
 
-    IPAD_fn = IPAD_kernel_importance_fn_generator(IPAD_L1_ADC_weight)
-    weights_fn = weights_importance_fn_generator(weights_L1_over_L2_alpha)
+#     def joined_imporance_fn(averaging_objects: dict, conv_tree_ixs):
+#         IPAD_importances = IPAD_fn(averaging_objects, conv_tree_ixs)
+#         weights_importances = weights_fn(averaging_objects, conv_tree_ixs)
 
-    def joined_imporance_fn(averaging_objects: dict, conv_tree_ixs):
-        IPAD_importances = IPAD_fn(averaging_objects, conv_tree_ixs)
-        weights_importances = weights_fn(averaging_objects, conv_tree_ixs)
+#         IPAD_importances_sum = 0
+#         weights_importances_sum = 0
+#         for tree_ix in conv_tree_ixs:
+#             IPAD_importances_sum += IPAD_importances[tree_ix].sum()
+#             weights_importances_sum += weights_importances[tree_ix].sum()
+#         total_sum = IPAD_importances_sum + weights_importances_sum
 
-        joined_importances = {}
-        for tree_ix in conv_tree_ixs:
-            joined_importances[tree_ix] = IPAD_over_weights_alpha * IPAD_importances[tree_ix] + (1 - IPAD_over_weights_alpha) * weights_importances[tree_ix]
 
-        return joined_importances
+#         # In the average case, if alpha is 0.5, we would like both criteria to bring the same amount to the final importance.
+#         # So we would like to normalize them based on their total sum.
+#         # IPAD_sum = 5,   weights_sum = 2     total_sum = 7
+#         # IPAD_fair_factor = 7 / 5 = 1.4        weights_fair_factor = 7 / 2 = 3.5
+#         # We could also just do:   1/5   and 1/2   The 7 is makes no difference to the fairness.
+#         # But since there are many kernels, and the sums could be huge, we would like to keep the total sum there.
+#         # In this way we sort of make sure that as we multiply with fairness factors, we don't extremely small numbers.
 
-    return joined_imporance_fn
+#         IPAD_fairness_factor = total_sum / IPAD_importances_sum
+#         weights_fairness_factor = total_sum / weights_importances_sum
+
+#         iff = IPAD_fairness_factor
+#         wff = weights_fairness_factor
+
+#         joined_importances = {}
+#         for tree_ix in conv_tree_ixs:
+#             joined_importances[tree_ix] = IPAD_over_weights_alpha * iff * IPAD_importances[tree_ix] + (1 - IPAD_over_weights_alpha) * wff * weights_importances[tree_ix]
+
+#         return joined_importances
+
+#     return joined_imporance_fn
 
 
 
@@ -233,10 +283,65 @@ def IPAD_and_weights_granular(IPAD1_weight, IPAD2_weight, L1_weight, L2_weight):
         L1_importances = L1_fn(averaging_objects, conv_tree_ixs)
         L2_importances = L2_fn(averaging_objects, conv_tree_ixs)
 
+
+
+
+        IPAD1_importances_sum = 0
+        IPAD2_importances_sum = 0
+        L1_importances_sum = 0
+        L2_importances_sum = 0
+        for tree_ix in conv_tree_ixs:
+            IPAD1_importances_sum += IPAD1_importances[tree_ix].sum()
+            IPAD2_importances_sum += IPAD2_importances[tree_ix].sum()
+            L1_importances_sum += L1_importances[tree_ix].sum()
+            L2_importances_sum += L2_importances[tree_ix].sum()
+        total_sum = IPAD1_importances_sum + IPAD2_importances_sum + L1_importances_sum + L2_importances_sum
+
+
+
+
+        # Imagine we just had IPAD and weights:
+
+        # IPAD_importances_sum = 0
+        # weights_importances_sum = 0
+        # for tree_ix in conv_tree_ixs:
+        #     IPAD_importances_sum += IPAD_importances[tree_ix].sum()
+        #     weights_importances_sum += weights_importances[tree_ix].sum()
+        # total_sum = IPAD_importances_sum + weights_importances_sum
+
+        # In the average case, if alpha is 0.5, we would like both criteria to bring the same amount to the final importance.
+        # So we would like to normalize them based on their total sum.
+        # IPAD_sum = 5,   weights_sum = 2     total_sum = 7
+        # IPAD_fair_factor = 7 / 5 = 1.4        weights_fair_factor = 7 / 2 = 3.5
+        # We could also just do:   1/5   and 1/2   The 7 is makes no difference to the fairness.
+        # But since there are many kernels, and the sums could be huge, we would like to keep the total sum there.
+        # In this way we sort of make sure that as we multiply with fairness factors, we don't extremely small numbers.
+
+        # The same argument applies to having 4 different things.
+        # IPAD1_sum = 5,   IPAD2_sum = 0,   L1_sum = 3,   L2_sum = 0     total_sum = 8
+        # IPAD1_fair_factor = 8 / 5 = 1.6        IPAD2_fair_factor = 8 / 0 = inf
+        # L1_fair_factor = 8 / 3 = 2.67        L2_fair_factor = 8 / 0 = inf
+        # So here we jsut have to watch out for the 0s.
+
+
+        IPAD1_fairness_factor = total_sum / IPAD1_importances_sum if IPAD1_importances_sum > eps else 0
+        IPAD2_fairness_factor = total_sum / (IPAD2_importances_sum) if IPAD2_importances_sum > eps else 0
+        L1_fairness_factor = total_sum / (L1_importances_sum) if L1_importances_sum > eps else 0
+        L2_fairness_factor = total_sum / (L2_importances_sum) if L2_importances_sum > eps else 0
+
+
+        iff1 = IPAD1_fairness_factor
+        iff2 = IPAD2_fairness_factor
+        lff1 = L1_fairness_factor
+        lff2 = L2_fairness_factor
+
+
+
+
         joined_importances = {}
         for tree_ix in conv_tree_ixs:
-            joined_importances[tree_ix] = IPAD1_weight * IPAD1_importances[tree_ix] + IPAD2_weight * IPAD2_importances[tree_ix] \
-            + L1_weight * L1_importances[tree_ix] + L2_weight * L2_importances[tree_ix]
+            joined_importances[tree_ix] = IPAD1_weight * iff1 * IPAD1_importances[tree_ix] + IPAD2_weight * iff2 * IPAD2_importances[tree_ix] \
+            + L1_weight * lff1 * L1_importances[tree_ix] + L2_weight * lff2 * L2_importances[tree_ix]
 
         return joined_importances
 

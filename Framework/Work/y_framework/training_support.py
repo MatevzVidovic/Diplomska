@@ -82,7 +82,7 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
             # If there were other runs before and training happened, then we are saving the last model that was trained, and so we can repeat the log.
             v = training_logs.last_log["val_err"]
             t = training_logs.last_log["test_err"]
-            te = training_logs.last_log["train_err"]
+            te = training_logs.last_log["train_err"] if "train_err" in training_logs.last_log else None
             ti = training_logs.last_log["train_iter"]
             # new_log = (v, t, ti, new_model_filename, unique_id, True)
             new_log = ({"val_err": v, "test_err": t, "train_err": te, "train_iter": ti, "model_filename": new_model_filename, "unique_id": unique_id, "is_not_automatic": True})

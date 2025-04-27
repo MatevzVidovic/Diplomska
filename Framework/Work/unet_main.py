@@ -180,6 +180,21 @@ if __name__ == "__main__":
         YD["max_auto_prunings"] = args.map
 
 
+    # Constructing model id
+    MODEL = ""
+    # Making legacy model specification work
+    if "model" in YD:
+        MODEL = YD["model"]
+        info = MODEL.split("_")
+        STARTING_KERNELS = int(info[0])
+        EXPANSION = float(info[1])
+        DEPTH = int(info[2])
+    else:
+        MODEL = f"{YD['starting_kernels']}_{YD['expansion']}_{YD['depth']}"
+        STARTING_KERNELS = YD["starting_kernels"]
+        EXPANSION = YD["expansion"]
+        DEPTH = YD["depth"]
+
 
     # Parameter changes to prevent wrongness.
 
@@ -407,256 +422,19 @@ if YD["have_patchification"]:
     dim_x = YD["patchification_params"]["patch_x"]
 
 
-if YD["model"] == "64_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "64_2_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 5,
-        }
-elif YD["model"] == "64_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "32_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "8_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "16_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 16,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "32_2_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
-        "expansion" : 2,
-        "depth" : 5,
-        }
-elif YD["model"] == "32_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-    
-elif YD["model"] == "32_1.5_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
-        "expansion" : 1.5,
-        "depth" : 6,
-        }
 
-elif YD["model"] == "64_1.5_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 1.5,
-        "depth" : 6,
-        }
+model_parameters = {
+    # layer sizes
+    "output_y" : dim_y,
+    "output_x" : dim_x,
+    "n_channels" : INPUT_DIMS["channels"],
+    "n_classes" : OUTPUT_DIMS["channels"],
+    "starting_kernels" : STARTING_KERNELS,
+    "expansion" : EXPANSION,
+    "depth" : DEPTH,
+}
 
 
-
-elif YD["model"] == "64_1_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 64,
-        "expansion" : 1,
-        "depth" : 6,
-        }
-elif YD["model"] == "32_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 32,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "16_2_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 16,
-        "expansion" : 2,
-        "depth" : 6,
-        }
-elif YD["model"] == "16_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 16,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "4_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "8_2_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 5,
-        }
-elif YD["model"] == "8_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "6_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 6,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "4_2_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 2,
-        "depth" : 4,
-        }
-elif YD["model"] == "8_1.5_5":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 5,
-        }
-elif YD["model"] == "8_1.5_6":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 8,
-        "expansion" : 1.5,
-        "depth" : 6,
-        }
-    
-elif YD["model"] == "small" or YD["model"] == "4_1_4":
-    model_parameters = {
-        # layer sizes
-        "output_y" : dim_y,
-        "output_x" : dim_x,
-        "n_channels" : INPUT_DIMS["channels"],
-        "n_classes" : OUTPUT_DIMS["channels"],
-        "starting_kernels" : 4,
-        "expansion" : 1,
-        "depth" : 4,
-        }
-else:
-    raise ValueError("Model not recognized.")
 
 print(f"{INPUT_DIMS['channels']=}")
 print(f"{dim_x=}")
@@ -906,7 +684,7 @@ KERNEL_CONNECTION_FN = None
 
 
 
-if YD["model"] == "small" or YD["model"] == "4_1_4":
+if MODEL == "small" or MODEL == "4_1_4":
 
 
 
@@ -1183,7 +961,7 @@ if YD["model"] == "small" or YD["model"] == "4_1_4":
 
 
 
-elif YD["model"] == "32_2_4":
+elif MODEL == "32_2_4":
 
 
 
@@ -1458,7 +1236,7 @@ elif YD["model"] == "32_2_4":
     KERNEL_CONNECTION_FN = unet_kernel_connection_fn
 
 
-elif YD["model"] == "16_2_4":
+elif MODEL == "16_2_4":
 
 
 
@@ -1735,7 +1513,7 @@ elif YD["model"] == "16_2_4":
 
 
 
-elif YD["model"] == "16_2_6":
+elif MODEL == "16_2_6":
 
 
 
@@ -2028,7 +1806,7 @@ elif YD["model"] == "16_2_6":
 
 
 
-elif YD["model"] == "64_2_6":
+elif MODEL == "64_2_6":
 
 
 
@@ -2334,7 +2112,7 @@ if IMPORTANCE_FN_DEFINER == "random":
 elif IMPORTANCE_FN_DEFINER == "uniform":
     IMPORTANCE_FN = uniform_random_pruning_importance_fn
 elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
-    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
+    IMPORTANCE_FN = IPAD_and_weights_granular(0.25, 0.25, 0.25, 0.25)
 elif IMPORTANCE_FN_DEFINER == "IPAD1_L1":
     IMPORTANCE_FN = IPAD_and_weights_granular(0.5, 0, 0.5, 0)
 elif IMPORTANCE_FN_DEFINER == "IPAD2_L2":
@@ -2443,13 +2221,13 @@ if __name__ == "__main__":
         generally_disallowed = MinResourcePercentage(tree_ix_2_name)
 
 
-        if YD["model"] == "small" or YD["model"] == "4_1_4" or YD["model"] == "32_2_4" or YD["model"] == "16_2_4":
+        if MODEL == "small" or MODEL == "4_1_4" or MODEL == "32_2_4" or MODEL == "16_2_4":
             
             disallowed_dict = {
                 model_wrapper.conv_tree_ixs[18] : 1.1
             }
 
-        elif YD["model"] == "64_2_6" or YD["model"] == "16_2_6":
+        elif MODEL == "64_2_6" or MODEL == "16_2_6":
             disallowed_dict = {
                 model_wrapper.conv_tree_ixs[26] : 1.1
             }

@@ -7,15 +7,15 @@
 
 # More situationally changed parameters
 is_resource_calc_ready: True
-is_pruning_ready: False   # set to false to skip all prun
+is_pruning_ready: True   # set to false to skip all prun
 path_to_data: "./Data/sclera_data"
 target: "scleras"
 train_epoch_size: 210    # we use random resampling, so this is unconnected with train_dataset size
 # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
 val_epoch_size: 80
 test_epoch_size: 80
-train_batch_size: 70     # 103 is limit for train, 268 for eval
-eval_batch_size: 80   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+train_batch_size: 15
+eval_batch_size: 40   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
 learning_rate: 0.0001
 num_of_dataloader_workers: 20
 # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
@@ -37,7 +37,7 @@ add_bcosfire_to_img: False
 add_coye_to_img: False
 
 # Model parameters that need to be set in stone for pruning
-model: "8_2_6"
+model: "16_2_6"
 input_width: 1024
 input_height: 1024
 input_channels: 3

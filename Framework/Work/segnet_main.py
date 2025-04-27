@@ -175,6 +175,21 @@ if __name__ == "__main__":
 
 
 
+    # Constructing model id
+    MODEL = ""
+    # Making legacy model specification work
+    if "model" in YD:
+        MODEL = YD["model"]
+        info = MODEL.split("_")
+        STARTING_KERNELS = int(info[0])
+        EXPANSION = float(info[1])
+    else:
+        MODEL = f"{YD['starting_kernels']}_{YD['expansion']}_{YD['depth']}"
+        STARTING_KERNELS = YD["starting_kernels"]
+        EXPANSION = YD["expansion"]
+        DEPTH = YD["depth"]
+
+
     # Parameter changes to prevent wrongness.
 
     if IMPORTANCE_FN_DEFINER == "uniform" or IMPORTANCE_FN_DEFINER == "random":
@@ -402,106 +417,17 @@ if YD["have_patchification"]:
 
 
 
-
-
-elif YD["model"] == "64_2":
-        
-    model_parameters = {
+model_parameters = {
         # layer sizes
         "output_y" : OUTPUT_DIMS["height"],
         "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 2,
-        "starting_kernels" : 64,
         "in_chn" : INPUT_DIMS["channels"],
         "out_chn" : OUTPUT_DIMS["channels"],
-    }
+        "starting_kernels" : STARTING_KERNELS,
+        "expansion" : EXPANSION,
+}
 
 
-elif YD["model"] == "32_2":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 2,
-        "starting_kernels" : 32,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "32_1.5":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.5,
-        "starting_kernels" : 32,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "16_1.5":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.5,
-        "starting_kernels" : 16,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "16_2":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 2,
-        "starting_kernels" : 16,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "8_2":
-        
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 2,
-        "starting_kernels" : 8,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "5_1.3":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1.3,
-        "starting_kernels" : 5,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-
-elif YD["model"] == "small" or YD["model"] == "4_1":
-
-    model_parameters = {
-        # layer sizes
-        "output_y" : OUTPUT_DIMS["height"],
-        "output_x" : OUTPUT_DIMS["width"],
-        "expansion" : 1,
-        "starting_kernels" : 4,
-        "in_chn" : INPUT_DIMS["channels"],
-        "out_chn" : OUTPUT_DIMS["channels"],
-    }
-else:
-    raise ValueError("Model not recognized.")
 
 
 print(f"{INPUT_DIMS['channels']=}")
@@ -904,7 +830,7 @@ if IMPORTANCE_FN_DEFINER == "random":
 elif IMPORTANCE_FN_DEFINER == "uniform":
     IMPORTANCE_FN = uniform_random_pruning_importance_fn
 elif IMPORTANCE_FN_DEFINER == "IPAD_eq":
-    IMPORTANCE_FN = IPAD_and_weights(0.5, 0.5, 0.5)
+    IMPORTANCE_FN = IPAD_and_weights_granular(0.25, 0.25, 0.25, 0.25)
 elif IMPORTANCE_FN_DEFINER == "IPAD1_L1":
     IMPORTANCE_FN = IPAD_and_weights_granular(0.5, 0, 0.5, 0)
 elif IMPORTANCE_FN_DEFINER == "IPAD2_L2":

@@ -17,7 +17,7 @@ paths = {
         # "z_pipeline_unet_6_depth_sclera",
         "z_pipeline_segnet_sclera_small",
         "z_pipeline_segnet_veins_small",
-        "z_pipeline_unet_sclera_small",
+        # "z_pipeline_unet_sclera_small",
         "z_pipeline_unet_veins_small",
         "z_pipeline_unet_6_depth_sclera_small",
     }

@@ -5,27 +5,27 @@
 
 
 
-pipeline_name: "z_pipeline_segnet_veins"
-main_name: segnet_main.py
-model_name: segnet
-pth_model_name: SegNet
+pipeline_name: "z_pipeline_unet_veins"
+main_name: unet_main.py
+model_name: unet
+pth_model_name: UNet
 yaml_id: "veins"
-trial_name: "trial_segnet_veins"
-origin_dir_name: "segnet_train_veins"
-versions_to_make: ["IPAD_eq", "IPAD1_L1", "IPAD2_L2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+trial_name: "trial_unet_veins"
+origin_dir_name: "unet_train_veins"
+versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
 mtti: 300    # train_epoch_size is 200 anyways, so this can be smaller. 
 # 180 iters to start with (make it a lot - these iters only happen once - in the first training - so doesn't take much compute), 
 # then 100 prunings with 1 iter (cleanup_k has to be 1, so if we have 2 iters we will probably save both models between the two pruning, since loss is going up.
 # so either have like 10 itesrs beween prunings, or just have one. We need to be saving on disk memory). 
 # Then lets say at most 20 trainings after that (most will have more anyways). This should be pretty low since trainings take so long.
-core_num: 10
+core_num: 8
 
 
-origin_prefix: "segnet_prune_"
+origin_prefix: "unet_prune_"
 origin_suffix: "_veins"
-pruning_methods: ["IPAD_eq", "IPAD1_L1", "IPAD2_L2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
 retained_percents: [0.75, 0.5, 0.25, 0.03]
 resource_name: "flops_num"
 
 training_logs_name: training_logs_300_.pkl
-csv_name: segnet_300_models_errors_veins.csv
+csv_name: unet_300_models_errors_veins.csv
