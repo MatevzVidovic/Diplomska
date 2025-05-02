@@ -30,6 +30,7 @@ loss_params: null
 # Dataset parameters
 dataset_type: simple    # Options: simple, vasd
 aug_type: pass    # Options: tf, np, pass
+metrics_aggregation_fn: mean_no_background
 zero_out_non_sclera: False
 add_sclera_to_img: False
 add_bcosfire_to_img: False

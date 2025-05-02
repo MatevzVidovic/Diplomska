@@ -28,6 +28,7 @@ MY_LOGGER = logging.getLogger("prototip") # or any string. Mind this: same strin
 MY_LOGGER.setLevel(logging.DEBUG)
 
 
+import y_helpers.shared as shared
 
 import os
 import pickle
@@ -197,6 +198,13 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
             if inp == "fw":
                 dict_with_all = {}
+                dict_with_all["MODEL"] = shared.GLOBAL_DICT["MODEL"]
+
+                # Making sure the old resource calc is deleted (possibly of the old MODEL) 
+                # and a new one is created.
+                os.remove(osp.join(model_wrapper.save_path, "initial_conv_resource_calc.pkl"))
+                model_wrapper.init()
+
                 print("Initial flops and weights:")
                 res_dict = model_wrapper.initial_resource_calc.get_all_resources_of_whole_model()
                 for k, v in res_dict.items():
@@ -427,7 +435,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
                 fig = list_of_fig_ax_id_tuples[0][0]
                 fig.show()
-                input("wait")
+                # input("wait")
                 save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"pkl"})
 
 

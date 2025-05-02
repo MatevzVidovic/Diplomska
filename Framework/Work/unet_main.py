@@ -33,6 +33,19 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 
 
 
+
+import y_helpers.shared as shared
+
+if shared.DEBUG:
+    import debugpy
+    debugpy.listen(("localhost", 5678))
+    print("Waiting for debugger attach...")
+    debugpy.wait_for_client()
+
+
+
+
+
 import torch
 from torch.utils.data import DataLoader
 
@@ -184,6 +197,8 @@ if __name__ == "__main__":
     MODEL = ""
     # Making legacy model specification work
     if "model" in YD:
+        if YD["model"] == "small":
+            YD["model"] = "4_1_4"
         MODEL = YD["model"]
         info = MODEL.split("_")
         STARTING_KERNELS = int(info[0])
@@ -194,6 +209,9 @@ if __name__ == "__main__":
         STARTING_KERNELS = YD["starting_kernels"]
         EXPANSION = YD["expansion"]
         DEPTH = YD["depth"]
+    
+    shared.GLOBAL_DICT["MODEL"] = MODEL
+
 
 
     # Parameter changes to prevent wrongness.

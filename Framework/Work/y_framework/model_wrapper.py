@@ -61,8 +61,23 @@ class ModelWrapper:
 
     @py_log.autolog(passed_logger=MY_LOGGER)
     def __init__(self, model_wrapper_params: ModelWrapperParams, model_parameters: dict, dataloader_dict: dict, training_wrapper_params: dict):
+        self.init_dict = {
+            "model_wrapper_params": model_wrapper_params,
+            "model_parameters": model_parameters,
+            "dataloader_dict": dataloader_dict,
+            "training_wrapper_params": training_wrapper_params
+        }
+        self.init()
+
+    @py_log.autolog(passed_logger=MY_LOGGER)
+    def init(self):
 
         try:
+
+            model_wrapper_params = self.init_dict["model_wrapper_params"]
+            model_parameters = self.init_dict["model_parameters"]
+            dataloader_dict = self.init_dict["dataloader_dict"]
+            training_wrapper_params = self.init_dict["training_wrapper_params"]
             
             self.params: ModelWrapperParams = model_wrapper_params
                 
@@ -161,7 +176,7 @@ class ModelWrapper:
 
 
                 initial_resource_calc_path = osp.join(self.save_path, "initial_conv_resource_calc.pkl")
-                if osp.exists(osp.join(initial_resource_calc_path)):
+                if osp.exists(initial_resource_calc_path):
                     with open(initial_resource_calc_path, "rb") as f:
                         self.initial_resource_calc = pickle.load(f)
                 else:

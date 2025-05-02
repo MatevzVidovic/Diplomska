@@ -1,21 +1,57 @@
-{
+// {
     
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python Debugger: Current File",
+//             "type": "debugpy",
+//             "request": "launch",
+//             "program": "${file}",
+//             "console": "integratedTerminal",
+//             "args": [
+//                 "-p",
+//                 "scp_copy_0/SegNet_main",
+//                 "-m",
+//                 "[(1, \"ending_save\"), (80, \"\")]",
+//                 "--mn",
+//                 "SegNet"
+//             ],
+//         }
+//     ]
+// }
+
+// {
+//     "name": "Attach to Python Script",
+//     "type": "python",
+//     "request": "attach",
+//     "connect": {
+//         "host": "localhost",
+//         "port": 5678
+//     },
+//     "justMyCode": false
+// }
+
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debugger: Remote Attach",
             "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": [
-                "-p",
-                "scp_copy_0/SegNet_main",
-                "-m",
-                "[(1, \"ending_save\"), (80, \"\")]",
-                "--mn",
-                "SegNet"
-            ],
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
+                }
+            ]
         }
     ]
 }

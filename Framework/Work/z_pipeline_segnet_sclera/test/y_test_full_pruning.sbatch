@@ -35,6 +35,8 @@ num_optional=2
 
 sbatch_id=test_full_pruning
 
+pipeline_name=z_pipeline_segnet_sclera
+source ${pipeline_name}/z_constants.sh
 
 if [[ $ifn == "" ]]; then
     ifn=$main_ifn
@@ -45,7 +47,6 @@ protect_out_files='true'
 retain_savedir='false'
 #pass 'false' for false, anything else for true
 
-pipeline_name=z_pipeline_segnet_sclera
 source z_boilerplate.sh 
 # get out_name, sd_name, yo_paths
 
