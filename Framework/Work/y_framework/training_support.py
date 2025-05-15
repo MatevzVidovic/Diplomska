@@ -124,6 +124,709 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
     os.makedirs(main_save_path, exist_ok=True)
 
 
+    # Research of methods for automatic pruning. 
+    # So we could bypass making input_connection_fn and kernel_connection_fn by hand, and make this available for all models out of the box - even when using pretrained ones.
+    if False:
+
+
+        # first method
+
+        # Doesnt work, because i think it does symbolic execution - like, doesnt use real input, it just sees the code and execurtes it in its own interpreter kind of was with made up "proxy" data.
+        # And so it cant work with control flow colde (like the if statements i use in the model for padding).
+        
+        import torch
+        from torch import fx
+        from collections import defaultdict
+
+
+        def trace_layer_usage(model: torch.nn.Module, example_input: torch.Tensor):
+            """
+            Traces the model using torch.fx and returns a mapping from each Conv2d module
+            to the list of nodes (modules) that consume its output.
+
+            Args:
+                model: the nn.Module to be traced (with skip or residual connections).
+                example_input: a tensor of appropriate shape to run through the model.
+
+            Returns:
+                usage_map: dict mapping conv module names to lists of consumer node names.
+            """
+            # Symbolically trace the model to get a GraphModule
+            traced: fx.GraphModule = fx.symbolic_trace(model)
+            graph = traced.graph
+
+            # Map from node -> module name for module calls
+            node_to_module = {}
+            for node in graph.nodes:
+                if node.op == 'call_module':
+                    node_to_module[node] = node.target  # e.g., 'conv1'
+
+            # Build reverse-lookup: which nodes read from each node
+            users_map = defaultdict(list)
+            for node in graph.nodes:
+                # For each argument of this node, if it's a Node, record usage
+                for arg in node.all_input_nodes:
+                    users_map[arg].append(node)
+
+            # Now collect usage per Conv2d
+            usage_map = {}
+            for node in graph.nodes:
+                if node.op == 'call_module':
+                    mod = dict(model.named_modules())[node.target]
+                    if isinstance(mod, torch.nn.Conv2d):
+                        # get all users of this conv's output
+                        consumers = users_map.get(node, [])
+                        usage_map[node.target] = [
+                            (user.op + ':' + (user.target if user.op=='call_module' else user.name))
+                            for user in consumers
+                        ]
+            return usage_map
+
+
+        class SimpleResNet(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
+                self.conv2 = torch.nn.Conv2d(16, 16, 3, padding=1)
+                self.conv3 = torch.nn.Conv2d(16, 16, 3, padding=1)
+                self.relu = torch.nn.ReLU()
+
+            def forward(self, x):
+                out1 = self.relu(self.conv1(x))
+                out2 = self.relu(self.conv2(out1))
+                res = out1 + out2
+                out3 = self.relu(self.conv3(res))
+                return out3
+
+        model = SimpleResNet()
+        dummy = torch.randn(1, 3, 224, 224)
+        usage = trace_layer_usage(model, dummy)
+        for conv_name, consumers in usage.items():
+            print(f"{conv_name} output is used by: {consumers}")
+        
+
+
+
+
+        import torch
+        from torch.utils.tensorboard import SummaryWriter
+        from torchviz import make_dot
+        from torch.fx import symbolic_trace
+
+
+        try:
+            model = model_wrapper.model
+            dummy_input = model_wrapper.input_example.to(model_wrapper.params.device)
+
+            
+            usage = trace_layer_usage(model, dummy_input)
+            for conv_name, consumers in usage.items():
+                print(f"{conv_name} output is used by: {consumers}")
+        except:
+            print("FX didnt work.")
+            pass
+            
+
+
+
+
+
+
+
+        # second method
+
+
+        activations = {}
+        def fw_hook(module, inp, out):
+            # activations[f"{module.__class__.__name__}_{id(module)}"] = out.detach()
+
+            # Build a unique key for this module
+            key = f"{module.__class__.__name__}_{id(module)}"
+            if isinstance(out, tuple):
+                # Detach each Tensor in the tuple and store as a tuple
+                activations[key] = tuple(
+                    elem.detach() if isinstance(elem, torch.Tensor) else elem
+                    for elem in out
+                )
+            else:
+                # Single Tensor case
+                activations[key] = out.detach()
+
+        for m in model.modules():
+            m.register_forward_hook(fw_hook)
+
+        output = model(dummy_input)
+
+        print("Activations:")
+        for key, value in activations.items():
+            if isinstance(value, tuple):
+                print(f"{key}: {[v.shape for v in value]}")
+            else:
+                print(f"{key}: {value.shape}")
+
+
+
+
+
+        # third method
+
+        """
+        pip install torchviz
+    # Additionally, install Graphviz system package:
+    # For Ubuntu:
+    sudo apt-get install graphviz
+    """
+
+        dot = make_dot(output, params=dict(model.named_parameters()))
+        dot.format = 'png'
+        dot.render('model_graph')
+
+
+
+        # Fourth method
+
+        # SummaryWriter().add_graph(model, dummy_input)
+
+        # pip install tensorboard
+
+        # tensorboard --logdir=runs
+
+        
+        tb_writer = SummaryWriter(log_dir='runs/your_experiment_name')
+        tb_writer.add_graph(model, dummy_input)
+        tb_writer.close()
+        print("TensorBoard graph written to runs/your_experiment_name")
+
+
+        
+        # import torch.fx
+        # torch.fx.wrap('pad_or_resize_to_dims')
+
+        # from torch.fx import symbolic_trace
+        # gm = symbolic_trace(model)
+        # print("\n===== FX Graph =====\n")
+        # for node in gm.graph.nodes:
+        #     print(node.format_node())
+
+
+
+        # Fifth method
+        import torch
+        sm = torch.jit.trace(model, dummy_input)
+        for node in sm.graph.nodes():
+            for out in node.outputs():
+                for use in out.uses():
+                    print(node.kind(), '->', use.user.kind())
+
+
+
+        # sixth method
+        print("\n\n\n sixth method \n\n\n")
+
+        def traverse(fn):
+            if fn is None:
+                return
+            print(fn)
+            for next_fn, _ in fn.next_functions:
+                traverse(next_fn)
+
+        
+        traverse(output.grad_fn)
+
+
+
+        # seventh method
+        print("\n\n\n seventh method \n\n\n")
+        edges = []
+        for line in dot.body:
+            if '->' in line:
+                src, dst = line.split('->')
+                edges.append((src.strip(), dst.strip().strip(';')))
+        print("Edges:")
+        for src, dst in edges:
+            print(f"{src} -> {dst}")
+        
+
+        # eight method
+        print("\n\n\n eight method \n\n\n")
+        sm = torch.jit.trace(model, dummy_input)
+        for node in sm.graph.nodes():
+            for out in node.outputs():
+                for use in out.uses():
+                    print(node.kind(), '->', use.user.kind())
+
+
+
+
+
+
+
+        # ninth method
+        print("\n\n\n ninth method \n\n\n")
+
+        from torch import nn
+        from torch.autograd import Function
+        from graphviz import Digraph
+
+        def make_dot(output, params=None, show_saved=False):
+            """Produce a Graphviz representation of the autograd graph for `output`.
+
+            Args:
+                output (Tensor): the output tensor from which to start tracing.
+                params (dict[string, Tensor], optional): mapping from parameter names to tensors,
+                    so weight nodes can be labeled.
+                show_saved (bool): if True, include edges to saved_tensors (for CatBackward, etc.).
+            Returns:
+                graphviz.Digraph
+            """
+            if params is None:
+                params = {}
+
+            dot = Digraph(format='png')
+            seen = set()
+
+            def size_to_str(size):
+                return '(' + (', ').join(str(s) for s in size) + ')'
+
+            def add_param_nodes():
+                for name, param in params.items():
+                    uid = str(id(param))
+                    dot.node(uid, label=f"{name}\n{size_to_str(param.size())}", shape='box', style='filled', fillcolor='lightgray')
+
+            def recurse(fn):
+                """Recursively traverse from a grad_fn node."""
+                if fn is None or fn in seen:
+                    return
+                seen.add(fn)
+
+                # Create a node for this Function
+                uid = str(id(fn))
+                label = type(fn).__name__
+                dot.node(uid, label)
+
+                # If this Function saved tensors (e.g. CatBackward, SumBackward…), optionally show them
+                if show_saved and hasattr(fn, 'saved_tensors'):
+                    for idx, t in enumerate(fn.saved_tensors):
+                        tid = str(id(t))
+                        dot.node(tid, label=f"saved[{idx}]\n{size_to_str(t.size())}", shape='oval', style='dotted')
+                        dot.edge(tid, uid, style='dotted')
+                
+                # Hasn't doen anything.
+                # # show atters of Function
+                # if show_saved and hasattr(fn, 'attrs'):
+                #     for idx, t in enumerate(fn.attrs):
+                #         tid = str(id(t))
+                #         dot.node(tid, label=f"saved[{idx}]\n{size_to_str(t.size())}", shape='oval', style='dotted')
+                #         dot.edge(tid, uid, style='dotted')
+                
+                
+
+                # Traverse next_functions: edges from dependencies → this node
+                for next_fn, _ in fn.next_functions:
+                    if next_fn is not None:
+                        n_uid = str(id(next_fn))
+                        # If next_fn is actually a leaf parameter, link from the param node
+                        
+                        if type(next_fn).__name__ == 'AccumulateGrad':
+                            var = next_fn.variable
+                            pname = None
+                            for name, p in params.items():
+                                if p is var:
+                                    pname = name; break
+                            if pname is not None:
+                                dot.edge(str(id(var)), uid)
+                            else:
+                                dot.node(str(id(var)), label=f"Leaf\n{size_to_str(var.size())}", shape='oval', style='filled', fillcolor='lightblue')
+                                dot.edge(str(id(var)), uid)
+                        else:
+                            dot.edge(str(id(next_fn)), uid)
+                            recurse(next_fn)
+
+            # Add parameter nodes first
+            add_param_nodes()
+
+            # Start from output.grad_fn
+            recurse(output.grad_fn)
+
+            return dot
+
+        # Simple model with concatenation and sum
+        class ToyModel(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv1 = nn.Conv2d(3, 4, 3, padding=1)
+                self.conv2 = nn.Conv2d(3, 4, 3, padding=1)
+            def forward(self, x):
+                a = self.conv1(x)
+                b = self.conv2(x)
+                y = torch.cat([a, b], dim=1)        # CatBackward
+                z = a + b                           # AddBackward
+                z = torch.cat([z, z], dim=1)        # CatBackward
+                return y + z
+
+        toy_model = ToyModel()
+        # Warm up with a dummy forward to build the graph
+        inp = torch.randn(1, 3, 8, 8, requires_grad=True)
+        out = toy_model(inp)
+
+        # Build and render the graph
+        dot = make_dot(out, params=dict(toy_model.named_parameters()), show_saved=True)
+        dot.render('toy_autograd_graph')
+
+
+        out = model(dummy_input)
+        dot = make_dot(out, params=dict(model.named_parameters()), show_saved=True)
+        dot.render('autograd_graph')
+
+
+
+
+
+
+
+
+
+
+        # tenth method
+        print("\n\n\n tenth method \n\n\n")
+
+
+        # import torch
+        # import torch.nn as nn
+        import collections
+        from typing import Dict, List, Tuple, Any, Set
+
+        class OutputTracker:
+            """
+            Tracks where the output tensor of specified PyTorch modules is used as input
+            to other modules within a model during a forward pass.
+
+            Useful for visualizing data flow, especially with skip/residual connections,
+            and for dependency analysis before pruning.
+            """
+            def __init__(self, model: nn.Module, target_modules: Tuple[type, ...] = (nn.Conv2d,)):
+                """
+                Initializes the tracker.
+
+                Args:
+                    model (nn.Module): The PyTorch model to track.
+                    target_modules (Tuple[type, ...]): A tuple of nn.Module types
+                                                        whose outputs we want to track
+                                                        (e.g., (nn.Conv2d, nn.Linear)).
+                                                        Also tracks which modules consume these outputs.
+                """
+                self.model = model
+                self.target_modules = target_modules
+                self.connections: Dict[str, Set[str]] = collections.defaultdict(set)
+                # Use tensor id() as key. Maps tensor ID to the name of the module that produced it.
+                self.tensor_origin_map: Dict[int, str] = {}
+                self.module_names: Dict[nn.Module, str] = {}
+                self._assign_module_names()
+                self.hook_handles = []
+                self.active = False # Flag to ensure hooks only run during track()
+
+            def _assign_module_names(self):
+                """Assigns unique names to all modules in the model."""
+                for name, module in self.model.named_modules():
+                    # Use the name provided by named_modules, which handles nesting.
+                    # Make sure each module instance has a unique reference in the dict.
+                    self.module_names[module] = name if name else "model_root" # Assign 'model_root' to the top-level module if unnamed
+
+            def _forward_hook(self, module: nn.Module, inputs: Any, output: Any):
+                """
+                Forward hook executed *after* module's forward pass.
+                Records the origin of the output tensor(s).
+                """
+                if not self.active: return # Only run when tracking is active
+
+                module_name = self.module_names.get(module, f"Unnamed_{type(module).__name__}_{id(module)}")
+                
+                # Handle single tensor output and tuple/list outputs
+                if isinstance(output, torch.Tensor):
+                    self.tensor_origin_map[id(output)] = module_name
+                    # print(f"HOOK: Module '{module_name}' produced tensor {id(output)}") # Debug
+                elif isinstance(output, (list, tuple)):
+                    for i, out_tensor in enumerate(output):
+                        if isinstance(out_tensor, torch.Tensor):
+                            # Store origin with an index if multiple outputs
+                            self.tensor_origin_map[id(out_tensor)] = f"{module_name}_out{i}"
+                            # print(f"HOOK: Module '{module_name}_out{i}' produced tensor {id(out_tensor)}") # Debug
+                # else: Handle other potential output types if necessary
+
+            def _forward_pre_hook(self, module: nn.Module, inputs: Any):
+                """
+                Forward pre-hook executed *before* module's forward pass.
+                Checks input tensors against the tensor_origin_map to find connections.
+                """
+                if not self.active: return # Only run when tracking is active
+
+                target_module_name = self.module_names.get(module, f"Unnamed_{type(module).__name__}_{id(module)}")
+
+                # inputs is often a tuple, even with a single input tensor
+                input_tensors = []
+                if isinstance(inputs, torch.Tensor):
+                    input_tensors.append(inputs)
+                elif isinstance(inputs, (list, tuple)):
+                    for item in inputs:
+                        if isinstance(item, torch.Tensor):
+                            input_tensors.append(item)
+                        # Can recursively check nested lists/tuples if needed
+                # else: Handle other potential input structures if necessary
+
+                for input_tensor in input_tensors:
+                    tensor_id = id(input_tensor)
+                    # print(f"PRE-HOOK: Module '{target_module_name}' received tensor {tensor_id}") # Debug
+                    if tensor_id in self.tensor_origin_map:
+                        source_module_name = self.tensor_origin_map[tensor_id]
+                        # print(f"PRE-HOOK: Tensor {tensor_id} came from '{source_module_name}'. Adding connection: {source_module_name} -> {target_module_name}") # Debug
+                        if source_module_name != target_module_name: # Avoid self-loops if logic allows
+                            self.connections[source_module_name].add(target_module_name)
+
+            def _attach_hooks(self):
+                """Attaches hooks to all relevant modules."""
+                self.remove_hooks() # Ensure no duplicate hooks
+                for name, module in self.model.named_modules():
+                    # Attach hooks to *all* modules to track the flow comprehensively
+                    # The filtering happens when interpreting the results later if needed
+                    # (or you could filter here based on self.target_modules if you *only*
+                    # care about connections originating from or ending at those specific types)
+                    handle_pre = module.register_forward_pre_hook(self._forward_pre_hook)
+                    handle_post = module.register_forward_hook(self._forward_hook)
+                    self.hook_handles.extend([handle_pre, handle_post])
+
+            def remove_hooks(self):
+                """Removes all attached hooks."""
+                for handle in self.hook_handles:
+                    handle.remove()
+                self.hook_handles = []
+
+            def reset(self):
+                """Clears the tracked connections and tensor map."""
+                self.connections.clear()
+                self.tensor_origin_map.clear()
+
+            def track(self, *args, **kwargs) -> Dict[str, Set[str]]:
+                """
+                Performs a forward pass on the model with tracking enabled.
+
+                Args:
+                    *args: Positional arguments for the model's forward pass.
+                    **kwargs: Keyword arguments for the model's forward pass.
+
+                Returns:
+                    Dict[str, Set[str]]: A dictionary where keys are the names of source
+                                        modules and values are sets of names of modules
+                                        that consume the source module's output tensor(s).
+                """
+                self.reset()
+                self._attach_hooks()
+                self.active = True # Enable hooks
+
+                # Perform the forward pass
+                try:
+                    _ = self.model(*args, **kwargs)
+                finally:
+                    # Ensure hooks are removed and state reset even if forward pass fails
+                    self.active = False # Disable hooks
+                    self.remove_hooks()
+                    # tensor_origin_map is cleared on next run, keep it for potential inspection
+                    # self.tensor_origin_map.clear() # Optionally clear immediately
+
+                # Filter connections to only show those originating from target_modules if desired
+                # (Or return all connections as done here)
+                # filtered_connections = {
+                #    src: targets for src, targets in self.connections.items()
+                #    if any(src.startswith(name) for name, mod in self.model.named_modules()
+                #           if isinstance(mod, self.target_modules) and self.module_names[mod] == src)
+                # }
+                # return filtered_connections
+                
+                # Return all connections found
+                # Convert sets to lists for cleaner printing if desired
+                return {k: sorted(list(v)) for k, v in self.connections.items()}
+
+            def __enter__(self):
+                # Allows using 'with OutputTracker(model) as tracker:'
+                self.reset()
+                self._attach_hooks()
+                self.active = True
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                # Cleans up hooks when exiting 'with' block
+                self.active = False
+                self.remove_hooks()
+                # Optionally clear map: self.tensor_origin_map.clear()
+
+
+        # --- Example Usage ---
+
+        # Define a simple CNN with skip/residual connections
+        class SimpleResNetBlock(nn.Module):
+            def __init__(self, channels):
+                super().__init__()
+                self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+                self.relu = nn.ReLU()
+                self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+
+            def forward(self, x):
+                identity = x
+                out = self.relu(self.conv1(x))
+                out = self.conv2(out)
+                out += identity # Residual connection (element-wise add)
+                return self.relu(out)
+
+        class SkipCNN(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.initial_conv = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+                self.relu1 = nn.ReLU()
+                self.res_block1 = SimpleResNetBlock(16)
+                self.downsample_conv = nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2)
+                self.relu2 = nn.ReLU()
+                self.res_block2 = SimpleResNetBlock(32)
+                # Example of a skip connection via concatenation (different structure)
+                self.skip_conv = nn.Conv2d(16, 16, kernel_size=1) # Process skip connection
+                self.upsample = nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2)
+                # Concatenate upsampled output with skip connection path
+                self.final_conv = nn.Conv2d(16 + 16, 1, kernel_size=3, padding=1) # 16 (upsampled) + 16 (skip)
+                self.pool = nn.AdaptiveAvgPool2d((1, 1)) # Make output size predictable
+
+            def forward(self, x):
+                # Initial processing
+                x1 = self.relu1(self.initial_conv(x)) # Output of initial_conv used by relu1
+
+                # First residual block
+                x2 = self.res_block1(x1) # Output of res_block1 used by downsample_conv AND skip_conv
+
+                # Downsampling path
+                x3 = self.relu2(self.downsample_conv(x2)) # Output used by res_block2
+                x4 = self.res_block2(x3) # Output used by upsample
+
+                # Upsampling path
+                x5_upsampled = self.upsample(x4) # Output used by final_conv (via concat)
+
+                # Skip connection path
+                x6_skip = self.skip_conv(x2) # Output used by final_conv (via concat)
+
+                # Concatenate and final convolution
+                # NOTE: The 'torch.cat' operation itself isn't an nn.Module and won't be directly
+                #       tracked by this hook-based method. The pre-hook on 'final_conv' will see
+                #       the *result* of the concatenation. Its ID won't be in tensor_origin_map.
+                #       This tracker identifies module-to-module tensor passing.
+                #       It shows x5_upsampled (from upsample) and x6_skip (from skip_conv)
+                #       are *available* just before final_conv, implying their use.
+                #       A more advanced graph tracer (like torch.fx) might be needed
+                #       to explicitly track the 'cat' operation itself.
+                x7_cat = torch.cat((x5_upsampled, x6_skip), dim=1)
+                out = self.final_conv(x7_cat) # Consumes the result of cat
+
+                out = self.pool(out) # Pool consumes output of final_conv
+                return out
+
+        # --- Print the Results ---
+        def printer(connections, model):
+            print("--- Data Flow Connections ---")
+            print("(Source Module Name -> [List of Consumer Module Names])")
+            # Focus on Conv2d outputs as requested by the user (filter the results)
+            conv_outputs_usage = {k: v for k, v in connections.items() if 'conv' in k.lower()} # Simple name filter
+
+            if not conv_outputs_usage:
+                print("\nNo connections found originating from Conv2D layers (or tracking failed).")
+                print("\nFull connection map:")
+                for source, targets in connections.items():
+                    print(f"'{source}' -> {targets}")
+
+            else:
+                print("\nUsage of Conv2D Layer Outputs:")
+                for source, targets in sorted(conv_outputs_usage.items()):
+                    # Find the actual module type for context (optional)
+                    try:
+                        module = model.get_submodule(source)
+                        mod_type = type(module).__name__
+                        print(f"'{source}' ({mod_type}) -> {targets}")
+                    except AttributeError:
+                        # Handle cases like source being 'module_name_out0' for tuple outputs
+                        print(f"'{source}' -> {targets}") # Just print names if lookup fails
+
+                print("\n--- Interpretation Notes ---")
+                print("- This shows which module's `forward` function received the output tensor")
+                print("  from the source module as part of its input tuple.")
+                print("- Intermediate operations like `+` or `torch.cat` are not `nn.Module`s and")
+                print("  won't appear as explicit sources or targets. However, you can infer their")
+                print("  presence by seeing which tensors are consumed by the module *after* the operation.")
+                print("  (e.g., 'final_conv' consuming tensors originating from 'upsample' and 'skip_conv')")
+        
+
+
+
+
+        # --- Run the Tracking ---
+        toy_model = SkipCNN()
+        # Create dummy input data (Batch, Channel, Height, Width)
+        toy_dummy_input = torch.randn(1, 1, 28, 28)
+
+        # Use the tracker
+        tracker = OutputTracker(toy_model, target_modules=(nn.Conv2d,)) # Track outputs of Conv2D
+
+        # Option 1: Direct call
+        connections = tracker.track(toy_dummy_input)
+
+        # Option 2: Using 'with' statement (preferred for cleanup)
+        # with OutputTracker(model, target_modules=(nn.Conv2d,)) as tracker:
+        #     _ = model(dummy_input) # Forward pass happens implicitly via model call
+        #     connections = {k: sorted(list(v)) for k, v in tracker.connections.items()}
+
+        printer(connections, toy_model)
+
+
+
+
+        # --- Run the Tracking ---
+
+        # Use the tracker
+        tracker = OutputTracker(model, target_modules=(nn.Conv2d,)) # Track outputs of Conv2D
+
+        # Option 1: Direct call
+        connections = tracker.track(dummy_input)
+
+        # Option 2: Using 'with' statement (preferred for cleanup)
+        # with OutputTracker(model, target_modules=(nn.Conv2d,)) as tracker:
+        #     _ = model(dummy_input) # Forward pass happens implicitly via model call
+        #     connections = {k: sorted(list(v)) for k, v in tracker.connections.items()}
+
+        printer(connections, model)
+
+
+
+
+
+
+        # eleventh method
+
+        print("\n\n\n eleventh method \n\n\n")
+        from collections import defaultdict
+        consumers = defaultdict(list)
+
+        def hook_fn(mod, inp, out):
+            for next_mod in model.modules():
+                # simplistic; better match via tensor identity
+                if out in next_mod.__inputs__:
+                    consumers[mod].append(next_mod)
+
+        for m in model.modules():
+            m.register_forward_hook(hook_fn)
+        _ = model(dummy_input)
+
+        print("Consumers:")
+        for mod, next_mods in consumers.items():
+            print(f"{mod.__class__.__name__}_{id(mod)} -> {[f'{next_mod.__class__.__name__}_{id(next_mod)}' for next_mod in next_mods]}")
+
+
+
+        # exit the program:
+        import sys
+        sys.exit(0)
 
 
 

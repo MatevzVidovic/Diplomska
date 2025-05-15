@@ -232,7 +232,10 @@ class ConvResourceCalc():
                 def new_forward(m):
                     
                     def lambda_forward(x, *args, **kwargs):
-                        
+                        # we need *args and **kwargs for layers with more params in the .forward() aside from the input x
+                        # (not in the constructuion of the layer, but in the forward)
+                        # e.g.  x = self.MaxDe2(x, ind4, output_size=size3)   (passing pooling indices in SegNet)
+                        # e.g.   output = F.dropout(x, p=0.5, training=self.training) 
                         return self.calculate_layer(m, curr_tree_ix, x, *args, **kwargs)
                     
                     return lambda_forward

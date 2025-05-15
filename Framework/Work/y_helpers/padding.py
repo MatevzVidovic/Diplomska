@@ -1,6 +1,6 @@
 
 
-
+import torch
 import torch.nn.functional as F
 
 
@@ -43,6 +43,30 @@ def pad_or_resize_to_second_arg(x1, x2):
     x1 = pad_or_resize_to_dims(x1, y, x)
     return x1
 
+
+
+
+# def pad_or_resize_to_dims(x, target_h, target_w):
+#     _, _, h, w = x.shape
+#     diff_h = target_h - h
+#     diff_w = target_w - w
+
+#     # # Positive → pad, Negative → crop
+#     # pad_h = torch.clamp(diff_h, min=0)
+#     # pad_w = torch.clamp(diff_w, min=0)
+#     # crop_h = torch.clamp(-diff_h, min=0)
+#     # crop_w = torch.clamp(-diff_w, min=0)
+
+#     # Positive → pad, Negative → crop
+#     pad_h = max(diff_h, 0)
+#     pad_w = max(diff_w, 0)
+#     crop_h = max(-diff_h, 0)
+#     crop_w = max(-diff_w, 0)
+
+#     x = F.pad(x, [pad_w//2, pad_w-pad_w//2,
+#                   pad_h//2, pad_h-pad_h//2])
+#     return x[..., crop_h//2:crop_h//2+target_h,
+#                 crop_w//2:crop_w//2+target_w]
 
 def pad_or_resize_to_dims(x1, y, x):
     # x2 is the larger tensor.
