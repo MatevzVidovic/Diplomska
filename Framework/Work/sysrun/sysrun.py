@@ -95,7 +95,7 @@ parser.add_argument("path_to_run", type=str) #, required=True)
 parser.add_argument("--um", action="store_true", default=False, help="unconstrained mode")
 parser.add_argument("--yamls", nargs='+', help="paths to additional yamls to add to the constructed yaml dict", default=[])
 parser.add_argument("--args", nargs='+', help="args we overwrite in the end. Passing sys:gpus:a100_80GB will change that arg.", default=[])
-parser.add_argument("--test_yaml", type=str, help="Pass path to a template yaml. If any field, \
+parser.add_argument("--test_yaml", type=str, help="Pass path from the root of the project to a template yaml. If any field, \
                     which is present in the template yaml, isn't present in the constructed yaml, we tell you about it. \
                     Either way, we stop before running anything.", default=None)
 
@@ -153,9 +153,15 @@ for path in args.yamls:
     
     # absolute in the sense that it is relative to the project root
     absolute_yaml_path = Path(path)
+
+    # relative yaml path (relative to where the runfile is)
+    relative_yaml_path = dirs_to_run[-1] / path
     
     if osp.exists(absolute_yaml_path):
         new_yaml = get_yaml(absolute_yaml_path)
+        YD = recursive_update(YD, new_yaml)
+    elif osp.exists(relative_yaml_path):
+        new_yaml = get_yaml(relative_yaml_path)
         YD = recursive_update(YD, new_yaml)
     else:
         print(f"Warning: {path} does not exist. Skipping.")
@@ -190,9 +196,11 @@ YD = recursive_update(YD, args_dict)
 def recursive_check(yaml_dict, template_yaml_dict):
 
     missing_keys = []
-    for key in test_yaml.keys():
-        if key not in YD:
-            missing_keys.append(key)
+    
+    # This was the initial proof of concept for the top level.
+    # for key in test_yaml.keys():
+    #     if key not in YD:
+    #         missing_keys.append(key)
     
     for key, value in template_yaml_dict.items():
         if key not in yaml_dict:
@@ -233,7 +241,7 @@ sysrun_yaml_path = sysrun_path  / "sysrun.yaml"
 write_yaml(YD, sysrun_yaml_path)
 
 
-out_folder_path = get_fresh_folder("sysrun_outputs")
+out_folder_path = get_fresh_folder("sysrun_runner_outputs")
 outfile_path = out_folder_path / "out.txt"
 err_path = out_folder_path / "err.txt"
 
@@ -244,7 +252,6 @@ module_path_to_run = str(path_to_run).replace("/", ".").removesuffix(".py") # we
 # print(f"module_path_to_run: {module_path_to_run}")
 
 if not unconstrained_mode:
-
 
     sysrun_sbatch_path = sysrun_path / "sysrun.sbatch"
     sys_args = YD.get("sys", None)

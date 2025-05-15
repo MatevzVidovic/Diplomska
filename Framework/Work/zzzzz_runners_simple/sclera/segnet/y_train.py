@@ -15,7 +15,15 @@ args = parser.parse_args()
 main_name, auto_main_args, sd_path, main_yaml_path, out_folder_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
 
 
+
+
+
+import y_helpers.shared_debug as debug
+debug.start_debug()
+
+
 # auto_main_args needs added_auto_main_args: --ifn: IPAD1
+assert "--mti" in auto_main_args
 
 command = ["python3", main_name] + auto_main_args + ["--sd", sd_path, "--yaml", main_yaml_path]
 run(command, **get_novel_out_and_err(out_folder_path))

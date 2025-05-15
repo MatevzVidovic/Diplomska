@@ -12,6 +12,3 @@
 
 
 GLOBAL_DICT = {}
-
-
-DEBUG = False#True

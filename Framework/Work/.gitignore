@@ -47,7 +47,7 @@ a_saved_*/
 slurm*/
 archive/
 
-
+active_models/
 zzz_outputs/
 sysrun_outputs/
 *__pycache__/

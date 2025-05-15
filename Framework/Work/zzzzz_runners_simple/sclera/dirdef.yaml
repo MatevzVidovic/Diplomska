@@ -1,0 +1,22 @@
+
+oth:
+    
+  main_yaml:
+
+    #  ---------- task specific ---------- 
+    path_to_data: "./Data/sclera_data"
+    target: "scleras"
+    input_width: 1024
+    input_height: 1024
+    input_channels: 3
+    output_channels: 2
+
+    # Dataset parameters
+    dataset_type: simple    # Options: simple, vasd
+    aug_type: pass    # Options: tf, np, pass
+    metrics_aggregation_fn: mean_no_background
+    zero_out_non_sclera: False
+    add_sclera_to_img: False
+    add_bcosfire_to_img: False
+    add_coye_to_img: False
+

@@ -1,40 +1,9 @@
 
 
 
-# basic_with_zero_out
-
-# Training parameters
-
-# More situationally changed parameters
-is_resource_calc_ready: True
-is_pruning_ready: True   # set to false to skip all prun
-
-train_epoch_size: 210    # we use random resampling, so this is unconnected with train_dataset size
-# In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
-val_epoch_size: 80
-test_epoch_size: 80
-train_batch_size: 15
-eval_batch_size: 40   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
-learning_rate: 0.0001
-num_of_dataloader_workers: 20
-# train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
-
-# More trainig-type-defining parameters
-loss_fn_name: "MCDL"
-loss_params: null
-
-# Dataset parameters
-dataset_type: simple    # Options: simple, vasd
-aug_type: pass    # Options: tf, np, pass
-metrics_aggregation_fn: mean_no_background
-zero_out_non_sclera: False
-add_sclera_to_img: False
-add_bcosfire_to_img: False
-add_coye_to_img: False
-
-# Model parameters that need to be set in stone for pruning
-model: "16_2"
-input_width: 1024
-input_height: 1024
-input_channels: 3
-output_channels: 2
+oth:
+  bashpy_args:
+    #  ---------- run specific (run.py same-name yaml) ---------- 
+    sbatch_id: train
+    protect_out_files: True
+    retain_savedir: True

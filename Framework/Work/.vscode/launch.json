@@ -31,27 +31,136 @@
 //     "justMyCode": false
 // }
 
-{
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
+
+
+
+// For debugpy import debugging inside of python code:
+// This is called remote debugging.
+
+// {
+//     // Use IntelliSense to learn about possible attributes.
+//     // Hover to view descriptions of existing attributes.
+//     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+//     "version": "0.2.0",
+//     "configurations": [
         
-        {
-            "name": "Python Debugger: Remote Attach",
-            "type": "debugpy",
-            "request": "attach",
-            "connect": {
-                "host": "localhost",
-                "port": 5678
-            },
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "."
-                }
-            ]
-        }
-    ]
+//         {
+//             "name": "Python Debugger: Remote Attach",
+//             "type": "debugpy",
+//             "request": "attach",
+//             "connect": {
+//                 "host": "localhost",
+//                 "port": 5678
+//             },
+//             "pathMappings": [
+//                 {
+//                     "localRoot": "${workspaceFolder}",
+//                     "remoteRoot": "."
+//                 }
+//             ]
+//         }
+//     ]
+// }
+
+
+
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug sysrun",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "sysrun.sysrun",
+      // --------------------
+
+
+      "args": [
+        "zzzzz_runners_simple/sclera/segnet/y_train.py",
+        "--yamls",
+        "model_yamls/sclera_fake.yaml",
+        "hpc_yamls/basic.yaml",
+        "--args",
+        "oth:added_auto_main_args:--mti:2",
+      ],
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/y_train.py",
+      //   "--yamls",
+      //   "model_yamls/sclera_fake.yaml",
+      //   "hpc_yamls/basic.yaml",
+      //   "--args",
+      //   "oth:added_auto_main_args:--mti:2",
+      //   "--test_yaml",
+      //   "sysrun/template_yaml.yaml"
+      // ],
+
+
+      // --------------------
+      "console": "integratedTerminal",
+      "subProcess": true,
+      // "python": "/path/to/conda/envs/ipad/bin/python" # or just do conda activate ipad in the integrated terminal beforehand
+    }
+  ]
 }
+
+
+
+
+
+// This just didn't work. 
+// But this did: in one vscode window you do the second part (the running of the script) 
+// and in another window you do the first part (the attach to process - remote dbugging) 
+// !!!!!!!!!!!!!!!! 
+// But very interestingly
+// When you do remote debugging, when you do Popen, you still get to do breakpoints in the process you just ran.
+// I think this mght be because here, Popen actually ran a python3 command.
+// Because in the second part in isolation, i have subprocess: true, which means it should do the same.
+//  But because Popen runs a bash command, I think the debugger doesn't go into that one.
+
+// // Combining the two above
+
+// {
+//   "version": "0.2.0",
+//   "compounds": [
+//     {
+//       "name": "Run sysrun + Attach Subprocess",
+//       "configurations": [
+//         "Python: Debug sysrun",
+//         "Python Debugger: Remote Attach"
+//       ]
+//     }
+//   ],
+//   "configurations": [
+//     {
+//       "name": "Python: Debug sysrun",
+//       "type": "debugpy",
+//       "request": "launch",
+//       "module": "sysrun.sysrun",
+//       "args": [
+//         "zzzzz_runners_simple/sclera/segnet/y_train.py",
+//         "--yamls", "model_yamls/sclera_fake.yaml",
+//         "hpc_yamls/basic.yaml",
+//         "--args", "oth:added_auto_main_args:--mti:2"
+//       ],
+//       "console": "integratedTerminal",
+//       "subProcess": true
+//     },
+//     {
+//       "name": "Python Debugger: Remote Attach",
+//       "type": "debugpy",
+//       "request": "attach",
+//       "connect": {
+//         "host": "localhost",
+//         "port": 5678 //5677
+//       },
+//       "pathMappings": [
+//         {
+//           "localRoot": "${workspaceFolder}",
+//           "remoteRoot": "."
+//         }
+//       ]
+//     }
+//   ]
+// }

@@ -178,7 +178,14 @@ dirdef.yaml, samename.yaml, and --yamls
 
 
 
+How to test that your constructed yaml contains all necessary fields?
 
+python3 -m sysrun.sysrun hpc_runner_test/a/b/c/run1.py --yamls a/yamls/whatevs.yaml --args oth:added_auto_main_args:arg1:2 a:9 --test_yaml sysrun/template_yaml.yaml
 
+parser.add_argument("--test_yaml", type=str, help="Pass path from the root of the project to a template yaml. If any field, \
+                    which is present in the template yaml, isn't present in the constructed yaml, we tell you about it. \
+                    Either way, we stop before running anything.", default=None)
 
+This is a nice check, but to make sure you cover all fields you'd have to have a template yaml for each runner file.
+But just having the general template yaml file with the general fields can help you somewhat too.
 

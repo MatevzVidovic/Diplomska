@@ -1,5 +1,10 @@
 
-oth:    
+oth:
+
+  bashpy_args:
+    uniform_ifn: "uniform"
+    main_ifn: "IPAD_eq"
+
   main_yaml:
 
     # Patchification options

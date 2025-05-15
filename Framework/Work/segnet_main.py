@@ -32,13 +32,10 @@ handlers = py_log_always_on.file_handler_setup(MY_LOGGER)
 
 
 
-import y_helpers.shared as shared
+import y_helpers.shared_debug as debug
+debug.start_debug()
 
-if shared.DEBUG:
-    import debugpy
-    debugpy.listen(("localhost", 5678))
-    print("Waiting for debugger attach...")
-    debugpy.wait_for_client()
+
 
 
 
