@@ -95,6 +95,9 @@ parser.add_argument("path_to_run", type=str) #, required=True)
 parser.add_argument("--um", action="store_true", default=False, help="unconstrained mode")
 parser.add_argument("--yamls", nargs='+', help="paths to additional yamls to add to the constructed yaml dict", default=[])
 parser.add_argument("--args", nargs='+', help="args we overwrite in the end. Passing sys:gpus:a100_80GB will change that arg.", default=[])
+parser.add_argument("--test_yaml", type=str, help="Pass path to a template yaml. If any field, \
+                    which is present in the template yaml, isn't present in the constructed yaml, we tell you about it. \
+                    Either way, we stop before running anything.", default=None)
 
 # parser.add_argument("--hours_time_limit", type=int, default=48)
 args = parser.parse_args()
@@ -125,7 +128,7 @@ path_to_run = dirs_to_run.pop(-1)
 
 
 
-
+# ---------- Building the yaml dict ----------
 
 YD = {}
 
@@ -179,6 +182,50 @@ YD = recursive_update(YD, args_dict)
 
 
 
+
+
+
+# ---------- Testing in comparing with template yaml ----------
+
+def recursive_check(yaml_dict, template_yaml_dict):
+
+    missing_keys = []
+    for key in test_yaml.keys():
+        if key not in YD:
+            missing_keys.append(key)
+    
+    for key, value in template_yaml_dict.items():
+        if key not in yaml_dict:
+            missing_keys.append(key)
+        elif isinstance(template_yaml_dict[key], dict):
+            if isinstance(value, dict):
+                deep_missing_keys = recursive_check(yaml_dict[key], template_yaml_dict[key])
+                new_missing_keys = [f"{key}:{deep_key}" for deep_key in deep_missing_keys]
+                missing_keys.extend(new_missing_keys)
+            else:
+                missing_keys.append(f"{key}-not-a-dict")
+    
+    return missing_keys
+
+if args.test_yaml is not None:
+    test_yaml = get_yaml(Path(args.test_yaml))
+
+    missing_keys = recursive_check(YD, test_yaml)    
+    
+    if len(missing_keys) > 0:
+        print(f"Missing keys in constructed yaml: {missing_keys}")
+        exit(1)
+    else:
+        print("All keys are present in the constructed yaml.")
+        exit(0)
+
+
+
+
+
+
+
+# ---------- Running stuff ----------
 
 sysrun_path = Path("sysrun") / "sysrun_temp"
 os.makedirs(sysrun_path, exist_ok=True)

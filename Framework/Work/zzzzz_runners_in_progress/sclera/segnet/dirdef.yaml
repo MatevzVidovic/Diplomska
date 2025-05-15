@@ -1,0 +1,7 @@
+
+
+oth:
+  bashpy_args:
+    pipeline_name: "z_pipeline_segnet_sclera"
+    main_name: "segnet_main.py"
+    model: "segnet"

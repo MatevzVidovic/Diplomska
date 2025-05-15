@@ -1,0 +1,27 @@
+
+
+
+
+
+
+
+pipeline_name: "z_pipeline_unet_sclera"
+main_name: unet_main.py
+model_name: unet
+pth_model_name: UNet
+yaml_id: "sclera"
+trial_name: "trial_unet_sclera"
+origin_dir_name: "unet_train_sclera"
+versions_to_make: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+mtti: 150      # 20 iters to start with, then 100 prunings with 1 iter. Then at least 30 trainings after that
+core_num: 20
+
+
+origin_prefix: "unet_prune_"
+origin_suffix: "_sclera"
+pruning_methods: ["random", "uniform", "IPAD_eq", "IPAD1_L1", "IPAD2_L2", "IPAD1", "IPAD2", "L1", "L2", "L2_0.1", "L2_0.9", "L1_0.1", "L1_0.9"]
+retained_percents: [0.75, 0.5, 0.25, 0.03]
+resource_name: "flops_num"
+
+training_logs_name: training_logs_150_.pkl
+csv_name: unet_150_models_errors_sclera.csv
