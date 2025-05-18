@@ -1,5 +1,6 @@
 
 
+# ---------- Remote debugging ----------
 
 # Avoid from shared import GLOBAL_DICT
 # Using this form of import creates a local reference to the dictionary in the importing module. 
@@ -23,13 +24,13 @@
 # the function itself does not create a local reference to the dictionary GLOBAL_DICT - that reference is fused as finction definition.
 # But you know, stay safe by just doing the import as above.
 
-DEBUG = False #True
+DEBUG = True #True
 
 GLOBAL_DICT = {
     "debug_connection_already_open": False,
 }
 
-DEBUG_PORT = 5678
+DEBUG_PORT = 8765
 
 
 # !!!!!!!!!!!!!!!!
@@ -45,7 +46,7 @@ DEBUG_PORT = 5678
 # (because remote debugging nicely works in python subprocesses) (look at launch.json for more info on this).
 
 
-def start_debug():
+def start_remote_debug():
     if DEBUG and not GLOBAL_DICT["debug_connection_already_open"]:
         import debugpy
         try:
@@ -56,6 +57,4 @@ def start_debug():
         except Exception as e:
             print(f"Debugpy connection failed: {e}")
             print(f"Probs debugpy connection already open.")
-
-
 

@@ -1,88 +1,32 @@
 
 
 
-# basic_with_zero_out
+oth:
+  main_yaml:
+    # basic_with_zero_out
 
-# Training parameters
+    # Training parameters
 
-# More situationally changed parameters
-is_resource_calc_ready: True
-is_pruning_ready: True   # set to false to skip all prun
-path_to_data: "./Data/sclera_data"
-target: "scleras"
-train_epoch_size: 210    # we use random resampling, so this is unconnected with train_dataset size
-# In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
-val_epoch_size: 80
-test_epoch_size: 80
-train_batch_size: 15
-eval_batch_size: 40   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
-learning_rate: 0.0001
-num_of_dataloader_workers: 20
-# train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
+    # More situationally changed parameters
+    is_resource_calc_ready: True
+    is_pruning_ready: True   # set to false to skip all prun
 
-# More trainig-type-defining parameters
-cleanup_k: 1      # Options: 0, 1, 2, 3
-optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
-zero_out_non_sclera_on_predictions: False
-loss_fn_name: "MCDL"
-loss_params: null
+    train_epoch_size: 210    # we use random resampling, so this is unconnected with train_dataset size
+    # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
+    val_epoch_size: 80
+    test_epoch_size: 80
+    train_batch_size: 15
+    eval_batch_size: 40   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+    learning_rate: 0.0001
+    num_of_dataloader_workers: 20
+    # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 
-# Dataset parameters
-dataset_type: simple    # Options: simple, vasd
-aug_type: pass    # Options: tf, np, pass
-metrics_aggregation_fn: mean_no_background
-zero_out_non_sclera: False
-add_sclera_to_img: False
-add_bcosfire_to_img: False
-add_coye_to_img: False
+    # More trainig-type-defining parameters
+    cleanup_k: 1      # Options: 0, 1, 2, 3
+    optimizer_used: "Adam"    # Options: Adam, SGD, LBFGS
+    zero_out_non_sclera_on_predictions: False
+    loss_fn_name: "MCDL"
+    loss_params: null
 
-# Model parameters that need to be set in stone for pruning
-model: "3_2"
-input_width: 1024
-input_height: 1024
-input_channels: 3
-output_channels: 2
-
-# Patchification options
-have_patchification: False
-patchification_params: null
-  # patch_x: 256
-  # patch_y: 128
-  # stride_percent_of_patch_x: 0.5
-  # stride_percent_of_patch_y: 0.5    
-  # input_size_limit: 41943040
-  # In test and eval, we take one whole imag, split it into patches, reconstruct the predictions to predict the entire image at once, and then evaluate the predictions.
-  # But even with batch_size=1, there are too many patches in one image. So instead we process the patches in managable splits.    
-  # Channels in output not really important for VRAM. So just batch_size * input_width * input_height (we could do 2 * 1024 * 2048 = 4194304)
-
-  # in patchification the train epoch is done on patches alone, without reconstruction.
-  # We could also do it with reconstruction (just copy the code from test) but you run out of VRAM, 
-  # because of gradient accumulation that needs to happen for the patches of at least one image (with bs=1).
-  # One approach would be to have a separate dataset for train:
-  # train_path_to_data: ./Data/vein_and_sclera_data_patches_128x256 
-  # Another is in having the normal dataset, but before DataSet gives the image, it samples patches out of it:
-  
-  # num_of_patches_from_img: 50   # with strides 128 and 64, and size 2048x1024, there are 2048/128 * 1024/64 = 256 patches in the reconstruction case. So 0 patches doesn't seem too much.
-  # prob_zero_patch_resample: 0.95    # This prevents most of our patches being background patches, where sclera iz 0 anyway.
-
-
-
-# Pruning parameters
-
-# more situationally changed parameters
-num_train_iters_between_prunings: 1
-max_auto_prunings: 100
-proportion_to_prune: 0.01
-
-# More pruning-type-defining parameters
-viscinity_save: # if it is none, we simply make a safety copy after every prunning. This is storage expensive.
-  resource_percentage_list: [0.75, 0.5, 0.25, 0.03]
-  margin_for_save: 0.02
-prune_by_original_percent: True
-num_filters_to_prune: -1 # not applied
-prune_n_kernels_at_once: 100
-resource_name_to_prune_by: "flops_num"        # Options: flops_num, weights_num, kernels_num
-FLOPS_conv2d_prune_limit: 0.2
-weights_conv2d_prune_limit: 0.0
-relative_FLOPS_conv2d_prune_limit: 0.8
-relative_weights_conv2d_prune_limit: 0.0
+    # Model parameters that need to be set in stone for pruning
+    model: "3_2"

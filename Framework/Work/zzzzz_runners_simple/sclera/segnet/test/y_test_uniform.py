@@ -1,0 +1,49 @@
+
+
+
+import argparse
+from sysrun.bashpy_boilerplate.diplomska_boilerplate import run_me, boilerplate, temp_file_strs
+import sysrun.bashpy_boilerplate.shared_remote_debug as debug
+debug.start_remote_debug()
+
+parser = argparse.ArgumentParser()
+parser.add_argument("path_to_yaml", type=str)
+parser.add_argument("module_path_to_this_file", type=str, help="""e.g. a.b.c.y_train    From root of project (should be your cwd in the terminal also).""")
+args = parser.parse_args()
+
+main_name, auto_main_args, sd_path, main_yaml_path, out_folder_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
+
+# Here, the necessary auto_main_args are to be asserted.
+
+
+
+
+
+
+# training phase
+command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["save_and_stop"])
+command = ["python3", main_name] + auto_main_args + ["--tras", "2", "--mti", "2", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path)
+command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["save_and_stop"])
+
+
+# pruning_phase
+for i in range(30):
+    command = ["python3", main_name] + auto_main_args + ["--ntibp", "1", "--ptp", "0.0000001", "--map", "1", "--tras", "2", "--tp", "--ifn", "uniform", "-p", "--mti", "2", "--sd", sd_path, "--yaml", main_yaml_path]
+    run_me(command, out_folder_path)
+    command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+    run_me(command, out_folder_path, stdin=temp_file_strs["graph_and_stop"])
+
+command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["results_and_stop"])
+command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["resource_graph_and_stop"])
+command = ["python3", main_name] + auto_main_args + ["--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["save_and_stop"])
+
+
+
+
+

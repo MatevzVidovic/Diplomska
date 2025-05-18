@@ -3,42 +3,22 @@
 
 
 import os
-import stat
 import os.path as osp
 import shutil as sh
-import yaml
-import argparse
-import time
-import subprocess
-import fcntl
 import sys
+# import stat
+# import yaml
+# import argparse
+# import time
+# import subprocess
+# import fcntl
 
 from sysrun.helpers.help import get_yaml, write_yaml, get_fresh_folder
 
 
 from pathlib import Path
 
-import tempfile
 
-# with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-#     print(f'Temporary file created: {temp_file.name}')
-#     temp_file.write(b'Temporary data.')
-# # The file remains after closing because delete=False
-# os.remove(temp_file.name)  # Clean up the file if needed
-
-
-temp_file_strs = {
-    "save_and_stop": "s\nstop\n",
-    "results_and_stop": "r\nstop\n",
-    "graph_and_stop": "g\n\nstop\n",
-    "resource_graph_and_stop": "resource_graph\nstop\n",
-    "test_showcase": "ts\nall\nstop\nstop\n",
-    "data_aug": "da\n\n\n\n\n1\n\n\n\n\n2\n\n\n\n\nstop\nstop\n",
-    "save_preds": "sp\nstop\nstop\n",
-    "batch_size_train": "bst\nstop\nstop\n",
-    "batch_size_eval": "bse\nstop\nstop\n",
-    "flops_and_weights": "fw\nstop\nstop\n",
-}
 
 
 
@@ -111,7 +91,7 @@ def main(yaml_path, module_path_of_bashpy_runfile):
 
     YD = get_yaml(yaml_path)["oth"]
     YD1 = YD["bashpy_args"]
-    YD2 = YD["added_auto_main_args"]
+    YD2 = YD["added_auto_main_args"] if "added_auto_main_args" in YD else {}
     YD3 = YD["main_yaml"]
 
 
@@ -126,13 +106,22 @@ def main(yaml_path, module_path_of_bashpy_runfile):
 
 
         
-
-    base_output_path = Path("zzz_outputs") / f"x_{sd_path}"
-    output_folder_path = get_fresh_folder(base_output_path) # we get zzz_outputs/x_<sd_name>/999 for example
+    base_output_path = Path("zzz_outputs") / sd_path
+    output_folder_path = get_fresh_folder(base_output_path) # we get zzz_outputs/<sd_path>/999 for example
 
     # we make the temp main yaml
     main_yaml_path = Path("sysrun") / "bashpy_temp" / "temp.yaml"
     write_yaml(YD3, main_yaml_path)
+    
+
+    # Making a symlink to the latest output folder
+    out_folder_path_absolute = output_folder_path.resolve()
+    symlink_to_latest = out_folder_path_absolute.parent / "0_symlink_to_latest"
+    # Uses Path object fns
+    if symlink_to_latest.exists() or symlink_to_latest.is_symlink():
+        symlink_to_latest.unlink()
+    symlink_to_latest.symlink_to(out_folder_path_absolute, target_is_directory=True)
+
     
     return main_yaml_path, output_folder_path, sd_path
 

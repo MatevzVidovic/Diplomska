@@ -73,18 +73,9 @@
       "type": "debugpy",
       "request": "launch",
       "module": "sysrun.sysrun",
-      // --------------------
 
 
-      "args": [
-        "zzzzz_runners_simple/sclera/segnet/y_train.py",
-        "--yamls",
-        "model_yamls/sclera_fake.yaml",
-        "hpc_yamls/basic.yaml",
-        "--args",
-        "oth:added_auto_main_args:--mti:2",
-      ],
-
+      
       // "args": [
       //   "zzzzz_runners_simple/sclera/segnet/y_train.py",
       //   "--yamls",
@@ -92,11 +83,29 @@
       //   "hpc_yamls/basic.yaml",
       //   "--args",
       //   "oth:added_auto_main_args:--mti:2",
-      //   "--test_yaml",
-      //   "sysrun/template_yaml.yaml"
+      // //   "--test_yaml",
+      // //   "sysrun/template_yaml.yaml"
+      // ],
+      
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/y_test_uniform.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
       // ],
 
-
+      "args": [
+        "zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py",
+        "--yamls",
+        "../model_yamls/sclera_fake.yaml",
+        "../hpc_yamls/basic.yaml",
+        // "--test_yaml",
+        // "sysrun/template_yaml.yaml"
+      ],
+        
       // --------------------
       "console": "integratedTerminal",
       "subProcess": true,
@@ -106,6 +115,7 @@
 }
 
 
+              // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml --test_yaml sysrun/template_yaml.yaml
 
 
 
@@ -115,7 +125,7 @@
 // !!!!!!!!!!!!!!!! 
 // But very interestingly
 // When you do remote debugging, when you do Popen, you still get to do breakpoints in the process you just ran.
-// I think this mght be because here, Popen actually ran a python3 command.
+// I think this might be because here, Popen actually ran a python3 command.
 // Because in the second part in isolation, i have subprocess: true, which means it should do the same.
 //  But because Popen runs a bash command, I think the debugger doesn't go into that one.
 

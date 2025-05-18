@@ -11,6 +11,7 @@ oth:
     # More situationally changed parameters
     is_resource_calc_ready: True
     is_pruning_ready: True   # set to false to skip all prun
+    
     train_epoch_size: 2    # we use random resampling, so this is unconnected with train_dataset size
     # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
     val_epoch_size: 2

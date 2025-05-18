@@ -17,72 +17,19 @@ Note:
 import os
 import os.path as osp
 import argparse
+# import shutil as sh
 
 from pathlib import Path
 
-from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder
+from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder, recursive_update, my_update, recursive_check
 
 
 SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
+# would be nice to alias sbatch as bash for local use, 
+# but python Popen won't recognise it unless shell=True, wo we can't do it
 
 # python3 -m sysrun.sysrun a/b/c/y_train.py --um
 
-
-
-
-def recursive_update(initial_yaml_dict, new_yaml_dict):
-
-    initial_yaml_dict_copy = initial_yaml_dict.copy()
-
-    for key, value in new_yaml_dict.items():
-        if key in initial_yaml_dict_copy and isinstance(value, dict) and isinstance(initial_yaml_dict_copy[key], dict):
-            initial_yaml_dict_copy[key] = recursive_update(initial_yaml_dict_copy[key], value)
-        else:
-            initial_yaml_dict_copy[key] = value
-
-    return initial_yaml_dict_copy
-
-
-
-def added_yaml(initial_yaml_dict, yaml_path):
-    initial_yaml_dict_copy = initial_yaml_dict.copy()
-    if osp.exists(yaml_path):
-        added_yaml = get_yaml(yaml_path)
-        initial_yaml_dict_copy = recursive_update(initial_yaml_dict_copy, added_yaml)
-    else:
-        print(f"Warning: {yaml_path} does not exist. Skipping.")
-    return initial_yaml_dict_copy
-
-
-def my_update(initial_yaml_dict, new_yaml_dict, dirpath, retain_yamls=False):
-
-    initial_yaml_dict_copy = initial_yaml_dict.copy()
-
-    if retain_yamls:
-        additional_yamls = new_yaml_dict.get("yamls", None)
-    else:
-        additional_yamls = new_yaml_dict.pop("yamls", None)
-    
-    initial_yaml_dict_copy = recursive_update(initial_yaml_dict_copy, new_yaml_dict)
-    
-    if additional_yamls is not None:
-        for yaml_path in additional_yamls:
-            
-            relative_yaml_path = dirpath / yaml_path # relative to dirpath
-            absolute_yaml_path = Path(yaml_path) # path from root as a second option
-
-            if osp.exists(relative_yaml_path):
-                added_yaml = get_yaml(relative_yaml_path)
-                initial_yaml_dict_copy = recursive_update(initial_yaml_dict_copy, added_yaml)
-            elif osp.exists(absolute_yaml_path):
-                added_yaml = get_yaml(absolute_yaml_path)
-                initial_yaml_dict_copy = recursive_update(initial_yaml_dict_copy, added_yaml)
-            else:
-                print(f"Warning: {yaml_path} does not exist. Skipping.")
-
-    
-    return initial_yaml_dict_copy
-    
 
 
 
@@ -143,8 +90,14 @@ for dirpath in dirs_to_run:
 
 
 
+
 file_yaml_path = path_to_run.with_suffix(".yaml")
 file_yaml = get_yaml(file_yaml_path)
+# I have no idea why we would want retain_yamls=True here.
+# We don't use the file_yaml anywhere anyway. And it just means that YD will then get the yamls_key added to it as well.
+# Maybe just so that when the YD is stored into a file for logging/observability purposes that the yamls are also there?
+# And maybe we don't want to do this in previous dirdef steps, 
+# so that in that process we don't keep the yamls key which could cause later unintended relative path yaml overrides?
 YD = my_update(YD, file_yaml, path_to_run.parent, retain_yamls=True)
 
 
@@ -191,29 +144,9 @@ YD = recursive_update(YD, args_dict)
 
 
 
+
+
 # ---------- Testing in comparing with template yaml ----------
-
-def recursive_check(yaml_dict, template_yaml_dict):
-
-    missing_keys = []
-    
-    # This was the initial proof of concept for the top level.
-    # for key in test_yaml.keys():
-    #     if key not in YD:
-    #         missing_keys.append(key)
-    
-    for key, value in template_yaml_dict.items():
-        if key not in yaml_dict:
-            missing_keys.append(key)
-        elif isinstance(template_yaml_dict[key], dict):
-            if isinstance(value, dict):
-                deep_missing_keys = recursive_check(yaml_dict[key], template_yaml_dict[key])
-                new_missing_keys = [f"{key}:{deep_key}" for deep_key in deep_missing_keys]
-                missing_keys.extend(new_missing_keys)
-            else:
-                missing_keys.append(f"{key}-not-a-dict")
-    
-    return missing_keys
 
 if args.test_yaml is not None:
     test_yaml = get_yaml(Path(args.test_yaml))
@@ -244,6 +177,17 @@ write_yaml(YD, sysrun_yaml_path)
 out_folder_path = get_fresh_folder("sysrun_runner_outputs")
 outfile_path = out_folder_path / "out.txt"
 err_path = out_folder_path / "err.txt"
+
+
+# Making a symlink to the latest output folder
+out_folder_path_absolute = out_folder_path.resolve()
+symlink_to_latest = out_folder_path_absolute.parent / "0_symlink_to_latest"
+# Uses Path object fns
+if symlink_to_latest.exists() or symlink_to_latest.is_symlink():
+    symlink_to_latest.unlink()
+symlink_to_latest.symlink_to(out_folder_path_absolute, target_is_directory=True)
+
+
 
 
 # We have to do this, so that our bashrun.py is run as a module, so it's cwd is the project root, and it can import other packages, such as sysrun.helpers.bashpy_help

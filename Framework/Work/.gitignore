@@ -47,6 +47,8 @@ a_saved_*/
 slurm*/
 archive/
 
+
+sysrun_runner_outputs/
 active_models/
 zzz_outputs/
 sysrun_outputs/
