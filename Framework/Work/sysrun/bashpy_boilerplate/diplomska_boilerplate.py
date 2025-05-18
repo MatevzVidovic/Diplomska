@@ -16,8 +16,8 @@ out_and_err_ix = 0
 def get_novel_out_and_err(out_folder_path):
     global out_and_err_ix
     returner = {
-        "stdout_path": out_folder_path / f"out_{out_and_err_ix}.txt",
-        "stderr_path": out_folder_path / f"err_{out_and_err_ix}.txt"
+        "stdout_path": out_folder_path / "outs" / f"out_{out_and_err_ix}.txt",
+        "stderr_path": out_folder_path / "errs" / f"err_{out_and_err_ix}.txt"
     }
     out_and_err_ix += 1
     return returner

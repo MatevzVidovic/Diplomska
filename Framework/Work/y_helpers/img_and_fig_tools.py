@@ -44,8 +44,11 @@ import numpy as np
 import torch
 from PIL import Image
 from torchvision import transforms
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
-
 
 # from utils import one_hot2dist
 
@@ -203,8 +206,9 @@ def show_image(passed_img, title="", close_all_limit=1e9):
         initial_fig_name = plt.get_current_fig_manager().get_window_title()
         plt.get_current_fig_manager().set_window_title(f"{initial_fig_name}, line {caller_line} in {caller_func} in {caller_file}")
 
-        plt.show(block=False)
-        plt.pause(0.001)
+        if shared.PLT_SHOW:
+            plt.show(block=False)
+            plt.pause(0.001)
 
         return fig, axes
 

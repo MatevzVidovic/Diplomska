@@ -48,6 +48,10 @@ import argparse
 import numpy as np
 from PIL import Image
 from torchvision import transforms
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 np.random.seed(7)
 

@@ -108,6 +108,10 @@ def main(yaml_path, module_path_of_bashpy_runfile):
         
     base_output_path = Path("zzz_outputs") / sd_path
     output_folder_path = get_fresh_folder(base_output_path) # we get zzz_outputs/<sd_path>/999 for example
+    outs_path = output_folder_path / "outs"
+    os.makedirs(outs_path, exist_ok=True)
+    errs_path = output_folder_path / "errs"
+    os.makedirs(errs_path, exist_ok=True)
 
     # we make the temp main yaml
     main_yaml_path = Path("sysrun") / "bashpy_temp" / "temp.yaml"

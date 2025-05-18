@@ -37,6 +37,10 @@ import random
 from typing import Union
 
 from torch import nn
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -749,8 +753,8 @@ def model_graph(resource_calc, initial_resource_calc=None, pruner=None, width=20
 
 
 
-
-        # plt.show(block=False)
+        # if shared.PLT_SHOW:
+        #     plt.show(block=False)
 
 
 

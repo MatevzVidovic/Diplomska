@@ -1137,7 +1137,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
                 }
                 list_of_fig_ax_id_tuples = model_wrapper.model_graph(model_graph_args_dict)
                 fig = list_of_fig_ax_id_tuples[0][0]
-                fig.show()
+                if shared.PLT_SHOW:
+                    fig.show()
                 # input("wait")
                 save_plt_fig(fig, graph_save_path, f"{train_iter}_model_graph", formats={"pkl"})
 

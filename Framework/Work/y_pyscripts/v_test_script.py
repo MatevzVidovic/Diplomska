@@ -104,6 +104,10 @@ from y_helpers.img_and_fig_tools import smart_conversion, show_image, save_img_q
 import numpy as np
 import torch
 
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 import os.path as osp
 # from utils import one_hot2dist

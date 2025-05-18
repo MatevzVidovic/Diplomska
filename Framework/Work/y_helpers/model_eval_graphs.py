@@ -32,6 +32,10 @@ MY_LOGGER.setLevel(logging.DEBUG)
 import pickle
 import argparse
 
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -151,7 +155,8 @@ def show_results(main_save_path):
         # Update the legend with the new entries
         plt.legend(handles=handles, labels=labels)
 
-        plt.show(block=False)
+        if shared.PLT_SHOW:
+            plt.show(block=False)
 
         return fig, ax
     
@@ -202,8 +207,8 @@ def resource_graph(main_save_path, saved_model_wrapper_path):
 
         plt.legend()
 
-
-        plt.show(block=False)
+        if shared.PLT_SHOW:
+            plt.show(block=False)
 
         to_pkl = []
         for i in range(len(pruning_moments)):

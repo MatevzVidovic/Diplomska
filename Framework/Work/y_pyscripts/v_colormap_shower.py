@@ -4,6 +4,10 @@ import os
 
 import cv2
 import numpy as np
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 
 
@@ -28,7 +32,8 @@ y = True
 r = True
 s = False
 
-plt.ion()  # Turn on interactive mode
+if shared.PLT_SHOW:
+    plt.ion()  # Turn on interactive mode
 fig, ax = plt.subplots()
 
 while True:
@@ -84,7 +89,8 @@ while True:
     plt.pause(0.1)  # Pause for a short duration
 
     # plt.ioff()  # Turn off interactive mode
-    plt.show()  # Keep the window open after the loop
+    if shared.PLT_SHOW:
+        plt.show()  # Keep the window open after the loop
 
     inp = input(f"""Enter num to look at img with that ix. There are {len(basenames)} images.
                 Enter 'g' to toggle green.

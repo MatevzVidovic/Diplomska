@@ -24,7 +24,7 @@
 # the function itself does not create a local reference to the dictionary GLOBAL_DICT - that reference is fused as finction definition.
 # But you know, stay safe by just doing the import as above.
 
-DEBUG = True #True
+DEBUG = False #True
 
 GLOBAL_DICT = {
     "debug_connection_already_open": False,

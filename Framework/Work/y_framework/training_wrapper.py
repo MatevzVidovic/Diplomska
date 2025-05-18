@@ -34,13 +34,15 @@ MY_LOGGER.setLevel(logging.DEBUG)
 from timeit import default_timer as timer
 import gc
 
-
 import cv2
 import pandas as pd
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-
 
 from y_helpers.img_and_fig_tools import save_img
 from y_helpers.patchification import patchify, accumulate_patches
@@ -1168,7 +1170,8 @@ Avg loss: {avg_loss:>.8f}
 
                         # ax[1, 1].set_title('pred[1] - pred[0], min-max normed')
                         # ax[1, 1].imshow(pred_grayscale_mask_min_max_normed, cmap='gray')
-                        # plt.show(block=False)
+                        # if shared.PLT_SHOW:
+                        #     plt.show(block=False)
                         # print(f"gt.shape: {gt.shape}")
                         # print(f"scleras.shape: {scleras.shape}")
                         # print(f"scleras[i].shape: {scleras[i].shape}")

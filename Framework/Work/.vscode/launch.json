@@ -96,7 +96,8 @@
       //   // "--test_yaml",
       //   // "sysrun/template_yaml.yaml"
       // ],
-
+      
+      // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml       --test_yaml sysrun/template_yaml.yaml
       "args": [
         "zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py",
         "--yamls",
@@ -114,8 +115,6 @@
   ]
 }
 
-
-              // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml --test_yaml sysrun/template_yaml.yaml
 
 
 

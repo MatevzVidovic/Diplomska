@@ -51,6 +51,10 @@ import torchvision.transforms.functional as F
 from torchvision import transforms
 import cv2
 
+import y_helpers.shared as shared
+if not shared.PLT_SHOW: # For more info, see shared.py
+    import matplotlib
+    matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 import os.path as osp
 # from utils import one_hot2dist
