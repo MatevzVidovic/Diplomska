@@ -1,3 +1,0 @@
-model: "32_1.5_6"
-train_batch_size: 6 # actually 7
-eval_batch_size: 16 # actually 18

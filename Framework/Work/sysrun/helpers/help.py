@@ -8,11 +8,11 @@ import os.path as osp
 import yaml
 import subprocess
 import io
+import sys
 # import shutil as sh
 # import argparse
 # import time
 # import fcntl
-# import sys
 
 from pathlib import Path
 
@@ -20,6 +20,41 @@ from pathlib import Path
 
 
 def get_fresh_folder(path_to_parent_folder):
+    # we will only keep 4 of the latest folders in path_to_parent_folder
+    # Older ones should be moved to an old/ folder.
+    # This makes the file system cleaner and easier to navigate,
+    # especially in vscode.
+
+    counter=999
+    
+    folder_path = Path(path_to_parent_folder) / f"{counter}"
+    folder_path_in_old = Path(path_to_parent_folder) / "old" / f"{counter}"
+    while osp.exists(folder_path) or osp.exists(folder_path_in_old):
+        counter -= 1
+        folder_path = Path(path_to_parent_folder) / f"{counter}"
+        folder_path_in_old = Path(path_to_parent_folder) / "old" / f"{counter}"
+
+    cleanup_by_moving_to_old(path_to_parent_folder, keep_latest=3) 
+    # we do the above first, to make absolutely sure the new folder is fresh and not in the old/ folder.
+    os.makedirs(folder_path, exist_ok=True)
+    return Path(folder_path)
+
+def cleanup_by_moving_to_old(path_to_parent_folder, keep_latest=4):
+    # Moves all folders in path_to_parent_folder to old/ folder, except the latest keep_latest ones.
+    # If old/ folder doesn't exist, it will be created.
+    
+    parent_path = Path(path_to_parent_folder)
+    old_path = parent_path / "old"
+    os.makedirs(old_path, exist_ok=True)
+
+    folders = sorted([f for f in parent_path.iterdir() if f.is_dir() and f.name.isdigit()], reverse=False)
+
+    for folder in folders[keep_latest:]:
+        new_folder_path = old_path / folder.name
+        if not new_folder_path.exists():
+            folder.rename(new_folder_path)
+
+def get_fresh_folder_basic(path_to_parent_folder):
         
     counter=999
     
@@ -162,15 +197,135 @@ def recursive_check(yaml_dict, template_yaml_dict):
 
 # ---------- Helper functions for actual running ----------
 
+def write_sbatch_file(sbatch_dict, sbatch_path, python_command):
+    sys_args = sbatch_dict.get("sys", None)
+    sys_args_string = ""
+    for key, value in sys_args.items():
+        if key.startswith("--"):
+            # To make: #SBATCH --gpus=A100
+            sys_args_string += f"#SBATCH {key}{value}\n"
+        else:
+            # To make: #SBATCH -c 16
+            # We need the extra space with single - args.
+            sys_args_string += f"#SBATCH {key} {value}\n"
+
+
+    sbatch_file = f"""#!/bin/bash
+
+{sys_args_string}
+
+{python_command}
+"""
+    
+    with open(sbatch_path, 'w') as f:
+        f.write(sbatch_file)
+
 def make_executable(file_path):
     st = os.stat(file_path)
     os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
-def run(args, stdout_path=None, stderr_path=None, stdin=None, shell=False):
-    # is shel=True, args is a string and not a list
+def run(args, stdout_path=None, stderr_path=None, stdin=None, shell=False, terminal_inp=False):
+    
+    """
+    if shel=True, args is a string and not a list. If a list is given, we will join it into a string.
+    
+    Since we run python -m sysrun.sysrun in the terminal, subprocess.PIPE is for the python subprocess.
+    So we can't use terminal input to steer our program.
+    So we need to bypass this, by making stdin_target sys.stdin directly - if terminal_inp is True.
+    The output of the program, however, is still read from the file - you won't see it in the terminal.
+    """
 
-    # Open the specified files or default to subprocess.PIPE
-    stdin_target = stdin if isinstance(stdin, io.IOBase) else subprocess.PIPE   # is stdin if stdin is any kind of file (text or buffered)
+    # --------- Open the specified files or default to subprocess.PIPE --------- 
+
+    # what happens is:
+    # sysrun proc -> run() -> bash (script) process -> py process -> run()
+    # By default, the bash stdin gets passed to the python process, because that's how bash works.
+    # We give the run() in sysrun sys.stdin explicitly so it always reads the terminal.
+    # But sys.stdin for the pyprocess is, I think, the bash process stdin.
+    # Even sys.__stdin__ (which gives the "original" stdin) is the bash process stdin.
+    
+    stdin_target = None
+    if terminal_inp:
+        stdin_target = sys.__stdin__
+    else:
+        stdin_target = stdin if isinstance(stdin, io.IOBase) else subprocess.PIPE
+
+    # A long experimentation on why terminal input could not be passed to the program:
+    """
+    # stdin_target = sys.__stdin__
+
+    # this works:
+    # (i think this worked because stdin_target stayed None in sysrun.py, 
+    # which surprisingly actually ended up being the exact same as sys.__stdin__ )
+    # stdin_target = None
+    # if terminal_inp:
+    #     stdin_target = sys.__stdin__
+    
+    # this doesn't work:
+    # stdin_target = None
+    # if terminal_inp:
+    #     stdin_target = sys.__stdin__
+    # else:
+    #     stdin_target = stdin if isinstance(stdin, io.IOBase) else subprocess.PIPE
+
+    # print(f"stdin_target is {stdin_target} (of type {type(stdin_target)})")
+    # print(f"terminal_inp is {terminal_inp}")
+
+    # whyyyyyyyyyyyyyyyyy!!!!!!
+
+    # stdin_target = stdin if isinstance(stdin, io.IOBase) else sys.__stdin__ if terminal_inp else subprocess.PIPE
+
+    # Now I know why this didn't work.
+    # I didn't set stdin=sys.stdin in sysrun.py, so it was None.
+    # Our system looks like this:
+    # sysrun proc -> run() -> bash (script) process -> py process -> run()
+    # So changing the code actually changed it in both sysrun.py and the script.py that is run.
+    # And in sysrun it had terminal_inp=False, so stdin was None.
+    # SO if we set stdin_target to sys.stdin without any condition, it got changed there too, and that's when it all worked.
+    # But
+    # Why didn't:
+    # if terminal_inp:
+    #     stdin_target = sys.__stdin__
+    # work?
+    # It sets it to the original stdin, right?
+    # Well, I think it actually set it to the bash stdin.
+    # And so things went like this:
+    # sysrun (terminal) stdin -> nowhere.   nothing -> bash_stdin --(this arrow i think happens by default when you run a bash script)--> pyproc_stdin  
+    # But now:
+    # sysrun (terminal) stdin -> bash_stdin --(this arrow i think happens by default when you run a bash script)--> pyproc_stdin
+
+    # This works:
+    # stdin_target = sys.stdin
+
+    # And this works:
+    # stdin_target = stdin if isinstance(stdin, io.IOBase) else sys.stdin
+
+    # This code didn't work:
+    # I suspect it's because after we even call SUBPROCESS.PIPE, the stdin is its stdin? Or sth? No idea.
+    # stdin_target = stdin if isinstance(stdin, io.IOBase) else subprocess.PIPE   # is stdin if stdin is any kind of file (text or buffered)
+    # if terminal_inp: stdin_target = sys.stdin
+
+    # And this doesn't work:
+    # stdin_target = stdin if isinstance(stdin, io.IOBase) else sys.stdin if terminal_inp else subprocess.PIPE
+
+    # And for some ungodly reason, this doesn't work either:
+    # stdin_target = None
+    # if stdin is None:
+    #     if terminal_inp:
+    #         stdin_target = sys.stdin
+    #     else:
+    #         stdin_target = subprocess.PIPE
+    # elif isinstance(stdin, io.IOBase):
+    #     # If stdin is a file-like object, we use it directly
+    #     stdin_target = stdin
+    # elif isinstance(stdin, str):
+    #     # If stdin is a string, we will pass it as input to the process
+    #     stdin_target = subprocess.PIPE
+    # else:
+    #     raise ValueError(f"stdin must be None, a file-like object, or a string. Got {type(stdin)} instead.")
+
+    """
+
     input = stdin if isinstance(stdin, str) else None
     stdout_target = open(stdout_path, 'w') if stdout_path else subprocess.PIPE
     stderr_target = open(stderr_path, 'w') if stderr_path else subprocess.PIPE
@@ -181,6 +336,15 @@ def run(args, stdout_path=None, stderr_path=None, stdin=None, shell=False):
     # python: ['python', 'script.py']
     # sbatch: ['sbatch', 'script.sbatch']
     # srun:   ['srun', 'python', 'script.py']
+
+
+
+
+
+    if shell:
+        if isinstance(args, list):
+            # If shell=True, args should be a single string command
+            args = ' '.join(str(i) for i in args)
 
     process = subprocess.Popen(args,
                             stdin=stdin_target,

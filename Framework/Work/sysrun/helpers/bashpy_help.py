@@ -87,11 +87,10 @@ def get_yo_str(yo_ids):
 
 
 
-def main(yaml_path, module_path_of_bashpy_runfile):
+def folder_and_yaml_setup(yaml_path, module_path_of_bashpy_runfile):
 
     YD = get_yaml(yaml_path)["oth"]
     YD1 = YD["bashpy_args"]
-    YD2 = YD["added_auto_main_args"] if "added_auto_main_args" in YD else {}
     YD3 = YD["main_yaml"]
 
 
@@ -116,7 +115,10 @@ def main(yaml_path, module_path_of_bashpy_runfile):
     # we make the temp main yaml
     main_yaml_path = Path("sysrun") / "bashpy_temp" / "temp.yaml"
     write_yaml(YD3, main_yaml_path)
-    
+
+    # this is just for logging, I think    
+    oth_yaml_path = Path("sysrun") / "bashpy_temp" / "oth.yaml"
+    write_yaml(YD, oth_yaml_path)
 
     # Making a symlink to the latest output folder
     out_folder_path_absolute = output_folder_path.resolve()

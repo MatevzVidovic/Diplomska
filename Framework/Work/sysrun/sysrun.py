@@ -17,11 +17,12 @@ Note:
 import os
 import os.path as osp
 import argparse
+import sys
 # import shutil as sh
 
 from pathlib import Path
 
-from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder, recursive_update, my_update, recursive_check
+from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder, recursive_update, my_update, recursive_check, write_sbatch_file
 
 
 SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
@@ -40,6 +41,8 @@ SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
 parser = argparse.ArgumentParser()
 parser.add_argument("path_to_run", type=str) #, required=True)
 parser.add_argument("--um", action="store_true", default=False, help="unconstrained mode")
+parser.add_argument("--no_run", action="store_true", default=False, help="if set, we will not run the command, just construct the yaml and .sbatch and exit. \
+                    You then run the command manually later. It gives you more control.")
 parser.add_argument("--yamls", nargs='+', help="paths to additional yamls to add to the constructed yaml dict", default=[])
 parser.add_argument("--args", nargs='+', help="args we overwrite in the end. Passing sys:gpus:a100_80GB will change that arg.", default=[])
 parser.add_argument("--test_yaml", type=str, help="Pass path from the root of the project to a template yaml. If any field, \
@@ -123,8 +126,28 @@ for path in args.yamls:
 
 args_dict = {}
 for arg in args.args:
+    """
+    Basic behaviour:
+    args = [sys:gpus:a100_80GB sys:-p:"frida"]
 
-    # e.g. sys:gpus:a100_80GB
+    We still have many problems.
+    This can only be used for string args.
+    Ints, floats, lists, dicts, etc. are not supported.
+
+    
+    Also not supported, just a possible idea for the future:
+
+    Also, having a lot of args starts to be unreadable.
+    It would be nice to not duplicate the paths for args in the same subdict.
+    So we could do:
+    args = [sys:{gpus:a100_80GB!&&!-p:frida}]
+    This special sequence could delimit the args in the same subdict.
+    But it would be a bit complex.  
+    
+    """
+
+    
+    # Basic behaviour:
     arg = arg.split(":")
     
     curr_dict = args_dict
@@ -198,35 +221,22 @@ module_path_to_run = str(path_to_run).replace("/", ".").removesuffix(".py") # we
 if not unconstrained_mode:
 
     sysrun_sbatch_path = sysrun_path / "sysrun.sbatch"
-    sys_args = YD.get("sys", None)
-    sys_args_string = ""
-    for key, value in sys_args.items():
-        sys_args_string += f"#SBATCH {key}{value}\n"
-
-
-    sbatch_file = f"""#!/bin/bash
-
-{sys_args_string}
-
-python3 -m {module_path_to_run} {sysrun_yaml_path} {module_path_to_run}
-"""
-    
-    with open(sysrun_sbatch_path, 'w') as f:
-        f.write(sbatch_file)
+    python_command = f"python3 -m {module_path_to_run} {sysrun_yaml_path} {module_path_to_run}"
+    write_sbatch_file(YD, sysrun_sbatch_path, python_command)
     
     # make_executable(sysrun_sbatch_path)
-
-    args = [SYSTEMS_RUN_COMMAND, sysrun_sbatch_path, sysrun_yaml_path, sysrun_sbatch_path]
+    command_args = [SYSTEMS_RUN_COMMAND, sysrun_sbatch_path, sysrun_yaml_path, sysrun_sbatch_path]
 
     # Here I think we can actually wait. Because when you run sbatch, you immediately get a response "Submited with id 31985" or whatever.
     # You arent actually waiting on the sbatch process itself.
-    stdout, stderr, exit_code = run(args, stdout_path=outfile_path, stderr_path=err_path)
+    if not args.no_run:
+        stdout, stderr, exit_code = run(command_args, stdout_path=outfile_path, stderr_path=err_path, stdin=sys.stdin)
     # run_no_wait(args)
 
 
 else:
 
-    args = ["python3", "-m", module_path_to_run, sysrun_yaml_path, module_path_to_run]
+    command_args = ["python3", "-m", module_path_to_run, sysrun_yaml_path, module_path_to_run]
 
     # # We don't want to be waiting.
     # # Otherwise, this will keep being an alive process on the login node, and noone wants that.
@@ -234,8 +244,8 @@ else:
     # print(f"stdout: {stdout}")
     # print(f"stderr: {stderr}")
     # print(f"exit_code: {exit_code}")
-    
-    run_no_wait(args, stdout_path=outfile_path, stderr_path=err_path)
+    if not args.no_run:
+        run_no_wait(command_args, stdout_path=outfile_path, stderr_path=err_path)
 
 
 

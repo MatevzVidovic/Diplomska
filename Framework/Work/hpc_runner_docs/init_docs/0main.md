@@ -53,7 +53,10 @@ We start with an empty dict, and gradually add stuff to it. We do 4 steps:
 - dirdef.yaml (directory default yaml)
 - samename.yaml
 - --yamls
-- --args
+- --args (only for str args. Small prototyping feature. Read more below.)
+
+
+
 
 Example yaml dict:
 sys:
@@ -139,7 +142,14 @@ yamls:
     As an arg we can give a list like:   oth:added_auto_main_args:arg1:2 a:9
     This then gets parsed along : and it is made into a small dict.
     Then the same updating operation happens.
-
+    But the values we set this way are all strings - even the 2 and 9 in the above example.
+    Ints, floats, lists, dicts, etc. are not supported.
+    We had ideas for expanding this use, and ideas for not duplicating paths 
+    (e.g. sys:{gpus:a100_80GB!&&!-p:frida} instead of sys:gpus:a100_80GB sys:-p:"frida")
+    but this would add a bunch of complexity and would be extremely unclear.
+    This is meant as a small feature which makes prototyping a bit easier.
+    For serious use we highly recommend making an argy/ folder (short for arg yamls)
+    in your project root, making temp yamls there, and passing them through --yamls.
 
 
 
@@ -173,6 +183,12 @@ We do this for every element in the yamls list.
 This isn't only true for dirdef. It's the same for
 dirdef.yaml, samename.yaml, and --yamls
 
+
+
+How to have moore control over what you are running?
+Use --no_run.
+If set, we will not run the command, just construct the yaml and .sbatch and exit.
+You then run the command manually later. It gives you more control.
 
 
 

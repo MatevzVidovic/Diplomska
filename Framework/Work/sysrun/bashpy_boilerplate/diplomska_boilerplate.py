@@ -9,6 +9,7 @@ from pathlib import Path
 import io
 
 from sysrun.helpers.help import get_yaml, write_yaml, run
+import sysrun.helpers.bashpy_help as bh
 
 
 
@@ -50,14 +51,14 @@ def _get_stdin(stdin):
     elif isinstance(stdin, str):
         return stdin
     else:
-        return f"Error: {stdin} is not a string or a file. It is of type {type(stdin)}."
+        return f"stdin was {stdin} (of type {type(stdin)})."
 
-def run_me(command: list, out_folder_path, stdin=None):
+def run_me(command: list, out_folder_path, stdin=None, shell=False, terminal_inp=False):
 
     result = get_novel_out_and_err(out_folder_path)
     stdout_path = result["stdout_path"]
     stderr_path = result["stderr_path"]
-    stdout, stderr, exit_code = run(command, stdout_path, stderr_path, stdin=stdin)
+    stdout, stderr, exit_code = run(command, stdout_path, stderr_path, stdin=stdin, shell=shell, terminal_inp=terminal_inp)
     
     global out_and_err_ix
     # Building all_outs_and_errs_concated.txt
@@ -107,33 +108,17 @@ temp_file_strs = {
 
 def boilerplate(path_to_yaml, module_path_to_this_file):
 
-
     whole_yaml = get_yaml(path_to_yaml)
-    YD = whole_yaml["oth"]
+    main_name = whole_yaml["oth"]["bashpy_args"]["main_name"]
 
-    oth_yaml_path = Path("sysrun") / "bashpy_temp" / "oth.yaml"
-    write_yaml(YD, oth_yaml_path)
+    main_yaml_path, out_folder_path, sd_path = bh.folder_and_yaml_setup(path_to_yaml, module_path_to_this_file)
 
-    YD1 = YD["bashpy_args"]
-    YD2 = YD["added_auto_main_args"] if "added_auto_main_args" in YD else {}
-
-    import sysrun.helpers.bashpy_help as bh
-    main_yaml_path, out_folder_path, sd_path = bh.main(path_to_yaml, module_path_to_this_file)
-
-
-    main_name = YD1["main_name"]
-
-    # this is how mti gets added for example
-    auto_main_args = []
-    for key, value in YD2.items():
-        auto_main_args.extend([str(key), str(value)])
-    
     returner_dict = {
+        "whole_yaml": whole_yaml,
+        "out_folder_path": out_folder_path,
         "main_name": main_name,
-        "auto_main_args": auto_main_args,
         "sd_path": sd_path,
         "main_yaml_path": main_yaml_path,
-        "out_folder_path": out_folder_path
     }
     return returner_dict
     

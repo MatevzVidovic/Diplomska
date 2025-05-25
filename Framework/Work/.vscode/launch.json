@@ -63,61 +63,6 @@
 // }
 
 
-
-
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Python: Debug sysrun",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "sysrun.sysrun",
-
-
-      
-      // "args": [
-      //   "zzzzz_runners_simple/sclera/segnet/y_train.py",
-      //   "--yamls",
-      //   "model_yamls/sclera_fake.yaml",
-      //   "hpc_yamls/basic.yaml",
-      //   "--args",
-      //   "oth:added_auto_main_args:--mti:2",
-      // //   "--test_yaml",
-      // //   "sysrun/template_yaml.yaml"
-      // ],
-      
-
-      // "args": [
-      //   "zzzzz_runners_simple/sclera/segnet/y_test_uniform.py",
-      //   "--yamls",
-      //   "../model_yamls/sclera_fake.yaml",
-      //   "../hpc_yamls/basic.yaml",
-      //   // "--test_yaml",
-      //   // "sysrun/template_yaml.yaml"
-      // ],
-      
-      // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml       --test_yaml sysrun/template_yaml.yaml
-      "args": [
-        "zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py",
-        "--yamls",
-        "../model_yamls/sclera_fake.yaml",
-        "../hpc_yamls/basic.yaml",
-        // "--test_yaml",
-        // "sysrun/template_yaml.yaml"
-      ],
-        
-      // --------------------
-      "console": "integratedTerminal",
-      "subProcess": true,
-      // "python": "/path/to/conda/envs/ipad/bin/python" # or just do conda activate ipad in the integrated terminal beforehand
-    }
-  ]
-}
-
-
-
-
 // This just didn't work. 
 // But this did: in one vscode window you do the second part (the running of the script) 
 // and in another window you do the first part (the attach to process - remote dbugging) 
@@ -173,3 +118,112 @@
 //     }
 //   ]
 // }
+
+
+
+
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug sysrun",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "sysrun.sysrun",
+      "console": "integratedTerminal",
+      "subProcess": true,
+      // "python": "/path/to/conda/envs/ipad/bin/python", # or just do conda activate ipad in the integrated terminal beforehand
+
+
+      
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/y_train.py",
+      //   "--yamls",
+      //   "model_yamls/sclera_fake.yaml",
+      //   "hpc_yamls/basic.yaml",
+      //   "--args",
+      //   "oth:bashpy_args:--mti:2",
+      // //   "--test_yaml",
+      // //   "sysrun/template_yaml.yaml"
+      // ],
+
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/y_prune.py",
+      //   "--yamls",
+      //   "model_yamls/sclera_fake.yaml",
+      //   "hpc_yamls/basic.yaml",
+      //   "--args",
+      //   "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   "oth:bashpy_args:--map:2",
+
+      // //   "--test_yaml",
+      // //   "sysrun/template_yaml.yaml"
+      // ],
+      
+
+      
+
+
+
+      "args": [
+        "zzzzz_runners_simple/sclera/segnet/test/y_test_main.py",
+        "--yamls",
+        "../model_yamls/sclera_fake.yaml",
+        "../hpc_yamls/basic.yaml",
+        // "--test_yaml",
+        // "sysrun/template_yaml.yaml"
+      ],
+
+      // //  needs manual steering, so running it in a terminal is necessary - you write the stdin on the fly
+      // // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_manual.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml
+      // // // // "args": [
+      // // // //   "zzzzz_runners_simple/sclera/segnet/test/y_test_manual.py",
+      // // // //   "--yamls",
+      // // // //   "../model_yamls/sclera_fake.yaml",
+      // // // //   "../hpc_yamls/basic.yaml",
+      // // // //   // "--test_yaml",
+      // // // //   // "sysrun/template_yaml.yaml"
+      // // // // ],
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/test/y_test_quick.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+
+      // // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml       --test_yaml sysrun/template_yaml.yaml
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+    }
+  ]
+}
+
+
+

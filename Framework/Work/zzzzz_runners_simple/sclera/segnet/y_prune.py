@@ -11,13 +11,17 @@ parser.add_argument("path_to_yaml", type=str)
 parser.add_argument("module_path_to_this_file", type=str, help="""e.g. a.b.c.y_train    From root of project (should be your cwd in the terminal also).""")
 args = parser.parse_args()
 
-main_name, auto_main_args, sd_path, main_yaml_path, out_folder_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
+whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
 
-# Here, the necessary auto_main_args are to be asserted.
+# Here, the necessary bashpy_args are to be asserted and processed.
+assert "--sd_path" in whole_yaml["oth"]["bashpy_args"]
+sd_path = whole_yaml["oth"]["bashpy_args"]["--sd_path"]
+if "--map" in whole_yaml["oth"]["bashpy_args"]:
+    added_args = ["--map", whole_yaml["oth"]["bashpy_args"]["--map"]]
+else:
+    added_args = []
 
 
-
-
-command = ["python3", main_name] + auto_main_args + ["-p", "--sd", sd_path, "--yaml", main_yaml_path]
+command = ["python3", main_name, "-p", "--sd", sd_path, "--yaml", main_yaml_path] + added_args
 run_me(command, out_folder_path)
 
