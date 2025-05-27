@@ -185,7 +185,7 @@ dirdef.yaml, samename.yaml, and --yamls
 
 
 
-How to have moore control over what you are running?
+How to have more control over what you are running?
 Use --no_run.
 If set, we will not run the command, just construct the yaml and .sbatch and exit.
 You then run the command manually later. It gives you more control.
@@ -205,3 +205,16 @@ parser.add_argument("--test_yaml", type=str, help="Pass path from the root of th
 This is a nice check, but to make sure you cover all fields you'd have to have a template yaml for each runner file.
 But just having the general template yaml file with the general fields can help you somewhat too.
 
+
+
+
+
+
+What about the "--bash" flag?
+help="""Enforce bash. If set, no sys_args (frida args) are set.
+And SYSTEMS_RUN_COMMAND is set to bash. This is useful running sysrun.sysrun inside of sysrun.sysrun.
+For example, you might make sth like a bash cript that makes graphs for the model. In your runner script
+you do some training and pruning. And then you want to run that bash-script-like runner (e.g. z_get_graphs.py).
+And it needs to be run with sysrun.sysrun. This will make a new temp sth.sbatch and a new temp yaml,
+and it will go run it. But you don't want it to be run with sbatch, because that would make it return instantly and run in the background.
+So you set this flag and make it run with bash."""

@@ -24,11 +24,13 @@ else:
 
 # pruning_phase
 command = ["python3", main_name, "--ntibp", "1", "--tras", "2", "-p", "--sd", sd_path, "--yaml", main_yaml_path] + added_args
-run_me(command, out_folder_path)    
+run_me(command, out_folder_path)
 
-
-
-bash ${pipeline_name}/standalone_scripts/z_get_graphs.sbatch $yaml_id $sd_name "$yo_ids"    >> $out_name 2>&1
+from pathlib import Path
+relative_path_to_this_file = args.module_path_to_this_file.replace(".", "/")
+path_to_z_get_graphs = Path(relative_path_to_this_file).parent.parent / "standalone_scripts" / "z_get_graphs.py" # relative path from root of project
+command = ["python3", "-m", "sysrun.sysrun", path_to_z_get_graphs, "--bash", "--yamls", "../model_yamls/sclera_fake.yaml", "../hpc_yamls/basic.yaml", "--args", f"oth:bashpy_args:--sd_path:{sd_path}"]
+run_me(command, out_folder_path)
 
 command = ["python3", main_name, "--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
 run_me(command, out_folder_path, stdin=temp_file_strs["save_and_stop"])

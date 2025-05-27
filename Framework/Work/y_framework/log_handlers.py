@@ -35,9 +35,70 @@ import os
 import pickle
 
 import y_helpers.json_handler as jh
+import y_helpers.shared as shared
 
 from y_framework.model_wrapper import ModelWrapper
 
+
+
+
+
+
+
+
+
+
+def log_flops_and_weights(model_wrapper: ModelWrapper, main_save_path, unique_id):
+
+    dict_with_all = {}
+    dict_with_all["MODEL"] = shared.GLOBAL_DICT["MODEL"]
+
+    # # This should only be used when manually making a new model instance to get the initial resources of a model with these architectural parameters.
+    # # When I was doing this and changing the architectural params in the yaml, 
+    # # the flops and weights weren't changing, because an initial_conv_resource_calc.pkl was already present.
+    # # So this is a workaround one can use in such a scenario.
+    # # Making sure the old resource calc is deleted (possibly of the old MODEL) 
+    # # and a new one is created.
+    # os.remove(osp.join(model_wrapper.save_path, "initial_conv_resource_calc.pkl"))
+    # model_wrapper.init()
+
+    import math
+
+    def format_base2_scientific(v, precision=3):
+        if v == 0:
+            return f'0.{"0"*precision} x 2^0'
+        exponent = math.floor(math.log2(abs(v)))
+        mantissa = v / (2 ** exponent)
+        return f'{mantissa:.{precision}f} x 2^{exponent}'
+
+
+    # current resources:
+    if model_wrapper.resource_calc is not None:
+        model_wrapper.resource_calc.calculate_resources(model_wrapper.input_example)
+        print("Flops and weights:")
+        res_dict = model_wrapper.resource_calc.get_all_resources_of_whole_model()
+        for k, v in res_dict.items():
+            sci_format = f'{v:.3e}'
+            base_2_format = format_base2_scientific(v)
+            dict_with_all[k] = (base_2_format, sci_format, v)
+            print(f"{k}: {dict_with_all[k]}")
+
+    # initial resources:
+    print("Initial flops and weights:")
+    if model_wrapper.initial_resource_calc is not None:
+        res_dict = model_wrapper.initial_resource_calc.get_all_resources_of_whole_model()
+        for k, v in res_dict.items():
+            sci_format = f'{v:.3e}'
+            base_2_format = format_base2_scientific(v)
+            k = f"initial_{k}"
+            dict_with_all[k] = (base_2_format, sci_format, v)
+            print(f"{k}: {dict_with_all[k]}")
+
+    input_example_dims = str(model_wrapper.input_example.shape)
+    dict_with_all["input_example_dims"] = input_example_dims
+    
+    j_path_no_suffix = osp.join(main_save_path, "flops_and_weights", f"{unique_id}_flops_and_weights")
+    jh.dump_no_overwrite(j_path_no_suffix, dict_with_all)
 
 
 

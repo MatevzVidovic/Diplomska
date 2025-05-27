@@ -165,16 +165,23 @@
 
       
 
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/test/y_test_full_pruning.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
 
-
-      "args": [
-        "zzzzz_runners_simple/sclera/segnet/test/y_test_main.py",
-        "--yamls",
-        "../model_yamls/sclera_fake.yaml",
-        "../hpc_yamls/basic.yaml",
-        // "--test_yaml",
-        // "sysrun/template_yaml.yaml"
-      ],
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/test/y_test_main.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
 
       // //  needs manual steering, so running it in a terminal is necessary - you write the stdin on the fly
       // // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_manual.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml
@@ -187,14 +194,14 @@
       // // // //   // "sysrun/template_yaml.yaml"
       // // // // ],
 
-      // "args": [
-      //   "zzzzz_runners_simple/sclera/segnet/test/y_test_quick.py",
-      //   "--yamls",
-      //   "../model_yamls/sclera_fake.yaml",
-      //   "../hpc_yamls/basic.yaml",
-      //   // "--test_yaml",
-      //   // "sysrun/template_yaml.yaml"
-      // ],
+      "args": [
+        "zzzzz_runners_simple/sclera/segnet/test/y_test_quick.py",
+        "--yamls",
+        "../model_yamls/sclera_fake.yaml",
+        "../hpc_yamls/basic.yaml",
+        // "--test_yaml",
+        // "sysrun/template_yaml.yaml"
+      ],
 
       // // python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/test/y_test_uniform.py --yamls ../model_yamls/sclera_fake.yaml ../hpc_yamls/basic.yaml       --test_yaml sysrun/template_yaml.yaml
       // "args": [
@@ -205,7 +212,83 @@
       //   // "--test_yaml",
       //   // "sysrun/template_yaml.yaml"
       // ],
+
+
+
+
+
+
+
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_bs.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
       
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_da.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   "--args",
+      //   "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_fw.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   "--args",
+      //   // "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   "oth:bashpy_args:--sd_path:active_models/segnet_test_quick___zzzzz_runners_simple.sclera.segnet.test.y_test_quick",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_graphs.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      // "--args",
+      // "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+
+
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_sp.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      //   "--args",
+      //   "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
+
+      // // Getting only 2 imgs is correct. We limit the size of the test set in sclera_fake.yaml I think. Or somewhere anyway.
+      // "args": [
+      //   "zzzzz_runners_simple/sclera/segnet/standalone_scripts/z_get_ts.py",
+      //   "--yamls",
+      //   "../model_yamls/sclera_fake.yaml",
+      //   "../hpc_yamls/basic.yaml",
+      // "--args",
+      // "oth:bashpy_args:--sd_path:active_models/segnet_train___zzzzz_runners_simple.sclera.segnet.y_train",
+      //   // "--test_yaml",
+      //   // "sysrun/template_yaml.yaml"
+      // ],
 
 
 

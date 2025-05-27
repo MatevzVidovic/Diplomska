@@ -16,12 +16,17 @@ whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(ar
 # Here, the necessary bashpy_args are to be asserted and processed.
 assert "--sd_path" in whole_yaml["oth"]["bashpy_args"]
 sd_path = whole_yaml["oth"]["bashpy_args"]["--sd_path"]
-if "--map" in whole_yaml["oth"]["bashpy_args"]:
-    added_args = ["--map", whole_yaml["oth"]["bashpy_args"]["--map"]]
-else:
-    added_args = []
 
 
-command = ["python3", main_name, "-p", "--sd", sd_path, "--yaml", main_yaml_path] + added_args
-run_me(command, out_folder_path)
+
+
+
+
+
+
+command = ["python3", main_name, "--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
+run_me(command, out_folder_path, stdin=temp_file_strs["flops_and_weights"])
+
+
+
 

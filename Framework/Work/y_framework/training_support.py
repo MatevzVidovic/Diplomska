@@ -43,7 +43,7 @@ from y_helpers.model_eval_graphs import resource_graph, show_results
 
 from y_framework.model_wrapper import ModelWrapper
 
-from y_framework.log_handlers import TrainingLogs, PruningLogs
+from y_framework.log_handlers import TrainingLogs, PruningLogs, log_flops_and_weights
 
 
 
@@ -105,8 +105,6 @@ def perform_save(model_wrapper: ModelWrapper, training_logs: TrainingLogs, pruni
 
 
 
-
-
 @py_log.autolog(passed_logger=MY_LOGGER)
 def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn=None, max_training_iters=1e9, max_total_training_iters=1e9,
                         max_auto_prunings=1e9, train_iter_possible_stop=5, pruning_phase=False, cleaning_err_key="loss", 
@@ -134,7 +132,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
         # Doesnt work, because i think it does symbolic execution - like, doesnt use real input, it just sees the code and execurtes it in its own interpreter kind of was with made up "proxy" data.
         # And so it cant work with control flow colde (like the if statements i use in the model for padding).
         
-        import torch
+        # import torch
         from torch import fx
         from collections import defaultdict
 
@@ -208,7 +206,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
 
-        import torch
+        # import torch
         from torch.utils.tensorboard import SummaryWriter
         from torchviz import make_dot
         from torch.fx import symbolic_trace
@@ -311,7 +309,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
         # Fifth method
-        import torch
+        # import torch
         sm = torch.jit.trace(model, dummy_input)
         for node in sm.graph.nodes():
             for out in node.outputs():
@@ -864,10 +862,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
 
-
-
-
-
+    # It's nice to get this every time we run our model. This way, we never really have to explicitly run z_get_fw.py.
+    log_flops_and_weights(model_wrapper, main_save_path, f"{train_iter}_start")
 
 
 
@@ -900,39 +896,8 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
             
 
             if inp == "fw":
-                dict_with_all = {}
-                dict_with_all["MODEL"] = shared.GLOBAL_DICT["MODEL"]
-
-                # Making sure the old resource calc is deleted (possibly of the old MODEL) 
-                # and a new one is created.
-                os.remove(osp.join(model_wrapper.save_path, "initial_conv_resource_calc.pkl"))
-                model_wrapper.init()
-
-                print("Initial flops and weights:")
-                res_dict = model_wrapper.initial_resource_calc.get_all_resources_of_whole_model()
-                for k, v in res_dict.items():
-                    sci_format = f'{v:.3e}'
-                    print(f"{k}: {sci_format}")
-                    dict_with_all[k] = (sci_format, v)
-                try:
-                    model_wrapper.resource_calc.calculate_resources()
-                    print("Flops and weights:")
-                    res_dict = model_wrapper.resource_calc.get_all_resources_of_whole_model()
-                    for k, v in res_dict.items():
-                        sci_format = f'{v:.3e}'
-                        print(f"{k}: {sci_format}")
-                        initial_k = f"initial_{k}"
-                        dict_with_all[initial_k] = (sci_format, v)
-                except Exception as e:
-                    print("No prunings done yet, so no current resources to calculate.")
-
-                input_example_dims = str(model_wrapper.input_example.shape)
-                dict_with_all["input_example_dims"] = input_example_dims
-                
-                j_path_no_suffix = osp.join(main_save_path, "flops_and_weights", f"{train_iter}_flops_and_weights")
-                jh.dump_no_overwrite(j_path_no_suffix, dict_with_all)
-                
-
+                                
+                log_flops_and_weights(model_wrapper, main_save_path, train_iter)
 
                 inp = input(f"""{train_iter_possible_stop} trainings have been done without error stopping.
                             Best k models are kept. (possibly (k+1) models are kept if one of the worse models is the last model we have).
@@ -1383,6 +1348,7 @@ def train_automatically(model_wrapper: ModelWrapper, main_save_path, val_stop_fn
 
 
     # After the while loop is broken out of:
+    log_flops_and_weights(model_wrapper, main_save_path, f"{train_iter}_end")
     model_wrapper.create_safety_copy_of_existing_models(f"{train_iter}_ending_save")
         
 

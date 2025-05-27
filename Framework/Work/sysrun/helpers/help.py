@@ -197,17 +197,21 @@ def recursive_check(yaml_dict, template_yaml_dict):
 
 # ---------- Helper functions for actual running ----------
 
-def write_sbatch_file(sbatch_dict, sbatch_path, python_command):
-    sys_args = sbatch_dict.get("sys", None)
-    sys_args_string = ""
-    for key, value in sys_args.items():
-        if key.startswith("--"):
-            # To make: #SBATCH --gpus=A100
-            sys_args_string += f"#SBATCH {key}{value}\n"
-        else:
-            # To make: #SBATCH -c 16
-            # We need the extra space with single - args.
-            sys_args_string += f"#SBATCH {key} {value}\n"
+def write_sbatch_file(sbatch_dict, sbatch_path, python_command, no_sys_args=False):
+    
+    if no_sys_args:
+        sys_args_string = ""
+    else:
+        sys_args = sbatch_dict.get("sys", None)
+        sys_args_string = ""
+        for key, value in sys_args.items():
+            if key.startswith("--"):
+                # To make: #SBATCH --gpus=A100
+                sys_args_string += f"#SBATCH {key}{value}\n"
+            else:
+                # To make: #SBATCH -c 16
+                # We need the extra space with single - args.
+                sys_args_string += f"#SBATCH {key} {value}\n"
 
 
     sbatch_file = f"""#!/bin/bash
@@ -219,6 +223,8 @@ def write_sbatch_file(sbatch_dict, sbatch_path, python_command):
     
     with open(sbatch_path, 'w') as f:
         f.write(sbatch_file)
+
+
 
 def make_executable(file_path):
     st = os.stat(file_path)

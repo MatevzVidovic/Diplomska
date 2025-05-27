@@ -41,6 +41,13 @@ SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
 parser = argparse.ArgumentParser()
 parser.add_argument("path_to_run", type=str) #, required=True)
 parser.add_argument("--um", action="store_true", default=False, help="unconstrained mode")
+parser.add_argument("--bash", action="store_true", default=False, help="""Enforce bash. If set, no sys_args (frida args) are set.
+                    And SYSTEMS_RUN_COMMAND is set to bash. This is useful running sysrun.sysrun inside of sysrun.sysrun.
+                    For example, you might make sth like a bash cript that makes graphs for the model. In your runner script
+                    you do some training and pruning. And then you want to run that bash-script-like runner (e.g. z_get_graphs.py).
+                    And it needs to be run with sysrun.sysrun. This will make a new temp sth.sbatch and a new temp yaml,
+                    and it will go run it. But you don't want it to be run with sbatch, because that would make it return instantly and run in the background.
+                    So you set this flag and make it run with bash.""")
 parser.add_argument("--no_run", action="store_true", default=False, help="if set, we will not run the command, just construct the yaml and .sbatch and exit. \
                     You then run the command manually later. It gives you more control.")
 parser.add_argument("--yamls", nargs='+', help="paths to additional yamls to add to the constructed yaml dict", default=[])
@@ -222,10 +229,13 @@ if not unconstrained_mode:
 
     sysrun_sbatch_path = sysrun_path / "sysrun.sbatch"
     python_command = f"python3 -m {module_path_to_run} {sysrun_yaml_path} {module_path_to_run}"
-    write_sbatch_file(YD, sysrun_sbatch_path, python_command)
+    write_sbatch_file(YD, sysrun_sbatch_path, python_command, no_sys_args=args.bash)
     
     # make_executable(sysrun_sbatch_path)
-    command_args = [SYSTEMS_RUN_COMMAND, sysrun_sbatch_path, sysrun_yaml_path, sysrun_sbatch_path]
+    if args.bash:
+        command_args = ["bash", sysrun_sbatch_path, sysrun_yaml_path, sysrun_sbatch_path]
+    else:
+        command_args = [SYSTEMS_RUN_COMMAND, sysrun_sbatch_path, sysrun_yaml_path, sysrun_sbatch_path]
 
     # Here I think we can actually wait. Because when you run sbatch, you immediately get a response "Submited with id 31985" or whatever.
     # You arent actually waiting on the sbatch process itself.
