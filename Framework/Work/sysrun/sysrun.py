@@ -22,7 +22,7 @@ import sys
 
 from pathlib import Path
 
-from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder, recursive_update, my_update, recursive_check, write_sbatch_file
+from sysrun.helpers.help import get_yaml, write_yaml, run, run_no_wait, get_fresh_folder, recursive_update, my_update, recursive_check, write_sbatch_file, symlink_safe_preresolve
 
 
 SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
@@ -115,10 +115,12 @@ YD = my_update(YD, file_yaml, path_to_run.parent, retain_yamls=True)
 for path in args.yamls:
     
     # absolute in the sense that it is relative to the project root
-    absolute_yaml_path = Path(path)
+    absolute_yaml_path = symlink_safe_preresolve(Path(path))
 
     # relative yaml path (relative to where the runfile is)
-    relative_yaml_path = dirs_to_run[-1] / path
+    relative_yaml_path = symlink_safe_preresolve(dirs_to_run[-1] / path)
+
+    print(f"Attempting to add yaml from {absolute_yaml_path} or {relative_yaml_path} to the constructed yaml dict.")
     
     if osp.exists(absolute_yaml_path):
         new_yaml = get_yaml(absolute_yaml_path)
@@ -127,7 +129,8 @@ for path in args.yamls:
         new_yaml = get_yaml(relative_yaml_path)
         YD = recursive_update(YD, new_yaml)
     else:
-        print(f"Warning: {path} does not exist. Skipping.")
+        print(3*"!!!!!!!!!!\n" + f"!!!Warning!!!: {path} does not exist. Skipping." + 3*"!!!!!!!!!!\n")
+        sys.exit(1) # to prevent erroneous runs
 
 
 

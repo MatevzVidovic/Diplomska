@@ -17,7 +17,85 @@ import sys
 from pathlib import Path
 
 
+# ---------- General helper functions ----------
 
+
+def symlink_safe_preresolve(path: Path, prevent_starting_double_dot=True):
+    """
+    In a path like:
+    zzzzz_runners_simple/sclera/unet/test/../model_yamls/sclera_fake.yaml
+
+    where test/ is actually a symlink to zzzzz_runners_simple/0_shared/test/
+
+    what actualy happens when pathlib Path resolves it, is:
+    - first resolving up to the relative element .. :
+    zzzzz_runners_simple/sclera/unet/test/    so we end up in zzzzz_runners_simple/0_shared/test/
+    - then resolving the relative element .. :
+    so we end up in zzzzz_runners_simple/0_shared/
+    - then resolving the rest:
+    model_yamls/sclera_fake.yaml
+    So we would end up in zzzzz_runners_simple/0_shared/model_yamls/sclera_fake.yaml
+
+    But there is no model_yamls/ in 0_shared. It's in sclera/unet/
+
+    So to prevent stuff like this from happening, we manually check for .. in the path and
+    remove the parent folder in the path, so we resolve correctly.
+
+    !!!!!
+    ALSO
+    We prevent going past the root of our project.
+    For example, using a path like:
+    ../model_yamls/sclera_fake.yaml
+    Would, in sysrun.py, try being tboth the absolute path (from root of project) and the relative path (from where the runner.py file resides).
+    In the absolute case, it would try to go to the parent folder of the root of the project, which is not desired.
+
+    """
+
+    new_path = []
+    for folder in path.parts:
+        if folder == "..":
+            if new_path: # if nonempty
+                new_path.pop()
+            elif not prevent_starting_double_dot:
+                new_path.append(folder)
+        else:
+            new_path.append(folder)
+
+    return Path(*new_path)
+
+
+
+
+    pass
+
+
+
+
+def get_yaml(path):
+    if osp.exists(path):
+        with open(path, 'r') as f:
+            YD = yaml.safe_load(f)
+
+            # when yaml is empty
+            if YD is None:
+                YD = {}
+    else:
+        YD = {}
+    return YD
+
+def write_yaml(inp_dict, file_path, sort_keys=False, indent=4):
+    os.makedirs(Path(file_path).parent, exist_ok=True)
+    with open(file_path, 'w') as file:
+        yaml.dump(inp_dict, file, sort_keys=sort_keys, indent=indent)
+
+
+
+
+
+
+
+
+# ---------- Helper functions for getting fresh folders ----------
 
 def get_fresh_folder(path_to_parent_folder):
     # we will only keep 4 of the latest folders in path_to_parent_folder
@@ -67,23 +145,6 @@ def get_fresh_folder_basic(path_to_parent_folder):
     return Path(folder_path)
 
 
-def get_yaml(path):
-    if osp.exists(path):
-        with open(path, 'r') as f:
-            YD = yaml.safe_load(f)
-
-            # when yaml is empty
-            if YD is None:
-                YD = {}
-    else:
-        YD = {}
-    return YD
-
-
-def write_yaml(inp_dict, file_path, sort_keys=False, indent=4):
-    os.makedirs(Path(file_path).parent, exist_ok=True)
-    with open(file_path, 'w') as file:
-        yaml.dump(inp_dict, file, sort_keys=sort_keys, indent=indent)
 
 
 
