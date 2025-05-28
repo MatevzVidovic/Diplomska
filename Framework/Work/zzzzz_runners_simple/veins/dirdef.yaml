@@ -1,0 +1,22 @@
+
+oth:
+    
+  main_yaml:
+
+    #  ---------- task specific ---------- 
+    path_to_data: "./Data/vein_and_sclera_data"
+    target: "veins"
+    input_width: 2048
+    input_height: 1048
+    input_channels: 5
+    output_channels: 2
+
+    # Dataset parameters
+    dataset_type: vasd    # Options: simple, vasd
+    aug_type: tf    # Options: tf, np, pass
+    metrics_aggregation_fn: mean_no_background
+    zero_out_non_sclera: True
+    add_sclera_to_img: False
+    add_bcosfire_to_img: True
+    add_coye_to_img: True
+

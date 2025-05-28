@@ -1,0 +1,8 @@
+
+
+oth:
+  bashpy_args:
+    # ---------- task+model specific ---------- 
+    pipeline_name: "z_pipeline_segnet_veins"
+    main_name: "segnet_main.py"
+    model: "segnet"

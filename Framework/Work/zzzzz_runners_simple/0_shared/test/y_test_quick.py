@@ -11,7 +11,7 @@ parser.add_argument("path_to_yaml", type=str)
 parser.add_argument("module_path_to_this_file", type=str, help="""e.g. a.b.c.y_train.""")
 args = parser.parse_args()
 
-whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
+whole_yaml, out_folder_path, sysrun_runner_outputs_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
 
 # Here, the necessary bashpy_args are to be asserted and processed.
 
@@ -19,9 +19,9 @@ whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(ar
 
 # training phase
 command = ["python3", main_name, "--tras", "2", "--mti", "2", "--sd", sd_path, "--yaml", main_yaml_path]
-run_me(command, out_folder_path)
+run_me(command, out_folder_path, sysrun_runner_outputs_path)
 
 # pruning_phase
 command = ["python3", main_name, "--ntibp", "1", "--ptp", "0.0000001", "--map", "2", "--tras", "2", "--tp", "--ifn", "uniform", "-p", "--sd", sd_path, "--yaml", main_yaml_path]
-run_me(command, out_folder_path)
+run_me(command, out_folder_path, sysrun_runner_outputs_path)
 

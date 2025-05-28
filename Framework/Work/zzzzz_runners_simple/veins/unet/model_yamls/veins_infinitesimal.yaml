@@ -1,7 +1,5 @@
 
 
-# python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/y_train.py --yamls model_yamls/sclera_fake.yaml hpc_yamls/basic.yaml --args oth:added_auto_main_args:--mti:2
-
 oth:
   main_yaml:
     # basic_with_zero_out
@@ -10,16 +8,15 @@ oth:
 
     # More situationally changed parameters
     is_resource_calc_ready: True
-    is_pruning_ready: True   # set to false to skip all prun
-    
-    train_epoch_size: 2    # we use random resampling, so this is unconnected with train_dataset size
+    is_pruning_ready: False   # set to false to skip all prun
+    train_epoch_size: 200    # we use random resampling, so this is unconnected with train_dataset size
     # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
-    val_epoch_size: 2
-    test_epoch_size: 2
-    train_batch_size: 2
-    eval_batch_size: 2   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
+    val_epoch_size: 30
+    test_epoch_size: 20
+    train_batch_size: 20     # limits are 26 for train, 68 for eval
+    eval_batch_size: 30   # In patchification, this doesn't matter, because VRAM is limited by input_size_limit
     learning_rate: 0.0001
-    num_of_dataloader_workers: 2
+    num_of_dataloader_workers: 20
     # train_epoch_size_limit: 400    # remnant of old time. When no random sampling, with a dataset size of 1000 that was a bit much for every epoch. So we just limited it.
 
     # More trainig-type-defining parameters
@@ -29,10 +26,6 @@ oth:
     loss_fn_name: "MCDL"
     loss_params: null
 
-
     # Model parameters that need to be set in stone for pruning
-    model: "small"
-
-    # --------- Overrides ---------
-    input_width: 256
-    input_height: 256
+    model: "3_2_2"
+    

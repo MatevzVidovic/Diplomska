@@ -11,7 +11,7 @@ parser.add_argument("path_to_yaml", type=str)
 parser.add_argument("module_path_to_this_file", type=str, help="""e.g. a.b.c.y_train.""")
 args = parser.parse_args()
 
-whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
+whole_yaml, out_folder_path, sysrun_runner_outputs_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
 
 # Here, the necessary bashpy_args are to be asserted and processed.
 
@@ -19,7 +19,7 @@ whole_yaml, out_folder_path, main_name, sd_path, main_yaml_path = boilerplate(ar
 
 
 command = ["python3", main_name, "--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
-run_me(command, out_folder_path, stdin=temp_file_strs["batch_size_train"])
+run_me(command, out_folder_path, sysrun_runner_outputs_path, stdin=temp_file_strs["batch_size_train"])
 
 command = ["python3", main_name, "--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]
-run_me(command, out_folder_path, stdin=temp_file_strs["batch_size_eval"])
+run_me(command, out_folder_path, sysrun_runner_outputs_path, stdin=temp_file_strs["batch_size_eval"])

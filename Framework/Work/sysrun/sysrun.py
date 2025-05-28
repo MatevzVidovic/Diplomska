@@ -18,6 +18,7 @@ import os
 import os.path as osp
 import argparse
 import sys
+import datetime
 # import shutil as sh
 
 from pathlib import Path
@@ -201,15 +202,20 @@ if args.test_yaml is not None:
 
 # ---------- Running stuff ----------
 
-sysrun_path = Path("sysrun") / "sysrun_temp"
+out_folder_path = get_fresh_folder("sysrun_runner_outputs").absolute()
+outfile_path = out_folder_path / "runner_out.txt"
+err_path = out_folder_path / "runner_err.txt"
+print(f" sysrun_runner_outputs_out_folder_path:[{out_folder_path.name}] \n") # .name is just the last part of the path, so it is the folder name
+
+YD["sysrun_info"] = {}
+YD["sysrun_info"]["sysrun_runner_outputs_out_folder_path"] = str(out_folder_path)
+
+sysrun_path = Path(out_folder_path) / "sysrun_temp"
 os.makedirs(sysrun_path, exist_ok=True)
 sysrun_yaml_path = sysrun_path  / "sysrun.yaml"
 write_yaml(YD, sysrun_yaml_path)
 
 
-out_folder_path = get_fresh_folder("sysrun_runner_outputs")
-outfile_path = out_folder_path / "out.txt"
-err_path = out_folder_path / "err.txt"
 
 
 # Making a symlink to the latest output folder
@@ -228,10 +234,15 @@ module_path_to_run = str(path_to_run).replace("/", ".").removesuffix(".py") # we
 # print(f"path_to_run: {path_to_run}")
 # print(f"module_path_to_run: {module_path_to_run}")
 
+python_command = f"python3 -m {module_path_to_run} {sysrun_yaml_path} {module_path_to_run}"
+running_time = datetime.datetime.now()
+with open(out_folder_path / "sysrun_info.txt", "w") as f:
+    f.write(f"Running time: {running_time}\n")
+    f.write(f"Python command: {python_command}\n")
+
 if not unconstrained_mode:
 
     sysrun_sbatch_path = sysrun_path / "sysrun.sbatch"
-    python_command = f"python3 -m {module_path_to_run} {sysrun_yaml_path} {module_path_to_run}"
     write_sbatch_file(YD, sysrun_sbatch_path, python_command, no_sys_args=args.bash)
     
     # make_executable(sysrun_sbatch_path)

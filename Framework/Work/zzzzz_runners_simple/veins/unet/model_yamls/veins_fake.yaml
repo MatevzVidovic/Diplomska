@@ -1,7 +1,5 @@
 
 
-# python3 -m sysrun.sysrun zzzzz_runners_simple/sclera/segnet/y_train.py --yamls model_yamls/sclera_fake.yaml hpc_yamls/basic.yaml --args oth:added_auto_main_args:--mti:2
-
 oth:
   main_yaml:
     # basic_with_zero_out
@@ -11,7 +9,6 @@ oth:
     # More situationally changed parameters
     is_resource_calc_ready: True
     is_pruning_ready: True   # set to false to skip all prun
-    
     train_epoch_size: 2    # we use random resampling, so this is unconnected with train_dataset size
     # In patchification the actual size in train is num_of_patches_from_img * train_epoch_size
     val_epoch_size: 2
@@ -29,10 +26,15 @@ oth:
     loss_fn_name: "MCDL"
     loss_params: null
 
-
     # Model parameters that need to be set in stone for pruning
     model: "small"
+    
 
     # --------- Overrides ---------
+    aug_type: pass    # Options: tf, np, pass
+
+    # Model parameters that need to be set in stone for pruning
     input_width: 256
     input_height: 256
+
+

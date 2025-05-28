@@ -1,0 +1,8 @@
+
+
+oth:
+  bashpy_args:
+    # ---------- task+model specific ---------- 
+    pipeline_name: "z_pipeline_unet_multi"
+    main_name: "unet_main.py"
+    model: "unet"

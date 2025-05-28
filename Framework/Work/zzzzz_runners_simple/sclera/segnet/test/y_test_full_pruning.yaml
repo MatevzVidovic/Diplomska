@@ -1,8 +1,0 @@
-
-
-oth:
-  bashpy_args:
-    #  ---------- run specific (run.py same-name yaml) ---------- 
-    sbatch_id: test_full_pruning
-    protect_out_files: True
-    retain_savedir: False
