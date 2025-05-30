@@ -42,6 +42,7 @@ SYSTEMS_RUN_COMMAND = "bash" # "sbatch"
 parser = argparse.ArgumentParser()
 parser.add_argument("path_to_run", type=str) #, required=True)
 parser.add_argument("--um", action="store_true", default=False, help="unconstrained mode")
+parser.add_argument("--ns", action="store_true", default=False, help="nested sysrun - inside of an already running sysrun")
 parser.add_argument("--bash", action="store_true", default=False, help="""Enforce bash. If set, no sys_args (frida args) are set.
                     And SYSTEMS_RUN_COMMAND is set to bash. This is useful running sysrun.sysrun inside of sysrun.sysrun.
                     For example, you might make sth like a bash cript that makes graphs for the model. In your runner script
@@ -201,8 +202,11 @@ if args.test_yaml is not None:
 
 
 # ---------- Running stuff ----------
-
-out_folder_path = get_fresh_folder("sysrun_runner_outputs").absolute()
+    
+# cleanup moves all but last 4 sysrun dirs to old/
+# but if we did 4 nested sysruns, then the original sysrun dir would now be moved to old/
+# and this make all the paths stored in the running process wrong and crashes the program.
+out_folder_path = get_fresh_folder("sysrun_runner_outputs", do_cleanup=(not args.ns)).absolute()
 outfile_path = out_folder_path / "runner_out.txt"
 err_path = out_folder_path / "runner_err.txt"
 print(f" sysrun_runner_outputs_out_folder_path:[{out_folder_path.name}] \n") # .name is just the last part of the path, so it is the folder name

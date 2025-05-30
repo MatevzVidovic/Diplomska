@@ -57,6 +57,8 @@ bashpy_temp/
 sysrun_temp/
 hpc_runner_test/
 
+!test_runners/
+
 # Probs not needed anymore:
 # saved/
 # saved_main/

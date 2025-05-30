@@ -97,7 +97,7 @@ def write_yaml(inp_dict, file_path, sort_keys=False, indent=4):
 
 # ---------- Helper functions for getting fresh folders ----------
 
-def get_fresh_folder(path_to_parent_folder):
+def get_fresh_folder(path_to_parent_folder, do_cleanup=True):
     # we will only keep 4 of the latest folders in path_to_parent_folder
     # Older ones should be moved to an old/ folder.
     # This makes the file system cleaner and easier to navigate,
@@ -112,7 +112,8 @@ def get_fresh_folder(path_to_parent_folder):
         folder_path = Path(path_to_parent_folder) / f"{counter}"
         folder_path_in_old = Path(path_to_parent_folder) / "old" / f"{counter}"
 
-    cleanup_by_moving_to_old(path_to_parent_folder, keep_latest=3) 
+    if do_cleanup:
+        cleanup_by_moving_to_old(path_to_parent_folder, keep_latest=3) 
     # we do the above first, to make absolutely sure the new folder is fresh and not in the old/ folder.
     os.makedirs(folder_path, exist_ok=True)
     return Path(folder_path)

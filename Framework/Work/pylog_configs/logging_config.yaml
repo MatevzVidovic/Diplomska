@@ -1,12 +1,14 @@
 
 unet_main.py : True
 unet_original_main.py : True
+segnet_main.py : True
 training_support.py : True
 training_wrapper.py : True
 model_wrapper.py : True
 pruner.py : False
+log_handlers.py : True
 dataset_aug.py : True
 dataset_aug_with_sclera.py : True
-helper_img_and_fig_tools.py : False
+img_and_fig_tools.py : True
 v_test_script.py : True
 v_unet_porter.py : True

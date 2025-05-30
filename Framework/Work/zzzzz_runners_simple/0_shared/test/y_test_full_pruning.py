@@ -14,6 +14,8 @@ args = parser.parse_args()
 whole_yaml, out_folder_path, sysrun_runner_outputs_path, main_name, sd_path, main_yaml_path = boilerplate(args.path_to_yaml, args.module_path_to_this_file).values()
 
 # Here, the necessary bashpy_args are to be asserted and processed.
+if (model_yaml := whole_yaml["oth"]["bashpy_args"].get("model_yaml", None)) is None:
+    raise ValueError("model_yaml not given in bashpy_args.")
 added_args = []
 if "--ifn" not in whole_yaml["oth"]["bashpy_args"]:
     added_args = ["--ifn", whole_yaml["oth"]["bashpy_args"]["main_ifn"]]
@@ -29,7 +31,7 @@ run_me(command, out_folder_path, sysrun_runner_outputs_path)
 from pathlib import Path
 relative_path_to_this_file = args.module_path_to_this_file.replace(".", "/")
 path_to_z_get_graphs = Path(relative_path_to_this_file).parent.parent / "standalone_scripts" / "z_get_graphs.py" # relative path from root of project
-command = ["python3", "-m", "sysrun.sysrun", path_to_z_get_graphs, "--bash", "--yamls", "../model_yamls/sclera_fake.yaml", "../hpc_yamls/basic.yaml", "--args", f"oth:bashpy_args:--sd_path:{sd_path}"]
+command = ["python3", "-m", "sysrun.sysrun", "--ns", path_to_z_get_graphs, "--bash", "--yamls", f"../model_yamls/{model_yaml}.yaml", "../hpc_yamls/basic.yaml", "--args", f"oth:bashpy_args:--sd_path:{sd_path}"]
 run_me(command, out_folder_path, sysrun_runner_outputs_path, is_nested_sysrun=True)
 
 command = ["python3", main_name, "--ips", "0", "--sd", sd_path, "--yaml", main_yaml_path]

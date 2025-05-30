@@ -8,8 +8,9 @@
 from pathlib import Path
 import io
 import re
+import os
 
-from sysrun.helpers.help import get_yaml, write_yaml, run
+from sysrun.helpers.help import get_yaml, write_yaml, run, get_fresh_folder
 import sysrun.helpers.bashpy_help as bh
 
 
@@ -150,7 +151,7 @@ def run_me(command: list, out_folder_path, sysrun_out_folder_path, stdin=None, s
     # (not creating symlinks, rather copying, for better permanence)
 
     sysrun_all_outs_and_errs_concated_path = Path(sysrun_out_folder_path) / "0_all_outs_and_errs_concated.txt"
-    with open(sysrun_all_outs_and_errs_concated_path, "a") as sysrun_all_outs_and_errs_concated:
+    with open(sysrun_all_outs_and_errs_concated_path, "w") as sysrun_all_outs_and_errs_concated:
         with open(all_outs_and_errs_concated_path, "r") as all_outs_and_errs_concated:
             sysrun_all_outs_and_errs_concated.write(all_outs_and_errs_concated.read())
 
@@ -197,6 +198,26 @@ def boilerplate(path_to_yaml, module_path_to_this_file):
         "main_name": main_name,
         "sd_path": sd_path,
         "main_yaml_path": main_yaml_path,
+    }
+    return returner_dict
+
+
+def basic_boilerplate(path_to_yaml, module_path_to_this_file):
+
+    whole_yaml = get_yaml(path_to_yaml)
+    
+    out_folder_path = get_fresh_folder(Path("zzz_outputs") / "basic")
+    outs_path = out_folder_path / "outs"
+    os.makedirs(outs_path, exist_ok=True)
+    errs_path = out_folder_path / "errs"
+    os.makedirs(errs_path, exist_ok=True)
+
+    sysrun_runner_outputs_path = whole_yaml["sysrun_info"]["sysrun_runner_outputs_out_folder_path"]
+
+    returner_dict = {
+        "whole_yaml": whole_yaml,
+        "out_folder_path": out_folder_path,
+        "sysrun_runner_outputs_path": sysrun_runner_outputs_path,
     }
     return returner_dict
     
