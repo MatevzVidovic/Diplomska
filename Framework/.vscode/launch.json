@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: Remote Attach",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                // "port": 5678, // for diplomska
+                "port": 8765 // for bashpy sysrun
+
+                // I have run.py which (sequentially) runs many instances of main.py.
+                // In run.py, I open debugpy remote debugging on port 5678.
+                // (always when I say this, I mean: inside try catch, where we warn and ignore the exception if catch.)
+                // In main.py, I open remote debug on 5678 - it fails and gets caught, because 5678 already open.
+                // But this is no problem - when remote debugging in run.py, when you run Popen with a python process,
+                // the debugging nicely transfers into the subprocess (doesn't work if Popen runs a bash file which runs python processes tho).
+                // But for some reason, this works for like 5 subprocesses, and then I start getting a weird error.
+                // And on subsequent runs, this problem starts with the first subprocess already. So yeah, there are problems.
+
+                // So I made a change:
+                // run.py now has debug on port 8765.
+                // When I run this setup, I first need to start (in VScode) remote debug attach for 8765, 
+                // and then change the launch.json to using port 5678, and then run it again for each subprocess that starts.
+
+                // Then I also tried: disable debugging for run.py and just have it for main.py. But again, we need to do VScode attach for each subprocess.
+
+                // So I disabled debugging for run.py, and just have it for main.py. And this works great, because we go into subprocesses anyway.
+                // Obvious in hindsight.
+
+                // Additionally:
+                // - I think if you run remote debug, and you change launch.json in the meanwhile, you get a "Client not authenticated" VScode error.
+                // But I'm really not sure.
+                // - I think a source of the first config above failing (despite the try-catch) might have something to do with multiprocessing in dataloaders?
+                // Again, I have no idea.
+
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/..",
+                    "remoteRoot": "."
+                }
+            ]
+        }
+    ]
+}
