@@ -46,8 +46,8 @@ from y_helpers.model_vizualization import model_graph
 
 from y_framework.params_dataclasses import *
 from y_framework.training_wrapper import TrainingWrapper
-from y_framework.conv_resource_calc import ConvResourceCalc
-from y_framework.pruner import Pruner
+from pruning_framework.conv_resource_calc import ConvResourceCalc
+from pruning_framework.pruner import Pruner
 
 
 

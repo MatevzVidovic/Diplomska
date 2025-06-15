@@ -3,7 +3,7 @@ import argparse
 import pickle
 
 
-from y_framework.conv_resource_calc import ConvResourceCalc
+from pruning_framework.conv_resource_calc import ConvResourceCalc
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--inp", type=str, required=True, help="./test_uniform_SegNet_pruning/saved_main/8_show_results.pkl")

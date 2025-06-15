@@ -31,7 +31,7 @@ MY_LOGGER.setLevel(logging.DEBUG)
 
 
 
-from y_helpers.model_sorting import sort_tree_ixs
+from pruning_framework.model_sorting import sort_tree_ixs
 
 
 class MinResourcePercentage:

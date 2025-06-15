@@ -44,8 +44,8 @@ if not shared.PLT_SHOW: # For more info, see shared.py
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-from y_helpers.model_sorting import sort_tree_ixs, denest_tuple
-from y_framework.conv_resource_calc import ConvResourceCalc
+from pruning_framework.model_sorting import sort_tree_ixs, denest_tuple
+from pruning_framework.conv_resource_calc import ConvResourceCalc
 
 
 
