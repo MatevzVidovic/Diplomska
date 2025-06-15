@@ -1,0 +1,33 @@
+# Symlinked Repository Commit Hashes
+# Generated on: Sun Jun 15 15:07:43 CEST 2025
+
+[manage_symrepos]
+commit_hash = b7da7d57fd0c23e83fa11817bd941e067a635d95
+branch = Diplomska
+commit_message = Works with Diplomska git repo.
+status = clean
+
+[sysrun]
+commit_hash = 150820ce6700d42b6d2d9838e08b24f472e5d348
+branch = main
+commit_message = Minor changes.
+status = clean
+
+[python_logger]
+commit_hash = 68cdcc34a0bc02ecb5f95822fede511ad568c8ed
+branch = main
+commit_message = set_basic.py bug fixed. Docs added.
+status = clean
+
+[python_logger]
+commit_hash = 68cdcc34a0bc02ecb5f95822fede511ad568c8ed
+branch = main
+commit_message = set_basic.py bug fixed. Docs added.
+status = clean
+
+[CNN_kernel_pruning]
+commit_hash = a9750eab2f33aacd5dc01e6ab99e04ce445e0242
+branch = main
+commit_message = Init.
+status = clean
+

@@ -33,14 +33,28 @@ MY_LOGGER.setLevel(logging.DEBUG)
 import os
 from pathlib import Path
 
-def get_fresh_folder_basic(path_to_parent_folder):
-        
-    counter=999
-    
-    folder_path = Path(path_to_parent_folder) / f"{counter}"
-    while osp.exists(folder_path):
-        counter -= 1
-        folder_path = Path(path_to_parent_folder) / f"{counter}"
 
-    os.makedirs(folder_path, exist_ok=True)
-    return Path(folder_path)
+@py_log.autolog(passed_logger=MY_LOGGER)
+def get_fresh_folder_basic(path_to_parent_folder):
+
+    try:
+        
+        prefix = "" # will be k*"#" if overflow
+        counter=999
+        
+        folder_path = Path(path_to_parent_folder) / f"{prefix}{counter}"
+        while osp.exists(folder_path):
+            counter -= 1
+            folder_path = Path(path_to_parent_folder) / f"{prefix}{counter}"
+
+            if counter <= 100:
+                prefix += "#"
+                counter = 999
+    
+        os.makedirs(folder_path, exist_ok=True)
+        py_log.log_locals(MY_LOGGER)
+        return Path(folder_path)
+    
+    except Exception as e:
+        py_log.log_stack(MY_LOGGER)
+        raise e
